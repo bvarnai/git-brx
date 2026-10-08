@@ -144,15 +144,6 @@ func (i *Inspector) ActiveOperation(ctx context.Context, rootDir string) (op str
 	return "", false
 }
 
-// InFlightOperations is a compatibility wrapper for ActiveOperation.
-func (i *Inspector) InFlightOperations(ctx context.Context, rootDir string) (rebaseActive bool, mergeActive bool) {
-	op, active := i.ActiveOperation(ctx, rootDir)
-	if !active {
-		return false, false
-	}
-	return op == "rebase", op == "merge"
-}
-
 // ComputeDelta calculates ahead and behind commit counts between a local ref and its upstream.
 func (i *Inspector) ComputeDelta(ctx context.Context, dir string, localRef, remoteRef string) (*domain.BranchDelta, error) {
 	out, err := i.runner.Run(ctx, dir, "rev-list", "--left-right", "--count", fmt.Sprintf("%s...%s", localRef, remoteRef))
