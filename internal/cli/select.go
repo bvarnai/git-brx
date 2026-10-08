@@ -45,16 +45,16 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 		workDir = a.WorkingDir
 	}
 
-	rootDir, err := a.Inspector.AssertWorkTree(ctx, workDir)
+	rootDir, err := checks.InsideWorkTree(ctx, a.Inspector, workDir)
 	if err != nil {
 		return err
 	}
 
-	// Preflight checks: ensure no in-progress operations and detached HEAD won't orphan commits
-	if err := checks.CheckInProgress(ctx, a.Inspector, rootDir); err != nil {
+	// Preflight checks: ensure no active operations and detached HEAD won't orphan commits
+	if err := checks.NoActiveOperation(ctx, a.Inspector, rootDir); err != nil {
 		return err
 	}
-	if err := checks.CheckDetachedHead(ctx, a.Inspector, rootDir); err != nil {
+	if err := checks.NoOrphanedCommits(ctx, a.Inspector, rootDir); err != nil {
 		return err
 	}
 
@@ -70,7 +70,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 	if len(args) == 1 && args[0] != "" {
 		targetBranch = args[0]
 	} else {
-		targetBranch = a.Inspector.ResolveDefaultBranch(ctx, rootDir)
+		targetBranch = a.Inspector.DefaultBranch(ctx, rootDir)
 		a.UI.Log("Selecting '%s' branch by default", targetBranch)
 	}
 
@@ -82,7 +82,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 			}
 		}
 		a.UI.Log("Already on '%s'", targetBranch)
-		checks.CheckUpstreamSync(ctx, a.Inspector, a.UI, rootDir, targetBranch)
+		checks.HintUpstreamSync(ctx, a.Inspector, a.UI, rootDir, targetBranch)
 		return nil
 	}
 
@@ -126,8 +126,8 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 		return domain.WrapError(domain.ExitGeneralError, checkoutErr, "Select failed (git checkout %s failed)", targetBranch)
 	}
 
-	// Postflight check: warn if uncommitted changes were carried over to the new branch
-	checks.CheckDirtyWorktree(a.UI, wasDirty, prevBranch, targetBranch)
+	// Postflight feedback: warn if uncommitted changes were carried over to the new branch
+	checks.WarnDirtyWorktree(a.UI, wasDirty, prevBranch, targetBranch)
 
 	return nil
 }

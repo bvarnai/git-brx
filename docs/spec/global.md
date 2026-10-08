@@ -160,6 +160,27 @@ When `--dry-run` (`-n`) is specified:
 - **No Remote Network Mutations:** Zero executions of `git push`, and zero mutating HTTP requests (POST, PUT, DELETE) against Bitbucket Server or JIRA.
 - **Predictive Output:** Logs the exact sequence of Git plumbing commands and external API requests that would be executed in live mode.
 
+### Repository Inspection vs. Preflight Checks Strategy
+
+To maintain strict boundary separation, testability, and clean diagnostics across all subcommands, repository interrogation and domain rule enforcement are decoupled into two distinct packages:
+
+1. **Inspection Engine (`internal/git.Inspector`): Pure Telemetry**
+   - **Role:** Queries raw repository state via Git plumbing and filesystem indicators.
+   - **Responsibility:** Returns pure telemetry data (raw strings, booleans, structs).
+   - **Boundary Constraint:** Has zero knowledge of UI formatting, terminal styles, exit codes, or domain `AppError`. It never logs to stderr or stdout. Errors returned are standard Go errors indicating Git subprocess execution failures.
+   - **Naming Convention:** Direct attribute/query signatures (e.g., `IsWorkTree`, `RepoRoot`, `ActiveOperation`, `DefaultBranch`, `BranchDelta`).
+
+2. **Preflight Checks Engine (`internal/checks`): Invariant Enforcement & Diagnostic Feedback**
+   - **Role:** Evaluates repository state returned by `Inspector` against command preconditions and domain invariants.
+   - **Invariant Enforcement:** Fatal preflight checks that assert conditions that must hold true. On violation, they return structured `domain.AppError` mapped to exit codes (e.g., `ExitPreconditionRepo`, `ExitConflict`):
+     - `InsideWorkTree(ctx, inspector, dir) (string, error)` (Exit Code 3)
+     - `NoActiveOperation(ctx, inspector, rootDir) error` (Exit Code 5)
+     - `NoOrphanedCommits(ctx, inspector, rootDir) error` (Exit Code 5)
+   - **Diagnostic Feedback:** Non-fatal checks that inspect state and output standardized guidance/warnings to `ui.UI`:
+     - `WarnDirtyWorktree(ui, wasDirty, prevBranch, newBranch)`
+     - `HintUpstreamSync(ctx, inspector, ui, rootDir, branch)`
+
+
 ---
 
 ## 5. Shared Domain Models

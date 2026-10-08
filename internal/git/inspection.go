@@ -21,16 +21,20 @@ func NewInspector(runner Runner) *Inspector {
 	return &Inspector{runner: runner}
 }
 
-// AssertWorkTree ensures the working directory is inside a valid Git work tree.
-func (i *Inspector) AssertWorkTree(ctx context.Context, dir string) (string, error) {
+// IsWorkTree reports whether the directory is inside a Git work tree.
+func (i *Inspector) IsWorkTree(ctx context.Context, dir string) bool {
 	out, err := i.runner.Run(ctx, dir, "rev-parse", "--is-inside-work-tree")
-	if err != nil || out != "true" {
-		return "", domain.NewError(domain.ExitPreconditionRepo, "Awh! This is not a git repository")
-	}
+	return err == nil && out == "true"
+}
 
+// RepoRoot returns the top-level directory path of the Git repository.
+func (i *Inspector) RepoRoot(ctx context.Context, dir string) (string, error) {
+	if !i.IsWorkTree(ctx, dir) {
+		return "", fmt.Errorf("not inside a git work tree")
+	}
 	root, err := i.runner.Run(ctx, dir, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return "", domain.WrapError(domain.ExitPreconditionRepo, err, "unable to determine repository root")
+		return "", fmt.Errorf("unable to determine repository root: %w", err)
 	}
 	return root, nil
 }
@@ -109,8 +113,8 @@ func (i *Inspector) HasCommits(ctx context.Context, dir string) bool {
 	return err == nil
 }
 
-// InProgressOperation checks if rebase, merge, cherry-pick, revert, or bisect is active.
-func (i *Inspector) InProgressOperation(ctx context.Context, rootDir string) (op string, active bool) {
+// ActiveOperation checks if rebase, merge, cherry-pick, revert, or bisect is active.
+func (i *Inspector) ActiveOperation(ctx context.Context, rootDir string) (op string, active bool) {
 	gitDir, err := i.runner.Run(ctx, rootDir, "rev-parse", "--git-dir")
 	if err != nil {
 		gitDir = filepath.Join(rootDir, ".git")
@@ -140,9 +144,9 @@ func (i *Inspector) InProgressOperation(ctx context.Context, rootDir string) (op
 	return "", false
 }
 
-// InFlightOperations is a compatibility wrapper for InProgressOperation.
+// InFlightOperations is a compatibility wrapper for ActiveOperation.
 func (i *Inspector) InFlightOperations(ctx context.Context, rootDir string) (rebaseActive bool, mergeActive bool) {
-	op, active := i.InProgressOperation(ctx, rootDir)
+	op, active := i.ActiveOperation(ctx, rootDir)
 	if !active {
 		return false, false
 	}
@@ -208,8 +212,8 @@ func (i *Inspector) IsDirty(ctx context.Context, dir string) (bool, error) {
 	return strings.TrimSpace(out) != "", nil
 }
 
-// ResolveDefaultBranch inspects repository references to determine the primary default branch ('master', 'main', or origin HEAD).
-func (i *Inspector) ResolveDefaultBranch(ctx context.Context, dir string) string {
+// DefaultBranch inspects repository references to determine the primary default branch ('master', 'main', or origin HEAD).
+func (i *Inspector) DefaultBranch(ctx context.Context, dir string) string {
 	localMaster, remoteMaster, _ := i.BranchExists(ctx, dir, "master")
 	if localMaster || remoteMaster {
 		return "master"

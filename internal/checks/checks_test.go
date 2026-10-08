@@ -48,7 +48,37 @@ func (m *mockRunner) RunWithEnv(ctx context.Context, dir string, extraEnv []stri
 	return m.Run(ctx, dir, args...)
 }
 
-func TestCheckInProgress(t *testing.T) {
+func TestInsideWorkTree(t *testing.T) {
+	t.Run("valid work tree returns root", func(t *testing.T) {
+		runner := &mockRunner{
+			responses: map[string]string{
+				"rev-parse --is-inside-work-tree": "true",
+				"rev-parse --show-toplevel":       "/repo/root",
+			},
+		}
+		inspector := git.NewInspector(runner)
+		root, err := checks.InsideWorkTree(context.Background(), inspector, "/repo/root/sub")
+		require.NoError(t, err)
+		assert.Equal(t, "/repo/root", root)
+	})
+
+	t.Run("outside work tree returns domain ExitPreconditionRepo error", func(t *testing.T) {
+		runner := &mockRunner{
+			responses: map[string]string{
+				"rev-parse --is-inside-work-tree": "false",
+			},
+		}
+		inspector := git.NewInspector(runner)
+		_, err := checks.InsideWorkTree(context.Background(), inspector, "/outside")
+		assert.Error(t, err)
+		var appErr *domain.AppError
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, domain.ExitPreconditionRepo, appErr.Code)
+		assert.Contains(t, appErr.Message, "Awh! This is not a git repository")
+	})
+}
+
+func TestNoActiveOperation(t *testing.T) {
 	tempDir := t.TempDir()
 	gitDir := filepath.Join(tempDir, ".git")
 	require.NoError(t, os.MkdirAll(gitDir, 0755))
@@ -61,13 +91,13 @@ func TestCheckInProgress(t *testing.T) {
 	inspector := git.NewInspector(runner)
 
 	// Clean state
-	err := checks.CheckInProgress(context.Background(), inspector, tempDir)
+	err := checks.NoActiveOperation(context.Background(), inspector, tempDir)
 	assert.NoError(t, err)
 
 	// In-progress cherry-pick
 	cherryPickHead := filepath.Join(gitDir, "CHERRY_PICK_HEAD")
 	require.NoError(t, os.WriteFile(cherryPickHead, []byte("commit-sha"), 0644))
-	err = checks.CheckInProgress(context.Background(), inspector, tempDir)
+	err = checks.NoActiveOperation(context.Background(), inspector, tempDir)
 	assert.Error(t, err)
 	var appErr *domain.AppError
 	require.True(t, errors.As(err, &appErr))
@@ -79,14 +109,14 @@ func TestCheckInProgress(t *testing.T) {
 	os.Remove(cherryPickHead)
 	mergeHead := filepath.Join(gitDir, "MERGE_HEAD")
 	require.NoError(t, os.WriteFile(mergeHead, []byte("commit-sha"), 0644))
-	err = checks.CheckInProgress(context.Background(), inspector, tempDir)
+	err = checks.NoActiveOperation(context.Background(), inspector, tempDir)
 	assert.Error(t, err)
 	require.True(t, errors.As(err, &appErr))
 	assert.Equal(t, domain.ExitConflict, appErr.Code)
 	assert.Contains(t, appErr.Message, "active merge")
 }
 
-func TestCheckDetachedHead(t *testing.T) {
+func TestNoOrphanedCommits(t *testing.T) {
 	t.Run("attached HEAD does not error", func(t *testing.T) {
 		runner := &mockRunner{
 			responses: map[string]string{
@@ -94,7 +124,7 @@ func TestCheckDetachedHead(t *testing.T) {
 			},
 		}
 		inspector := git.NewInspector(runner)
-		err := checks.CheckDetachedHead(context.Background(), inspector, "/repo")
+		err := checks.NoOrphanedCommits(context.Background(), inspector, "/repo")
 		assert.NoError(t, err)
 	})
 
@@ -108,7 +138,7 @@ func TestCheckDetachedHead(t *testing.T) {
 			},
 		}
 		inspector := git.NewInspector(runner)
-		err := checks.CheckDetachedHead(context.Background(), inspector, "/repo")
+		err := checks.NoOrphanedCommits(context.Background(), inspector, "/repo")
 		assert.NoError(t, err)
 	})
 
@@ -122,7 +152,7 @@ func TestCheckDetachedHead(t *testing.T) {
 			},
 		}
 		inspector := git.NewInspector(runner)
-		err := checks.CheckDetachedHead(context.Background(), inspector, "/repo")
+		err := checks.NoOrphanedCommits(context.Background(), inspector, "/repo")
 		assert.Error(t, err)
 		var appErr *domain.AppError
 		require.True(t, errors.As(err, &appErr))
@@ -132,27 +162,27 @@ func TestCheckDetachedHead(t *testing.T) {
 	})
 }
 
-func TestCheckDirtyWorktree(t *testing.T) {
+func TestWarnDirtyWorktree(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	u := ui.New(&stdout, &stderr, true, false, false)
 
 	// Switched branches with dirty files
-	checks.CheckDirtyWorktree(u, true, "feature/old", "feature/new")
+	checks.WarnDirtyWorktree(u, true, "feature/old", "feature/new")
 	assert.Contains(t, stderr.String(), "Warning: You have uncommitted local changes that were carried over to 'feature/new'.")
 	assert.Contains(t, stderr.String(), "Hint: If this was unintentional, run 'git-brx select feature/old'")
 
 	// Same branch: no warning
 	stderr.Reset()
-	checks.CheckDirtyWorktree(u, true, "master", "master")
+	checks.WarnDirtyWorktree(u, true, "master", "master")
 	assert.Empty(t, stderr.String())
 
 	// Clean worktree: no warning
 	stderr.Reset()
-	checks.CheckDirtyWorktree(u, false, "feature/old", "feature/new")
+	checks.WarnDirtyWorktree(u, false, "feature/old", "feature/new")
 	assert.Empty(t, stderr.String())
 }
 
-func TestCheckUpstreamSync(t *testing.T) {
+func TestHintUpstreamSync(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	u := ui.New(&stdout, &stderr, true, false, false)
 
@@ -165,6 +195,6 @@ func TestCheckUpstreamSync(t *testing.T) {
 	}
 	inspector := git.NewInspector(runner)
 
-	checks.CheckUpstreamSync(context.Background(), inspector, u, "/repo", "master")
+	checks.HintUpstreamSync(context.Background(), inspector, u, "/repo", "master")
 	assert.Contains(t, stderr.String(), "Hint: Your branch is behind 'origin/master' by 3 commit(s). Run 'git-brx sync' to update.")
 }

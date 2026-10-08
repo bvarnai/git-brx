@@ -19,8 +19,8 @@ func TestHarnessAndInspector(t *testing.T) {
 	inspector := git.NewInspector(runner)
 	ctx := context.Background()
 
-	// Assert Work Tree
-	root, err := inspector.AssertWorkTree(ctx, h.RepoDir)
+	// Repo Root Check
+	root, err := inspector.RepoRoot(ctx, h.RepoDir)
 	require.NoError(t, err)
 	assert.Equal(t, h.RepoDir, root)
 
@@ -36,8 +36,8 @@ func TestHarnessAndInspector(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, isShallow)
 
-	// In-flight operation check
-	rebase, merge := inspector.InFlightOperations(ctx, h.RepoDir)
-	assert.False(t, rebase)
-	assert.False(t, merge)
+	// Active operation check
+	op, active := inspector.ActiveOperation(ctx, h.RepoDir)
+	assert.False(t, active)
+	assert.Empty(t, op)
 }
