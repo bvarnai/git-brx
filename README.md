@@ -1,2 +1,3 @@
 # git-brx
-Minimalist branch lifecycle and upstream sync automation for Git.
+
+> A single-binary Git extension providing fast, opinionated automation for local branch lifecycles, upstream synchronization, and clean rebasing.

@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  # Mock API server simulating Atlassian Bitbucket Server and JIRA REST endpoints
+  mock-atlassian:
+    image: wiremock/wiremock:3.5.4
+    container_name: git-brx-mock-atlassian
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+    environment:
+      - JAVA_OPTS=-Xmx512m
+    command: ["--verbose"]
+
+  # Local Git remote server for manual push/pull/publish/delete testing
+  git-server:
+    image: rockstorm/git-server:2.40
+    container_name: git-brx-git-server
+    ports:
+      - "2222:22"
+    environment:
+      - GIT_SSH_KEY_DIR=/keys
+    volumes:
+      - git-repos:/git-server/repos
+
+volumes:
+  git-repos:
