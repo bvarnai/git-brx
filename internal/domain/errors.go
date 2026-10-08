@@ -37,8 +37,12 @@ func (e *AppError) Unwrap() error {
 }
 
 // WithHint sets an actionable hint on the error.
-func (e *AppError) WithHint(hint string) *AppError {
-	e.Hint = hint
+func (e *AppError) WithHint(format string, args ...any) *AppError {
+	if len(args) == 0 {
+		e.Hint = format
+	} else {
+		e.Hint = fmt.Sprintf(format, args...)
+	}
 	return e
 }
 

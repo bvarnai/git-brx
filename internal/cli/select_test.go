@@ -29,7 +29,18 @@ func (m *mockGitRunner) Run(ctx context.Context, dir string, args ...string) (st
 	if resp, ok := m.responses[key]; ok {
 		return resp.out, resp.err
 	}
-	return "", errors.New("command not mocked: " + key)
+	switch key {
+	case "symbolic-ref -q HEAD":
+		return "refs/heads/master", nil
+	case "symbolic-ref --short -q HEAD":
+		return "master", nil
+	case "status --porcelain":
+		return "", nil
+	case "for-each-ref --format=%(refname:short) refs/heads refs/remotes/origin":
+		return "", nil
+	default:
+		return "", errors.New("command not mocked: " + key)
+	}
 }
 
 func (m *mockGitRunner) RunLines(ctx context.Context, dir string, args ...string) ([]string, error) {

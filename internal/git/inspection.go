@@ -109,8 +109,8 @@ func (i *Inspector) HasCommits(ctx context.Context, dir string) bool {
 	return err == nil
 }
 
-// InFlightOperations checks if rebase or merge is currently in progress.
-func (i *Inspector) InFlightOperations(ctx context.Context, rootDir string) (rebaseActive bool, mergeActive bool) {
+// InProgressOperation checks if rebase, merge, cherry-pick, revert, or bisect is active.
+func (i *Inspector) InProgressOperation(ctx context.Context, rootDir string) (op string, active bool) {
 	gitDir, err := i.runner.Run(ctx, rootDir, "rev-parse", "--git-dir")
 	if err != nil {
 		gitDir = filepath.Join(rootDir, ".git")
@@ -118,14 +118,35 @@ func (i *Inspector) InFlightOperations(ctx context.Context, rootDir string) (reb
 		gitDir = filepath.Join(rootDir, gitDir)
 	}
 
-	_, rebaseMergeErr := os.Stat(filepath.Join(gitDir, "rebase-merge"))
-	_, rebaseApplyErr := os.Stat(filepath.Join(gitDir, "rebase-apply"))
-	rebaseActive = rebaseMergeErr == nil || rebaseApplyErr == nil
+	if _, err := os.Stat(filepath.Join(gitDir, "rebase-merge")); err == nil {
+		return "rebase", true
+	}
+	if _, err := os.Stat(filepath.Join(gitDir, "rebase-apply")); err == nil {
+		return "rebase", true
+	}
+	if _, err := os.Stat(filepath.Join(gitDir, "MERGE_HEAD")); err == nil {
+		return "merge", true
+	}
+	if _, err := os.Stat(filepath.Join(gitDir, "CHERRY_PICK_HEAD")); err == nil {
+		return "cherry-pick", true
+	}
+	if _, err := os.Stat(filepath.Join(gitDir, "REVERT_HEAD")); err == nil {
+		return "revert", true
+	}
+	if _, err := os.Stat(filepath.Join(gitDir, "BISECT_LOG")); err == nil {
+		return "bisect", true
+	}
 
-	_, mergeErr := os.Stat(filepath.Join(gitDir, "MERGE_HEAD"))
-	mergeActive = mergeErr == nil
+	return "", false
+}
 
-	return rebaseActive, mergeActive
+// InFlightOperations is a compatibility wrapper for InProgressOperation.
+func (i *Inspector) InFlightOperations(ctx context.Context, rootDir string) (rebaseActive bool, mergeActive bool) {
+	op, active := i.InProgressOperation(ctx, rootDir)
+	if !active {
+		return false, false
+	}
+	return op == "rebase", op == "merge"
 }
 
 // ComputeDelta calculates ahead and behind commit counts between a local ref and its upstream.
@@ -161,4 +182,84 @@ func (i *Inspector) BranchExists(ctx context.Context, dir, branch string) (local
 
 	return localExists, remoteExists, nil
 }
+
+// HasOrphanedCommits checks if HEAD is detached and contains commits not reachable from any local or remote branch.
+func (i *Inspector) HasOrphanedCommits(ctx context.Context, dir string) (bool, error) {
+	// If HEAD is attached to a branch, switching away cannot orphan commits.
+	_, err := i.runner.Run(ctx, dir, "symbolic-ref", "-q", "HEAD")
+	if err == nil {
+		return false, nil
+	}
+
+	// Detached HEAD: check for commits reachable from HEAD but not from any branch or remote.
+	out, err := i.runner.Run(ctx, dir, "rev-list", "-n", "1", "HEAD", "--not", "--branches", "--remotes")
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) != "", nil
+}
+
+// IsDirty returns true if the working directory or staging index contains uncommitted changes.
+func (i *Inspector) IsDirty(ctx context.Context, dir string) (bool, error) {
+	out, err := i.runner.Run(ctx, dir, "status", "--porcelain")
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) != "", nil
+}
+
+// ResolveDefaultBranch inspects repository references to determine the primary default branch ('master', 'main', or origin HEAD).
+func (i *Inspector) ResolveDefaultBranch(ctx context.Context, dir string) string {
+	localMaster, remoteMaster, _ := i.BranchExists(ctx, dir, "master")
+	if localMaster || remoteMaster {
+		return "master"
+	}
+
+	localMain, remoteMain, _ := i.BranchExists(ctx, dir, "main")
+	if localMain || remoteMain {
+		return "main"
+	}
+
+	out, err := i.runner.Run(ctx, dir, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+	if err == nil {
+		trimmed := strings.TrimSpace(out)
+		parts := strings.SplitN(trimmed, "/", 2)
+		if len(parts) == 2 && parts[1] != "" {
+			return parts[1]
+		}
+	}
+
+	return "master"
+}
+
+// ListAllBranchNames returns all deduplicated local and remote branch names.
+func (i *Inspector) ListAllBranchNames(ctx context.Context, dir string) ([]string, error) {
+	lines, err := i.runner.RunLines(ctx, dir, "for-each-ref", "--format=%(refname:short)", "refs/heads", "refs/remotes/origin")
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]bool)
+	var names []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasSuffix(trimmed, "/HEAD") {
+			continue
+		}
+		// Strip remote prefix if present: "origin/foo" -> "foo"
+		name := trimmed
+		if strings.HasPrefix(trimmed, "origin/") {
+			name = strings.TrimPrefix(trimmed, "origin/")
+		}
+
+		if !seen[name] {
+			seen[name] = true
+			names = append(names, name)
+		}
+	}
+
+	return names, nil
+}
+
 

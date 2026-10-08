@@ -4,14 +4,15 @@ import (
 	"context"
 	"strings"
 
+	"github.com/bvarnai/git-brx/internal/checks"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/suggest"
 	"github.com/spf13/cobra"
 )
 
 // SelectOptions stores flags for the select command.
 type SelectOptions struct {
 	Offline bool
-	NoFetch bool
 }
 
 // newSelectCmd constructs the 'select' subcommand.
@@ -30,7 +31,6 @@ from origin before switching.`,
 	}
 
 	cmd.Flags().BoolVarP(&opts.Offline, "offline", "o", false, "Skip remote fetch and switch between existing local references only")
-	cmd.Flags().BoolVar(&opts.NoFetch, "no-fetch", false, "Do not trigger remote synchronization before checkout")
 
 	return cmd
 }
@@ -50,20 +50,44 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 		return err
 	}
 
-	rebaseActive, mergeActive := a.Inspector.InFlightOperations(ctx, rootDir)
-	if rebaseActive || mergeActive {
-		return domain.NewError(domain.ExitConflict, "Cannot switch branches during an active merge/rebase")
+	// Preflight checks: ensure no in-progress operations and detached HEAD won't orphan commits
+	if err := checks.CheckInProgress(ctx, a.Inspector, rootDir); err != nil {
+		return err
+	}
+	if err := checks.CheckDetachedHead(ctx, a.Inspector, rootDir); err != nil {
+		return err
 	}
 
-	targetBranch := "master"
+	// Capture state before switching
+	wasDirty, _ := a.Inspector.IsDirty(ctx, rootDir)
+	prevBranch := ""
+	if curr, err := a.Inspector.CurrentBranch(ctx, rootDir); err == nil && !curr.IsDetached {
+		prevBranch = curr.Name
+	}
+
+	// Resolve target branch
+	targetBranch := ""
 	if len(args) == 1 && args[0] != "" {
 		targetBranch = args[0]
 	} else {
-		a.UI.Log("Selecting 'master' branch by default")
+		targetBranch = a.Inspector.ResolveDefaultBranch(ctx, rootDir)
+		a.UI.Log("Selecting '%s' branch by default", targetBranch)
+	}
+
+	// Handle case where user is already on the target branch
+	if prevBranch != "" && prevBranch == targetBranch {
+		if !opts.Offline {
+			if hasOrigin, _, _ := a.Inspector.HasOrigin(ctx, rootDir); hasOrigin {
+				_ = a.Operations.Fetch(ctx, rootDir, "origin")
+			}
+		}
+		a.UI.Log("Already on '%s'", targetBranch)
+		checks.CheckUpstreamSync(ctx, a.Inspector, a.UI, rootDir, targetBranch)
+		return nil
 	}
 
 	// Remote synchronization (online mode)
-	if !opts.Offline && !opts.NoFetch {
+	if !opts.Offline {
 		hasOrigin, _, _ := a.Inspector.HasOrigin(ctx, rootDir)
 		if hasOrigin {
 			fetchErr := a.Operations.Fetch(ctx, rootDir, "origin")
@@ -83,14 +107,14 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 	// Dry run mode
 	if a.Opts.DryRun {
 		if !localExists && !remoteExists {
-			return domain.NewError(domain.ExitPreconditionRepo, "Branch '%s' not found", targetBranch)
+			return a.branchNotFoundError(ctx, rootDir, targetBranch)
 		}
 		a.UI.Log("Would checkout branch '%s'", targetBranch)
 		return nil
 	}
 
 	if !localExists && !remoteExists {
-		return domain.NewError(domain.ExitPreconditionRepo, "Branch '%s' not found", targetBranch)
+		return a.branchNotFoundError(ctx, rootDir, targetBranch)
 	}
 
 	checkoutErr := a.Operations.Checkout(ctx, rootDir, targetBranch)
@@ -102,5 +126,20 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 		return domain.WrapError(domain.ExitGeneralError, checkoutErr, "Select failed (git checkout %s failed)", targetBranch)
 	}
 
+	// Postflight check: warn if uncommitted changes were carried over to the new branch
+	checks.CheckDirtyWorktree(a.UI, wasDirty, prevBranch, targetBranch)
+
 	return nil
+}
+
+func (a *App) branchNotFoundError(ctx context.Context, rootDir, targetBranch string) error {
+	appErr := domain.NewError(domain.ExitPreconditionRepo, "Branch '%s' not found", targetBranch)
+	candidates, err := a.Inspector.ListAllBranchNames(ctx, rootDir)
+	if err == nil && len(candidates) > 0 {
+		closest := suggest.Closest(targetBranch, candidates, 3)
+		if closest != "" {
+			appErr.WithHint("Did you mean '%s'?", closest)
+		}
+	}
+	return appErr
 }
