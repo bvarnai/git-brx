@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/rest/api/2/issue/VSB-102(\\?.*)?"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id": "10002",
+      "key": "VSB-102",
+      "self": "http://localhost:8080/rest/api/2/issue/10002",
+      "fields": {
+        "summary": "Add interactive CLI menu support",
+        "issuetype": {
+          "id": "2",
+          "name": "Story",
+          "subtask": false
+        },
+        "status": {
+          "id": "1",
+          "name": "Open"
+        },
+        "assignee": {
+          "name": "asmith",
+          "displayName": "Alice Smith",
+          "active": true
+        },
+        "components": [
+          {
+            "id": "102",
+            "name": "VSB Command line/Scripting"
+          }
+        ]
+      }
+    }
+  }
+}

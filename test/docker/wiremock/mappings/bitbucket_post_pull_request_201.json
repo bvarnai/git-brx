@@ -1,0 +1,90 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "/rest/api/1.0/projects/VSB/repos/vsb-test/pull-requests",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.title"
+      },
+      {
+        "matchesJsonPath": "$.fromRef.id"
+      },
+      {
+        "matchesJsonPath": "$.toRef.id"
+      }
+    ]
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id": 42,
+      "version": 0,
+      "title": "issue/VSB-101",
+      "description": "# Developer checklist\n- [x] Verified locally",
+      "state": "OPEN",
+      "open": true,
+      "closed": false,
+      "createdDate": 1728380000000,
+      "updatedDate": 1728380000000,
+      "fromRef": {
+        "id": "refs/heads/issue/VSB-101",
+        "displayId": "issue/VSB-101",
+        "latestCommit": "abcdef1234567890abcdef1234567890abcdef12",
+        "repository": {
+          "slug": "vsb-test",
+          "name": "vsb-test",
+          "project": {
+            "key": "VSB"
+          }
+        }
+      },
+      "toRef": {
+        "id": "refs/heads/master",
+        "displayId": "master",
+        "latestCommit": "123456abcdef123456abcdef123456abcdef1234",
+        "repository": {
+          "slug": "vsb-test",
+          "name": "vsb-test",
+          "project": {
+            "key": "VSB"
+          }
+        }
+      },
+      "locked": false,
+      "author": {
+        "user": {
+          "name": "jdoe",
+          "emailAddress": "jdoe@example.com",
+          "displayName": "John Doe",
+          "active": true
+        },
+        "role": "AUTHOR",
+        "approved": false,
+        "status": "UNAPPROVED"
+      },
+      "reviewers": [
+        {
+          "user": {
+            "name": "zkrajovs",
+            "displayName": "Zdenek Krajovsky",
+            "active": true
+          },
+          "role": "REVIEWER",
+          "approved": false,
+          "status": "UNAPPROVED"
+        }
+      ],
+      "participants": [],
+      "links": {
+        "self": [
+          {
+            "href": "http://localhost:8080/projects/VSB/repos/vsb-test/pull-requests/42"
+          }
+        ]
+      }
+    }
+  }
+}

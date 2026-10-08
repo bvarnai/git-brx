@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:atlassian:jira-server:7.6.1:issue",
+  "title": "JiraIssueBean",
+  "description": "Official Jira Server 7.6.1 Issue schema extracted from official Atlassian WADL XML CDATA",
+  "source": {
+    "product": "Jira Server",
+    "version": "7.6.1",
+    "extractedFrom": "official_wadl_xml_cdata",
+    "wadlUrl": "https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/jira-rest-plugin.wadl",
+    "docUrl": "https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/#api/2/issue-getIssue",
+    "resourcePath": "/rest/api/2/issue/{issueIdOrKey}",
+    "method": "GET",
+    "responseStatus": 200,
+    "modelName": "IssueBean",
+    "extractionNotes": "Embedded as raw JSON Schema inside the CDATA block of response/representation/doc/pre/code at line 884 of the official WADL XML"
+  },
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+-[1-9][0-9]*$"
+    },
+    "self": {
+      "type": "string",
+      "format": "uri"
+    },
+    "expand": {
+      "type": "string"
+    },
+    "fields": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "description": {
+          "type": ["string", "null"]
+        },
+        "issuetype": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "subtask": { "type": "boolean" }
+          },
+          "required": ["name"]
+        },
+        "status": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" }
+          },
+          "required": ["name"]
+        },
+        "assignee": {
+          "type": ["object", "null"],
+          "properties": {
+            "name": { "type": "string" },
+            "displayName": { "type": "string" },
+            "active": { "type": "boolean" }
+          },
+          "required": ["name", "displayName"]
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" }
+            },
+            "required": ["name"]
+          }
+        }
+      },
+      "required": ["summary", "issuetype", "status"]
+    }
+  },
+  "required": ["id", "key", "self", "fields"]
+}

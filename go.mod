@@ -3,6 +3,7 @@ module github.com/bvarnai/git-brx
 go 1.26.5
 
 require (
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.10.0
 )

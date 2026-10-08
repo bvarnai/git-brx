@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/rest/api/2/issue/VSB-401(\\?.*)?"
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "errorMessages": [
+        "You are not authenticated. Authentication required to perform this operation."
+      ],
+      "errors": {}
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:atlassian:bitbucket-server:6.1.3:errors",
+  "title": "BitbucketRestErrors",
+  "description": "Bitbucket Server 6.1.3 Error response schema extracted from official Atlassian HTML documentation",
+  "source": {
+    "product": "Bitbucket Server",
+    "version": "6.1.3",
+    "extractedFrom": "official_html_reference_contract",
+    "docUrl": "https://docs.atlassian.com/bitbucket-server/rest/6.1.3/bitbucket-rest.html#errors-and-validation",
+    "resourcePath": "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests",
+    "responseStatus": 409,
+    "modelName": "RestErrors",
+    "extractionNotes": "Extracted from official Atlassian HTML REST reference documentation at anchor #errors-and-validation (response error examples for 400, 401, 404, 409)"
+  },
+  "type": "object",
+  "properties": {
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "context": {},
+          "message": { "type": "string" },
+          "exceptionName": {}
+        },
+        "required": ["message"]
+      }
+    }
+  },
+  "required": ["errors"]
+}

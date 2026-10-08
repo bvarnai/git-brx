@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:atlassian:jira-server:7.6.1:error-collection",
+  "title": "JiraErrorCollection",
+  "description": "Official Jira Server 7.6.1 ErrorCollection schema extracted from official Atlassian WADL XML CDATA",
+  "source": {
+    "product": "Jira Server",
+    "version": "7.6.1",
+    "extractedFrom": "official_wadl_xml_cdata",
+    "wadlUrl": "https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/jira-rest-plugin.wadl",
+    "docUrl": "https://docs.atlassian.com/software/jira/docs/api/REST/7.6.1/#api/2/issue-getIssue",
+    "resourcePath": "/rest/api/2/issue/{issueIdOrKey}",
+    "responseStatus": 404,
+    "modelName": "ErrorCollection",
+    "extractionNotes": "Derived from ErrorCollection response representation in official WADL XML"
+  },
+  "type": "object",
+  "properties": {
+    "errorMessages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "errors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["errorMessages", "errors"],
+  "additionalProperties": false
+}

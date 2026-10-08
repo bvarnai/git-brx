@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:atlassian:bitbucket-server:6.1.3:pull-request",
+  "title": "BitbucketRestPullRequest",
+  "description": "Bitbucket Server 6.1.3 Pull Request response schema extracted from official Atlassian HTML documentation",
+  "source": {
+    "product": "Bitbucket Server",
+    "version": "6.1.3",
+    "extractedFrom": "official_html_reference_contract",
+    "docUrl": "https://docs.atlassian.com/bitbucket-server/rest/6.1.3/bitbucket-rest.html#idp252",
+    "resourcePath": "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests",
+    "method": "POST",
+    "responseStatus": 201,
+    "modelName": "RestPullRequest",
+    "extractionNotes": "Extracted from the official Atlassian HTML REST reference documentation at anchor #idp252 (POST pull-requests 201 response example and field descriptor tables)"
+  },
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["OPEN", "DECLINED", "MERGED"]
+    },
+    "open": {
+      "type": "boolean"
+    },
+    "closed": {
+      "type": "boolean"
+    },
+    "createdDate": {
+      "type": "integer"
+    },
+    "updatedDate": {
+      "type": "integer"
+    },
+    "fromRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^refs/heads/.+"
+        },
+        "displayId": { "type": "string" },
+        "latestCommit": { "type": "string" },
+        "repository": {
+          "type": "object",
+          "properties": {
+            "slug": { "type": "string" },
+            "name": { "type": ["string", "null"] },
+            "project": {
+              "type": "object",
+              "properties": {
+                "key": { "type": "string" }
+              },
+              "required": ["key"]
+            }
+          },
+          "required": ["slug", "project"]
+        }
+      },
+      "required": ["id", "repository"]
+    },
+    "toRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^refs/heads/.+"
+        },
+        "displayId": { "type": "string" },
+        "latestCommit": { "type": "string" },
+        "repository": {
+          "type": "object",
+          "properties": {
+            "slug": { "type": "string" },
+            "project": {
+              "type": "object",
+              "properties": {
+                "key": { "type": "string" }
+              },
+              "required": ["key"]
+            }
+          },
+          "required": ["slug", "project"]
+        }
+      },
+      "required": ["id"]
+    },
+    "locked": {
+      "type": "boolean"
+    },
+    "author": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" }
+          },
+          "required": ["name"]
+        }
+      }
+    },
+    "reviewers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" }
+            },
+            "required": ["name"]
+          },
+          "role": { "type": "string" },
+          "approved": { "type": "boolean" },
+          "status": { "type": "string" }
+        },
+        "required": ["user"]
+      }
+    },
+    "links": {
+      "type": "object",
+      "properties": {
+        "self": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "href": { "type": "string" }
+            },
+            "required": ["href"]
+          }
+        }
+      },
+      "required": ["self"]
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "title",
+    "state",
+    "open",
+    "closed",
+    "fromRef",
+    "toRef",
+    "reviewers",
+    "links"
+  ]
+}

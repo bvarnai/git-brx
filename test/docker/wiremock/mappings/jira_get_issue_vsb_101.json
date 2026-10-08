@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/rest/api/2/issue/VSB-101(\\?.*)?"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id": "10001",
+      "key": "VSB-101",
+      "self": "http://localhost:8080/rest/api/2/issue/10001",
+      "fields": {
+        "summary": "Fix memory leak in parser",
+        "issuetype": {
+          "id": "1",
+          "name": "Bug",
+          "subtask": false
+        },
+        "status": {
+          "id": "1",
+          "name": "Open"
+        },
+        "assignee": {
+          "name": "jdoe",
+          "displayName": "John Doe",
+          "active": true
+        },
+        "components": [
+          {
+            "id": "101",
+            "name": "VSB Base framework"
+          }
+        ]
+      }
+    }
+  }
+}
