@@ -150,3 +150,15 @@ func (i *Inspector) ComputeDelta(ctx context.Context, dir string, localRef, remo
 		BehindCount:  behind,
 	}, nil
 }
+
+// BranchExists checks if a branch exists locally in refs/heads or remotely in refs/remotes/origin.
+func (i *Inspector) BranchExists(ctx context.Context, dir, branch string) (localExists, remoteExists bool, err error) {
+	_, localErr := i.runner.Run(ctx, dir, "show-ref", "--verify", "--quiet", "refs/heads/"+branch)
+	localExists = localErr == nil
+
+	_, remoteErr := i.runner.Run(ctx, dir, "show-ref", "--verify", "--quiet", "refs/remotes/origin/"+branch)
+	remoteExists = remoteErr == nil
+
+	return localExists, remoteExists, nil
+}
+

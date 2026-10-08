@@ -21,6 +21,7 @@ const (
 type AppError struct {
 	Code    ExitCode
 	Message string
+	Hint    string
 	Err     error
 }
 
@@ -33,6 +34,12 @@ func (e *AppError) Error() string {
 
 func (e *AppError) Unwrap() error {
 	return e.Err
+}
+
+// WithHint sets an actionable hint on the error.
+func (e *AppError) WithHint(hint string) *AppError {
+	e.Hint = hint
+	return e
 }
 
 // NewError creates a new AppError with an exit code and formatted message.
