@@ -1,0 +1,36 @@
+{
+  "jira": {
+    "projectkey": "VSB",
+    "uri": "https://ies-iesd-jira.ies.mentorg.com"
+  },
+  "bitbucket": {
+    "projectkey": "VSB",
+    "repokey": "vsb-test",
+    "uri": "http://ies-iesd-bitbucket.ies.mentorg.com",
+    "branch": {
+      "template": "^(issue|feature|epic)/(${projectkey}|VPP-[1-9][0-9]*)\\$",
+      "mapping": {
+          "Bug": "issue",
+          "Tech Dept": "issue",
+          "Story": "feature",
+          "Epic": "epic",
+          "Improvement Idea": "issue",
+          "Other Task": "issue"
+      }
+    },
+    "review": {
+      "mapping": {
+        "VSB Base framework": "zkrajovs",
+        "VSB BIRT reporting": "rjelinek",
+        "VSB BSW Related Editors": "atnemeth,zkrajovs",
+        "VSB Command line/Scripting": "rjelinek",
+        "VSB ECU Configuration Generator": "rjelinek,zkrajovs",
+        "VSB Export/Import/Postbuild locator": "rjelinek",
+        "VSB SWC/System related editors": "atnemeth,tgitting",
+        "VSC": "rjelinek",
+        "VSB UI Test": "bdavid",
+        "default": "rjelinek"
+      }
+    }
+  }
+}

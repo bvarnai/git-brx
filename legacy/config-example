@@ -1,0 +1,22 @@
+[alias]
+	# Get me the branch name now!
+	branch-name = !f() { ( . ../tools/branch/name.sh $@ ); }; f"
+	branch-history = "!f() { ( . ../tools/branch/history.sh $@ ); }; f"
+	# Oh no, the push has been rejected! Somebody has been touching my branch!
+	branch-update = "!f() { ( . ../tools/branch/update.sh $@ ); }; f"
+	# Get me to master quickly!
+	branch-select = "!f() { ( . ../tools/branch/select.sh $@ ); }; f"
+	# I want my branch to reflect the latest changes from master!
+	branch-sync = "!f() { ( . ../tools/branch/sync.sh $@ ); }; f"
+	# I don’t care about the current working changes, just give me the latest state from origin!
+	branch-reset = "!f() { ( . ../tools/branch/reset.sh $@ ); }; f"
+	# Damn, I tried to rebase, but wild conflicts appeared! I'm feeling lucky!
+	branch-resolve = "!f() { ( . ../tools/branch/resolve.sh $@ ); }; f"
+	# Let’s create a branch!
+	branch-create = "!f() { ( . ../tools/branch/create.sh $@ ); }; f"
+	# I had enough!
+	branch-delete = "!f() { ( . ../tools/branch/delete.sh $@ ); }; f"
+	# Ok, ready to push!
+	branch-publish = "!f() { ( . ../tools/branch/publish.sh $@ ); }; f"
+	# Open the create pull request page with source branch set to the current branch
+	branch-review = "!f() { ( . ../tools/branch/review.sh $@ ); }; f"
