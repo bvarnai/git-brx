@@ -256,5 +256,3 @@ func (i *Inspector) ListAllBranchNames(ctx context.Context, dir string) ([]strin
 
 	return names, nil
 }
-
-
