@@ -5,7 +5,6 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/git"
-	"github.com/bvarnai/git-brx/internal/ui"
 )
 
 // InsideWorkTree ensures the directory is inside a valid Git work tree and returns its root path.
@@ -48,25 +47,4 @@ func NoOrphanedCommits(ctx context.Context, inspector *git.Inspector, rootDir st
 			WithHint("Save your work into a branch first: 'git branch <branch-name>'")
 	}
 	return nil
-}
-
-// WarnDirtyWorktree warns if uncommitted local modifications were carried over between branches.
-func WarnDirtyWorktree(u *ui.UI, wasDirty bool, prevBranch, newBranch string) {
-	if wasDirty && prevBranch != "" && newBranch != "" && prevBranch != newBranch {
-		u.Warn("You have uncommitted local changes that were carried over to '%s'.", newBranch)
-		u.Hint("If this was unintentional, run 'git-brx select %s' and commit or stash first.", prevBranch)
-	}
-}
-
-// HintUpstreamSync provides a hint if the current branch is behind its remote tracking branch.
-func HintUpstreamSync(ctx context.Context, inspector *git.Inspector, u *ui.UI, rootDir, branch string) {
-	_, remoteExists, _ := inspector.BranchExists(ctx, rootDir, branch)
-	if !remoteExists {
-		return
-	}
-
-	delta, err := inspector.ComputeDelta(ctx, rootDir, branch, "origin/"+branch)
-	if err == nil && delta != nil && delta.BehindCount > 0 {
-		u.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx sync' to update.", branch, delta.BehindCount)
-	}
 }

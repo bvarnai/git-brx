@@ -82,7 +82,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 			}
 		}
 		a.UI.Log("Already on '%s'", targetBranch)
-		checks.HintUpstreamSync(ctx, a.Inspector, a.UI, rootDir, targetBranch)
+		a.hintUpstreamSync(ctx, rootDir, targetBranch)
 		return nil
 	}
 
@@ -127,9 +127,28 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 	}
 
 	// Postflight feedback: warn if uncommitted changes were carried over to the new branch
-	checks.WarnDirtyWorktree(a.UI, wasDirty, prevBranch, targetBranch)
+	a.warnDirtyWorktree(wasDirty, prevBranch, targetBranch)
 
 	return nil
+}
+
+func (a *App) warnDirtyWorktree(wasDirty bool, prevBranch, newBranch string) {
+	if wasDirty && prevBranch != "" && newBranch != "" && prevBranch != newBranch {
+		a.UI.Warn("You have uncommitted local changes that were carried over to '%s'.", newBranch)
+		a.UI.Hint("If this was unintentional, run 'git-brx select %s' and commit or stash first.", prevBranch)
+	}
+}
+
+func (a *App) hintUpstreamSync(ctx context.Context, rootDir, branch string) {
+	_, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, branch)
+	if !remoteExists {
+		return
+	}
+
+	delta, err := a.Inspector.ComputeDelta(ctx, rootDir, branch, "origin/"+branch)
+	if err == nil && delta != nil && delta.BehindCount > 0 {
+		a.UI.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx sync' to update.", branch, delta.BehindCount)
+	}
 }
 
 func (a *App) branchNotFoundError(ctx context.Context, rootDir, targetBranch string) error {

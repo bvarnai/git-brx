@@ -170,16 +170,14 @@ To maintain strict boundary separation, testability, and clean diagnostics acros
    - **Boundary Constraint:** Has zero knowledge of UI formatting, terminal styles, exit codes, or domain `AppError`. It never logs to stderr or stdout. Errors returned are standard Go errors indicating Git subprocess execution failures.
    - **Naming Convention:** Direct attribute/query signatures (e.g., `IsWorkTree`, `RepoRoot`, `ActiveOperation`, `DefaultBranch`, `BranchDelta`).
 
-2. **Preflight Checks Engine (`internal/checks`): Invariant Enforcement & Diagnostic Feedback**
+2. **Preflight Checks Engine (`internal/checks`): Invariant Enforcement**
    - **Role:** Evaluates repository state returned by `Inspector` against command preconditions and domain invariants.
-   - **Invariant Enforcement:** Fatal preflight checks that assert conditions that must hold true. On violation, they return structured `domain.AppError` mapped to exit codes (e.g., `ExitPreconditionRepo`, `ExitConflict`):
+   - **Responsibility:** Fatal preflight checks that assert conditions that must hold true before a command proceeds.
+   - **Boundary Constraint:** Pure rule validation; has no UI dependencies. On violation, returns structured `domain.AppError` mapped to specific application exit codes:
      - `InsideWorkTree(ctx, inspector, dir) (string, error)` (Exit Code 3)
      - `NoActiveOperation(ctx, inspector, rootDir) error` (Exit Code 5)
      - `NoOrphanedCommits(ctx, inspector, rootDir) error` (Exit Code 5)
-   - **Diagnostic Feedback:** Non-fatal checks that inspect state and output standardized guidance/warnings to `ui.UI`:
-     - `WarnDirtyWorktree(ui, wasDirty, prevBranch, newBranch)`
-     - `HintUpstreamSync(ctx, inspector, ui, rootDir, branch)`
-
+   - **Command-Specific UX Notices:** Non-fatal UX guidance and warnings (e.g., behind upstream sync hints or dirty tree carryover warnings) are presented by CLI command handlers using `ui.UI`.
 
 ---
 

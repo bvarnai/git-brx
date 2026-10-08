@@ -1,7 +1,6 @@
 package checks_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"github.com/bvarnai/git-brx/internal/checks"
 	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/git"
-	"github.com/bvarnai/git-brx/internal/ui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -160,41 +158,4 @@ func TestNoOrphanedCommits(t *testing.T) {
 		assert.Contains(t, appErr.Message, "detached HEAD with unreferenced commits")
 		assert.Contains(t, appErr.Hint, "Save your work into a branch first")
 	})
-}
-
-func TestWarnDirtyWorktree(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	u := ui.New(&stdout, &stderr, true, false, false)
-
-	// Switched branches with dirty files
-	checks.WarnDirtyWorktree(u, true, "feature/old", "feature/new")
-	assert.Contains(t, stderr.String(), "Warning: You have uncommitted local changes that were carried over to 'feature/new'.")
-	assert.Contains(t, stderr.String(), "Hint: If this was unintentional, run 'git-brx select feature/old'")
-
-	// Same branch: no warning
-	stderr.Reset()
-	checks.WarnDirtyWorktree(u, true, "master", "master")
-	assert.Empty(t, stderr.String())
-
-	// Clean worktree: no warning
-	stderr.Reset()
-	checks.WarnDirtyWorktree(u, false, "feature/old", "feature/new")
-	assert.Empty(t, stderr.String())
-}
-
-func TestHintUpstreamSync(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	u := ui.New(&stdout, &stderr, true, false, false)
-
-	runner := &mockRunner{
-		responses: map[string]string{
-			"show-ref --verify --quiet refs/heads/master":          "",
-			"show-ref --verify --quiet refs/remotes/origin/master": "",
-			"rev-list --left-right --count master...origin/master": "0\t3",
-		},
-	}
-	inspector := git.NewInspector(runner)
-
-	checks.HintUpstreamSync(context.Background(), inspector, u, "/repo", "master")
-	assert.Contains(t, stderr.String(), "Hint: Your branch is behind 'origin/master' by 3 commit(s). Run 'git-brx sync' to update.")
 }
