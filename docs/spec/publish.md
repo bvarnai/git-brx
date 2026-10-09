@@ -5,7 +5,7 @@
 - **Arguments:** None.
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
-  - Safety override: `--no-lease`: Push with standard fast-forward constraints instead of `--force-with-lease`.
+  - Safety override: `--no-force`: Push with standard fast-forward constraints without `--force-with-lease`.
 
 ## 2. Prerequisites & Environment
 - **Required host binaries:** `git` (>= 2.20.0).

@@ -38,6 +38,22 @@ func (o *Operations) CreateAndCheckout(ctx context.Context, dir, branch string) 
 	return err
 }
 
+// Push pushes commits for the given branch to remote with optional upstream tracking and leased force.
+func (o *Operations) Push(ctx context.Context, dir, remote, branch string, setUpstream, forceWithLease, dryRun bool) (string, error) {
+	args := []string{"push"}
+	if dryRun {
+		args = append(args, "--dry-run")
+	}
+	if setUpstream {
+		args = append(args, "--set-upstream")
+	}
+	args = append(args, remote, branch)
+	if forceWithLease {
+		args = append(args, "--force-with-lease")
+	}
+	return o.runner.Run(ctx, dir, args...)
+}
+
 // Rebase runs git rebase against the specified upstream ref.
 func (o *Operations) Rebase(ctx context.Context, dir, upstream string, autostash, interactive bool) error {
 	args := []string{"rebase"}
