@@ -57,9 +57,15 @@ This bypasses remote network calls and allows full offline productivity.
     git brx delete --force
     ```
 
-### 5. `! Authorization failure` / `HTTP 401 Unauthorized`
+### 5. `Error: Authorization failure` / `HTTP 401 Unauthorized`
 - **Cause:** Your personal access token has expired or is missing.
 - **Solution:**
   - For GitHub: update `GITHUB_TOKEN` or `GH_TOKEN` in your environment.
   - For Bitbucket / Jira: update `GIT_BRX_TOKEN` in your environment.
   - On Windows: if your credential manager stored expired passwords, search for **Credential Manager** in Windows Start, remove the stale entry for your Git host, and re-run the command.
+
+### 6. `fatal: '.../git-doc/git-brx.html': documentation file not found`
+- **Cause:** You ran `git brx --help`. Git's external command dispatcher intercepts `--help` on top-level plugins and searches Git's internal documentation folder for manpages or HTML files.
+- **Solution:**
+  - Run **`git brx help`** or **`git brx -h`**.
+  - For individual subcommands, `--help` works directly (e.g. `git brx create --help`, `git brx help sync`).
