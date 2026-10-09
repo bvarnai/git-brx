@@ -330,15 +330,23 @@ func (c *Client) handleErrorResponse(resp *http.Response, actionFormat string, a
 
 	var ghErr gitHubErrorResponse
 	_ = json.Unmarshal(body, &ghErr)
-	msg := ghErr.Message
+	msg := strings.TrimSpace(ghErr.Message)
 	if msg == "" {
-		msg = strings.TrimSpace(string(body))
+		bodyStr := strings.TrimSpace(string(body))
+		// If the response is HTML, don't dump raw HTML markup into terminal
+		if strings.HasPrefix(strings.ToLower(bodyStr), "<!doctype") || strings.HasPrefix(strings.ToLower(bodyStr), "<html") {
+			msg = fmt.Sprintf("HTTP %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+		} else if len(bodyStr) > 200 {
+			msg = bodyStr[:200] + "..."
+		} else {
+			msg = bodyStr
+		}
 	}
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return domain.NewError(domain.ExitAPIError, "GitHub authorization failed (%d): %s", resp.StatusCode, msg).
-			WithHint("Ensure GITHUB_TOKEN or GH_TOKEN is valid and has repository permissions")
+			WithHint("Ensure GITHUB_TOKEN or GH_TOKEN is set in your environment with 'pull_requests: write' scope")
 	case http.StatusNotFound:
 		err := domain.NewError(domain.ExitAPIError, "GitHub resource not found during %s: %s", action, msg)
 		if c.Token == "" {
