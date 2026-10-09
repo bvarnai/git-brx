@@ -46,6 +46,16 @@ func (h *Harness) Git(args ...string) string {
 	return string(out)
 }
 
+// GitAllowError executes a raw Git command allowing failure and returns output and error.
+func (h *Harness) GitAllowError(args ...string) (string, error) {
+	h.T.Helper()
+	cmd := exec.CommandContext(context.Background(), "git", args...)
+	cmd.Dir = h.RepoDir
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
 // CommitFile creates or updates a file in the repo and commits it.
 func (h *Harness) CommitFile(relPath, content, commitMsg string) {
 	h.T.Helper()

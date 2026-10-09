@@ -56,3 +56,27 @@ func (o *Operations) Merge(ctx context.Context, dir, upstream, message string) e
 	_, err := o.runner.Run(ctx, dir, args...)
 	return err
 }
+
+// AbortMerge runs git merge --abort.
+func (o *Operations) AbortMerge(ctx context.Context, dir string) error {
+	_, err := o.runner.Run(ctx, dir, "merge", "--abort")
+	return err
+}
+
+// AbortRebase runs git rebase --abort.
+func (o *Operations) AbortRebase(ctx context.Context, dir string) error {
+	_, err := o.runner.Run(ctx, dir, "rebase", "--abort")
+	return err
+}
+
+// ResetHard runs git reset --hard against the specified reference.
+func (o *Operations) ResetHard(ctx context.Context, dir, targetRef string) error {
+	_, err := o.runner.Run(ctx, dir, "reset", "--hard", targetRef)
+	return err
+}
+
+// Clean removes untracked files and directories via git clean -fd.
+func (o *Operations) Clean(ctx context.Context, dir string) error {
+	_, err := o.runner.Run(ctx, dir, "clean", "-fd")
+	return err
+}
