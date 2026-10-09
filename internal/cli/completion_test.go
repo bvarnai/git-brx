@@ -32,5 +32,5 @@ func TestCompletion_InvalidShell(t *testing.T) {
 
 	code := cli.Run(ctx, []string{"completion", "invalid-shell"}, &stdout, &stderr)
 	assert.Equal(t, int(domain.ExitUsageError), code)
-	assert.Contains(t, stderr.String(), "[git-brx] ! invalid argument \"invalid-shell\"")
+	assert.Contains(t, stderr.String(), "[git-brx] Error: invalid argument \"invalid-shell\"")
 }

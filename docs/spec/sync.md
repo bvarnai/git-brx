@@ -48,7 +48,7 @@
      git rev-list --left-right --count <with_branch>...origin/<with_branch>
      ```
    - If either `<ahead> != 0` or `<behind> != 0`:
-     - Log: `[git-brx] ! Sync branch '<with_branch>' is not up-to-date`
+     - Log: `[git-brx] Error: Sync branch '<with_branch>' is not up-to-date`
      - Log: `[git-brx] Hint: Switch to '<with_branch>' branch and use 'git-brx update' to update all changes`
      - Fail with Exit Code `5`.
 5. **Dry-Run Check:**
@@ -64,7 +64,7 @@
      ```
 7. **Conflict Interception:**
    - If rebase or merge fails due to conflicts:
-     - Log: `[git-brx] ! Sync failed due to merge conflicts`
+     - Log: `[git-brx] Error: Sync failed due to merge conflicts`
      - Log: `[git-brx] Hint: Use 'git-brx resolve' in case of merge conflicts or 'git-brx reset' to abort`
      - Exit with Exit Code `5`.
    - Otherwise, log success and exit with Exit Code `0`.
@@ -73,10 +73,10 @@
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | Branch successfully synchronized. | None (informational progress logged). | None. |
-| `2` | Conflicting strategy flags (`--merge` + `--rebase`) or rebase flags on merge. | `[git-brx] ! Multiple override sync strategies specified` | None. |
-| `3` | Shallow repository, detached HEAD, or unpermitted branch type. | `[git-brx] ! You are in a shallow repository` / `[git-brx] ! You must be on 'issue', 'feature' or 'epic' branch` | None. |
-| `4` | Fetch from origin failed. | `[git-brx] ! Sync failed (git fetch failed)` | None. |
-| `5` | In-flight rebase/merge active, base branch not up to date, or conflicts hit. | `[git-brx] ! Sync branch '<branch>' is not up-to-date` / `[git-brx] ! Sync failed due to merge conflicts` | Leave conflicted state for `git-brx resolve`. |
+| `2` | Conflicting strategy flags (`--merge` + `--rebase`) or rebase flags on merge. | `[git-brx] Error: Multiple override sync strategies specified` | None. |
+| `3` | Shallow repository, detached HEAD, or unpermitted branch type. | `[git-brx] Error: You are in a shallow repository` / `[git-brx] Error: You must be on 'issue', 'feature' or 'epic' branch` | None. |
+| `4` | Fetch from origin failed. | `[git-brx] Error: Sync failed (git fetch failed)` | None. |
+| `5` | In-flight rebase/merge active, base branch not up to date, or conflicts hit. | `[git-brx] Error: Sync branch '<branch>' is not up-to-date` / `[git-brx] Error: Sync failed due to merge conflicts` | Leave conflicted state for `git-brx resolve`. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Documentation vs Script Discrepancy on Branch Types:** The legacy User's Guide explicitly states in Section 6.8 that `release maintenance` and `master` branches are permitted to sync using the `merge` strategy. However, the legacy Bash script `sync.sh` hardcoded a strict guard:

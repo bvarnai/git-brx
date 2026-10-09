@@ -36,7 +36,7 @@
      ```
 
    - If not found:
-     - Log: `[git-brx] ! Reset failed: remote reference 'origin/<branch>' does not exist`
+     - Log: `[git-brx] Error: Reset failed: remote reference 'origin/<branch>' does not exist`
      - Log: `[git-brx] Hint: Your branch may not have been published yet. Use 'git-brx publish' to publish it`
      - Fail with Exit Code `4`.
 4. **Dry-Run Check:**
@@ -58,10 +58,10 @@
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | In-flight operations aborted and working copy reset to remote tip. | `[git-brx] Working tree successfully reset to 'origin/<branch>'` | None. |
-| `2` | Positional arguments or unknown flags supplied. | `[git-brx] ! Unexpected argument: <arg>` | None. |
-| `3` | Outside repository or detached HEAD. | `[git-brx] ! You are in detached HEAD state, this means you are not on any branch` | None. |
-| `4` | Origin missing or `origin/<branch>` does not exist. | `[git-brx] ! Reset failed: remote reference 'origin/<branch>' does not exist` | None. |
-| `5` | `git merge --abort` or `git rebase --abort` failed. | `[git-brx] ! Reset failed (git merge --abort failed)` | None. |
+| `2` | Positional arguments or unknown flags supplied. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
+| `3` | Outside repository or detached HEAD. | `[git-brx] Error: You are in detached HEAD state, this means you are not on any branch` | None. |
+| `4` | Origin missing or `origin/<branch>` does not exist. | `[git-brx] Error: Reset failed: remote reference 'origin/<branch>' does not exist` | None. |
+| `5` | `git merge --abort` or `git rebase --abort` failed. | `[git-brx] Error: Reset failed (git merge --abort failed)` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Untracked File Persistence:** Legacy documentation states that `reset` "discards current working changes," but `git reset --hard` leaves untracked local files untouched. The Go specification introduces the `--clean` flag to optionally remove untracked artifacts.

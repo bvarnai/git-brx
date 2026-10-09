@@ -25,7 +25,7 @@
 
 ## 3. Core Execution Flow
 1. **Repository Verification:** Run `git rev-parse --is-inside-work-tree`. If non-zero, fail with Exit Code `3`.
-2. **Commit Existence Check:** Verify HEAD points to an existing commit: `git rev-parse --verify -q HEAD`. If non-zero, output diagnostic note: `[git-brx] ! Repository has no commits yet` and exit with Exit Code `3`.
+2. **Commit Existence Check:** Verify HEAD points to an existing commit: `git rev-parse --verify -q HEAD`. If non-zero, output diagnostic note: `[git-brx] Error: Repository has no commits yet` and exit with Exit Code `3`.
 3. **Query Parameter Assembly:**
    - Base command: `git log --pretty=tformat:"%h %ad | %s%d [%an]" --graph --decorate --date=short`
    - Limit: If `--limit` > 0, append `--max-count=<N>`.
@@ -39,9 +39,9 @@
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | History graph rendered cleanly. | None. | None. |
-| `2` | Unknown flags or unexpected positional arguments passed. | `[git-brx] ! Unexpected argument: <arg>` | None. |
-| `3` | Outside Git repository or empty repository without commits. | `[git-brx] ! Awh! This is not a git repository` / `[git-brx] ! Repository has no commits yet` | None. |
-| `1` | Subprocess execution or pager pipe failure. | `[git-brx] ! Getting history failed (git log failed)` | None. |
+| `2` | Unknown flags or unexpected positional arguments passed. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
+| `3` | Outside Git repository or empty repository without commits. | `[git-brx] Error: Awh! This is not a git repository` / `[git-brx] Error: Repository has no commits yet` | None. |
+| `1` | Subprocess execution or pager pipe failure. | `[git-brx] Error: Getting history failed (git log failed)` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Empty / Unborn Repositories:** Legacy `history.sh` blindly executed `git log`, which fails abruptly with `fatal: your current branch 'master' does not have any commits yet` if invoked on a newly initialized repository before the first commit. Modern Go implementation explicitly checks for valid commits before attempting to format the log.

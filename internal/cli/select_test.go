@@ -85,7 +85,7 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 				"rev-parse --show-toplevel":       {out: "/repo"},
 			},
 			expectedCode: int(domain.ExitUsageError),
-			expectStderr: "[git-brx] ! Unexpected argument: branch-b",
+			expectStderr: "[git-brx] Error: Unexpected argument: branch-b",
 		},
 		{
 			name: "outside git repository returns precondition error",
@@ -94,7 +94,7 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {err: errors.New("fatal: not a git repo")},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			expectStderr: "[git-brx] ! Awh! This is not a git repository",
+			expectStderr: "[git-brx] Error: Awh! This is not a git repository",
 		},
 		{
 			name: "branch not found locally or remotely returns code 3",
@@ -107,7 +107,7 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/non-existent": {err: errors.New("not found")},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			expectStderr: "[git-brx] ! Branch 'non-existent' not found",
+			expectStderr: "[git-brx] Error: Branch 'non-existent' not found",
 		},
 		{
 			name: "dry run logs planned checkout without executing checkout",

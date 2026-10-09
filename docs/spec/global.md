@@ -45,7 +45,7 @@ The following flags must be accepted across the root binary and all subcommands:
   - **Structured Logging Prefixes:**
     - Informational / progress: `[git-brx] <message>`
     - Warnings: `[git-brx] Warning: <message>`
-    - Errors: `[git-brx] ! <message>`
+    - Errors: `[git-brx] Error: <message>`
     - Actionable hints: `[git-brx] Hint: <message>`
 - **Terminal Color Handling:**
   - **TTY Auto-Detection:** ANSI color sequences are enabled by default if and only if standard error is connected to an interactive terminal (`isatty`).

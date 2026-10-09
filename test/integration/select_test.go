@@ -104,7 +104,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "nonexistent-branch"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitPreconditionRemote), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Select failed (git fetch failed)")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Select failed (git fetch failed)")
 	})
 
 	t.Run("BranchNotFound", func(t *testing.T) {
@@ -115,7 +115,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "-o", "nonexistent"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Branch 'nonexistent' not found")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Branch 'nonexistent' not found")
 	})
 
 	t.Run("ActiveRebaseBlocksSelect", func(t *testing.T) {
@@ -128,7 +128,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "master"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Cannot switch branches during an active rebase")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Cannot switch branches during an active rebase")
 	})
 
 	t.Run("ActiveMergeBlocksSelect", func(t *testing.T) {
@@ -141,7 +141,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "master"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Cannot switch branches during an active merge")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Cannot switch branches during an active merge")
 	})
 
 	t.Run("DirtyWorkingTreeConflict", func(t *testing.T) {
@@ -160,7 +160,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "-o", "feature/dirty"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Select failed: local modifications would be overwritten by checkout")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Select failed: local modifications would be overwritten by checkout")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Commit or stash your changes before switching branches")
 	})
 
@@ -187,7 +187,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "arg1", "arg2"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitUsageError), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Unexpected argument: arg2")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Unexpected argument: arg2")
 	})
 
 	t.Run("AutoDetectMainDefault", func(t *testing.T) {
@@ -221,7 +221,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "-o", "master"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! You are on a detached HEAD with unreferenced commits")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: You are on a detached HEAD with unreferenced commits")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Save your work into a branch first: 'git branch <branch-name>'")
 	})
 
@@ -236,7 +236,7 @@ func TestSelectIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "-o", "master"}, &stdout, &stderr)
 		assert.Equal(t, int(domain.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Cannot switch branches during an active cherry-pick")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Cannot switch branches during an active cherry-pick")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Abort with 'git cherry-pick --abort'")
 
 		// Active revert
@@ -247,7 +247,7 @@ func TestSelectIntegration(t *testing.T) {
 		stderr.Reset()
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "-o", "master"}, &stdout, &stderr)
 		assert.Equal(t, int(domain.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Cannot switch branches during an active revert")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Cannot switch branches during an active revert")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Abort with 'git revert --abort'")
 	})
 
@@ -304,7 +304,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "-o", "featrue/login"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
-		assert.Contains(t, stderr.String(), "[git-brx] ! Branch 'featrue/login' not found")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Branch 'featrue/login' not found")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Did you mean 'feature/login'?")
 	})
 }

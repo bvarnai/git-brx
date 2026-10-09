@@ -55,7 +55,7 @@ git brx select issue/TASK-101
   ```
 - **Fuzzy typo suggestions:** Made a typo like `git brx select featrue/login`? `git-brx` computes Levenshtein distances:
   ```text
-  [git-brx] ! Branch 'featrue/login' not found
+  [git-brx] Error: Branch 'featrue/login' not found
   [git-brx] Hint: Did you mean 'feature/login'?
   ```
 - **Carried-over changes warning:** If you have uncommitted changes that Git carried over into the new branch, `git-brx` prominently warns you so you don't commit unrelated edits into the wrong branch.
@@ -101,7 +101,7 @@ In raw Git, developers often alternate dangerously between `git push` (which fai
 - If this is your first time publishing, it executes `git push --set-upstream origin <branch> --force-with-lease`.
 - If someone else pushed commits to your remote branch since you last fetched, `git brx publish` **rejects the push** and protects the remote work:
   ```text
-  [git-brx] ! Publish rejected: remote has newer commits
+  [git-brx] Error: Publish rejected: remote has newer commits
   [git-brx] Hint: Run 'git-brx update' to incorporate remote changes before publishing
   ```
 

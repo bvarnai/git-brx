@@ -36,7 +36,7 @@ git brx sync -r
 ### Precondition checks
 Before running a rebase or merge, `git brx sync` verifies that your local `master` is not diverged from `origin/master`. If your base branch is out-of-date, it halts immediately with guidance:
 ```text
-[git-brx] ! Sync branch 'master' is not up-to-date
+[git-brx] Error: Sync branch 'master' is not up-to-date
 [git-brx] Hint: Switch to 'master' branch and use 'git-brx update' to update all changes
 ```
 

@@ -36,5 +36,5 @@ func TestCliRunUnknownFlag(t *testing.T) {
 
 	code := cli.Run(ctx, []string{"--unknown-flag"}, &stdout, &stderr)
 	assert.Equal(t, int(domain.ExitUsageError), code)
-	assert.Contains(t, stderr.String(), "[git-brx] ! unknown flag: --unknown-flag")
+	assert.Contains(t, stderr.String(), "[git-brx] Error: unknown flag: --unknown-flag")
 }

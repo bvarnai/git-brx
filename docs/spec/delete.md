@@ -26,7 +26,7 @@
    - Validate branch type: Extract prefix before the first slash `/`.
      - Permitted prefixes: `issue`, `feature`, `epic`.
      - If `<current_branch>` is `master` or unrecognized:
-       Log `[git-brx] ! You must be on an 'issue', 'feature', or 'epic' branch to delete it` and fail with Exit Code `3`.
+       Log `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch to delete it` and fail with Exit Code `3`.
 2. **Remote Deletion Assertion (Safe Deletion Gate):**
    - Unless `--force` is active:
      - Check whether `<current_branch>` still exists on the remote:
@@ -34,16 +34,16 @@
        git ls-remote --heads origin <current_branch>
        ```
      - If command fails due to network outage:
-       Log `[git-brx] ! Unable to reach remote; are you offline?` and fail with Exit Code `4`.
+       Log `[git-brx] Error: Unable to reach remote; are you offline?` and fail with Exit Code `4`.
      - If ref output is non-empty (branch still exists on remote):
        - Log: `[git-brx] Branch '<current_branch>' found on remote origin`
        - **SCM-Aware Pull Request Diagnostic:**
          - Query configured SCM provider (`scm.GetPullRequestForBranch(ctx, branch)`).
          - If an active or merged pull request is discovered, provide tailored status context:
            - **Merged:** `[git-brx] Pull request is merged (<url>), but the remote branch has not been deleted yet.`
-           - **Open:** `[git-brx] ! Pull request is still open (<url>). Merge or close it before deleting.`
+           - **Open:** `[git-brx] Error: Pull request is still open (<url>). Merge or close it before deleting.`
            - **Closed:** `[git-brx] Pull request is closed without merge (<url>).`
-       - Log: `[git-brx] ! Branch must be deleted on remote first (e.g., after merging pull request)`
+       - Log: `[git-brx] Error: Branch must be deleted on remote first (e.g., after merging pull request)`
        - Log: `[git-brx] Hint: Use '--force' to bypass remote check if you intend to delete an unpublished branch`
        - Fail with Exit Code `3`.
 3. **Dry-Run Check:**
@@ -54,7 +54,7 @@
      git checkout master
      ```
    - If checkout fails (e.g., uncommitted local edits collide with `master`):
-     - Log: `[git-brx] ! Unable to switch to 'master' branch`
+     - Log: `[git-brx] Error: Unable to switch to 'master' branch`
      - Fail with Exit Code `5`.
 5. **Delete Local Branch:**
    - Force delete the local branch reference:
@@ -75,10 +75,10 @@
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | Switched to `master`, deleted local branch, and pruned origin. | `[git-brx] Deleted local branch '<branch>' and pruned origin` | None. |
-| `2` | Positional arguments or unknown flags supplied. | `[git-brx] ! Unexpected argument: <arg>` | None. |
-| `3` | On `master`, detached HEAD, or remote branch still exists on server. | `[git-brx] ! Branch must be deleted on remote first` | None. |
-| `4` | Remote unreachable during remote existence check. | `[git-brx] ! Unable to reach remote; are you offline?` | None. |
-| `5` | Switching to `master` failed or `git branch -D` failed. | `[git-brx] ! Unable to switch to 'master' branch` | None. |
+| `2` | Positional arguments or unknown flags supplied. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
+| `3` | On `master`, detached HEAD, or remote branch still exists on server. | `[git-brx] Error: Branch must be deleted on remote first` | None. |
+| `4` | Remote unreachable during remote existence check. | `[git-brx] Error: Unable to reach remote; are you offline?` | None. |
+| `5` | Switching to `master` failed or `git branch -D` failed. | `[git-brx] Error: Unable to switch to 'master' branch` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Typo in Legacy Error Message:** In `legacy/delete.sh` line 34:

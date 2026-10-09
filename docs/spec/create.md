@@ -21,7 +21,7 @@
 
 ## 3. Core Execution Flow
 1. **Argument & Repository Assertions:**
-   - Verify argument `<branch>` is provided. If missing, log `[git-brx] ! No branch name specified` and exit with Exit Code `2`.
+   - Verify argument `<branch>` is provided. If missing, log `[git-brx] Error: No branch name specified` and exit with Exit Code `2`.
    - Verify repository context: `git rev-parse --is-inside-work-tree`.
 2. **Local Branch Collision Check:**
    - Check if `<branch>` already exists locally:
@@ -38,7 +38,7 @@
        ```bash
        git ls-remote --heads origin <branch>
        ```
-     - If remote is unreachable, log `[git-brx] ! Unable to reach remote; try --offline if working without network access` and fail with Exit Code `4`.
+     - If remote is unreachable, log `[git-brx] Error: Unable to reach remote; try --offline if working without network access` and fail with Exit Code `4`.
      - If ref exists on remote:
        - Log: `[git-brx] Branch '<branch>' found (remote)`
        - Log: `[git-brx] Hint: To select this branch, use 'git-brx select <branch>' instead`
@@ -49,14 +49,14 @@
    - Match `<branch>` against the template. Extract:
      - `branchPath` (e.g., `issue`, `feature`, `epic`)
      - `issueKey` (e.g., `VSB-1234` or `#42` or `42`)
-   - If regex does not match, log `[git-brx] ! Branch name '<branch>' doesn't match pattern <pattern>` and exit with Exit Code `8`.
+   - If regex does not match, log `[git-brx] Error: Branch name '<branch>' doesn't match pattern <pattern>` and exit with Exit Code `8`.
 5. **Issue Tracker Validation (Online Mode):**
    - If `--offline` is NOT set:
      - Fetch issue details using the configured `IssueTracker` adapter (Jira REST, GitHub Issues, etc.).
      - If authorization fails: Fail with Exit Code `6` (`Authorization failure`).
      - If issue not found: Fail with Exit Code `6` (`Issue not found in issue tracker`).
      - Check issue type mapping: If `config.branch.mapping` has an entry for `issue.Type`, verify `mapping[issue.Type] == branchPath`.
-       - If mismatch: Log `[git-brx] ! Issue type '<type>' is not allowed on '<branchPath>' branch` with hint and fail with Exit Code `8`.
+       - If mismatch: Log `[git-brx] Error: Issue type '<type>' is not allowed on '<branchPath>' branch` with hint and fail with Exit Code `8`.
      - If issue status is closed/resolved, display warning:
        `[git-brx] Warning: Issue '<issueKey>' is currently marked as '<status>'`
      - Confirmation prompt (unless `--yes` is specified):
@@ -75,12 +75,12 @@
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | Branch successfully created, or already exists locally/remotely with guidance. | `[git-brx] Creating branch '<branch>'` | None. |
-| `2` | Missing mandatory `<branch>` positional argument or unknown flag. | `[git-brx] ! No branch name specified` | None. |
-| `3` | Outside Git repository. | `[git-brx] ! Awh! This is not a git repository` | None. |
-| `4` | Remote `origin` unreachable in online mode. | `[git-brx] ! Unable to reach remote` | None. |
-| `6` | JIRA API authentication failure or issue not found. | `[git-brx] ! Authorization failure` / `[git-brx] ! Issue not found` | None. |
+| `2` | Missing mandatory `<branch>` positional argument or unknown flag. | `[git-brx] Error: No branch name specified` | None. |
+| `3` | Outside Git repository. | `[git-brx] Error: Awh! This is not a git repository` | None. |
+| `4` | Remote `origin` unreachable in online mode. | `[git-brx] Error: Unable to reach remote` | None. |
+| `6` | JIRA API authentication failure or issue not found. | `[git-brx] Error: Authorization failure` / `[git-brx] Error: Issue not found` | None. |
 | `7` | User aborted creation during interactive confirmation. | None (aborted cleanly). | None. |
-| `8` | Configuration file missing or branch name fails regex naming contract. | `[git-brx] ! Configuration file not found` / `[git-brx] ! Branch name doesn't match pattern` | None. |
+| `8` | Configuration file missing or branch name fails regex naming contract. | `[git-brx] Error: Configuration file not found` / `[git-brx] Error: Branch name doesn't match pattern` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Credential Leak via Process Table:** In legacy `create.sh`, the script invoked Groovy by passing base64-encoded credentials on the command-line: `groovy -cp ... create.groovy "$1" "$offline" "$TOOLS_CREDENTIALS" ...`. Any local user could inspect these credentials via `ps aux`. The Go binary eliminates this by keeping credentials entirely in-memory within the single binary process.

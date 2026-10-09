@@ -18,7 +18,7 @@ func TestUIOutputProtocols(t *testing.T) {
 	assert.Empty(t, stdout.String())
 
 	u.Error("something failed")
-	assert.Contains(t, stderr.String(), "[git-brx] ! something failed")
+	assert.Contains(t, stderr.String(), "[git-brx] Error: something failed")
 
 	u.Hint("try this")
 	assert.Contains(t, stderr.String(), "[git-brx] Hint: try this")
@@ -36,7 +36,7 @@ func TestUIQuietMode(t *testing.T) {
 	assert.Empty(t, stderr.String())
 
 	u.Error("fatal error")
-	assert.Contains(t, stderr.String(), "[git-brx] ! fatal error")
+	assert.Contains(t, stderr.String(), "[git-brx] Error: fatal error")
 }
 
 func TestUIWrapText(t *testing.T) {

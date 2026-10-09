@@ -34,7 +34,7 @@
      git ls-remote --heads origin <branch>
      ```
    - If missing on remote:
-     - Log: `[git-brx] ! Branch '<branch>' has not been pushed to remote origin`
+     - Log: `[git-brx] Error: Branch '<branch>' has not been pushed to remote origin`
      - Log: `[git-brx] Hint: Run 'git-brx publish' to push your branch before creating a review`
      - Fail with Exit Code `4`.
 4. **Configuration & Issue Loading:**
@@ -71,21 +71,21 @@
      - Emit URL to stdout for machine consumption.
      - Exit with Exit Code `0`.
    - If HTTP 409 Conflict (e.g., open pull request already exists):
-     - Log: `[git-brx] ! A pull request for branch '<branch>' already exists`.
+     - Log: `[git-brx] Error: A pull request for branch '<branch>' already exists`.
      - Fail with Exit Code `6`.
    - If HTTP 400/401/403/404:
-     - Extract and log API error messages: `[git-brx] ! <error_message>`.
+     - Extract and log API error messages: `[git-brx] Error: <error_message>`.
      - Fail with Exit Code `6`.
 
 ## 4. Error Handling & Exit Codes
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | Pull request created successfully. | `[git-brx] Created pull-request <url>` | None. |
-| `2` | Excess positional arguments or unknown flags. | `[git-brx] ! Unexpected argument: <arg>` | None. |
-| `3` | Detached HEAD or unpermitted branch type (e.g. running on `master`). | `[git-brx] ! You must be on an 'issue', 'feature', or 'epic' branch` | None. |
-| `4` | Source branch not published on remote origin. | `[git-brx] ! Branch '<branch>' has not been pushed to remote origin` | None. |
-| `6` | JIRA or Bitbucket API failure (HTTP 401, 404, 409 conflict). | `[git-brx] ! A pull request for branch '<branch>' already exists` / `[git-brx] ! Request failure` | None. |
-| `8` | Configuration file or review template missing / corrupt. | `[git-brx] ! Configuration file not found` | None. |
+| `2` | Excess positional arguments or unknown flags. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
+| `3` | Detached HEAD or unpermitted branch type (e.g. running on `master`). | `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch` | None. |
+| `4` | Source branch not published on remote origin. | `[git-brx] Error: Branch '<branch>' has not been pushed to remote origin` | None. |
+| `6` | JIRA or Bitbucket API failure (HTTP 401, 404, 409 conflict). | `[git-brx] Error: A pull request for branch '<branch>' already exists` / `[git-brx] Error: Request failure` | None. |
+| `8` | Configuration file or review template missing / corrupt. | `[git-brx] Error: Configuration file not found` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Silent Failure on Unpublished Branch:** Legacy `review.sh` never checked if the current branch was published before calling `review.groovy`. Bitbucket Server would return a confusing 400 Bad Request error stating that the ref did not exist. Modern Go explicitly tests remote ref availability first and hints to run `publish`.

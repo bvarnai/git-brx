@@ -22,8 +22,8 @@
 ## 3. Core Execution Flow
 1. **Repository & State Verification:**
    - Verify repository context: `git rev-parse --is-inside-work-tree`.
-   - Check in-progress operations via `checks.CheckInProgress`. If active, log `[git-brx] ! Cannot switch branches during an active <op>` and fail with Exit Code `5`.
-   - Check detached HEAD via `checks.CheckDetachedHead`. If detached with unreferenced commits, log `[git-brx] ! You are on a detached HEAD with unreferenced commits` and fail with Exit Code `5`.
+   - Check in-progress operations via `checks.CheckInProgress`. If active, log `[git-brx] Error: Cannot switch branches during an active <op>` and fail with Exit Code `5`.
+   - Check detached HEAD via `checks.CheckDetachedHead`. If detached with unreferenced commits, log `[git-brx] Error: You are on a detached HEAD with unreferenced commits` and fail with Exit Code `5`.
 2. **Target Branch Resolution:**
    - If positional argument `<branch>` is absent, dynamically resolve default branch (`master` -> `main` -> `origin/HEAD`) and log:
      `[git-brx] Selecting '<default>' branch by default`.
@@ -47,7 +47,7 @@
      - Check remote tracking: `git show-ref --verify --quiet refs/remotes/origin/<branch>`.
    - If neither exists:
      - Inspect available branch names and suggest closest match via Levenshtein distance:
-       `[git-brx] ! Branch '<branch>' not found`
+       `[git-brx] Error: Branch '<branch>' not found`
        `[git-brx] Hint: Did you mean '<closest>'?` (if match found within threshold).
      - Exit with Exit Code `3`.
    - Execute branch switch:
@@ -56,7 +56,7 @@
      ```
 7. **Post-Checkout Verification:**
    - If checkout fails due to uncommitted working tree conflicts:
-     - Log: `[git-brx] ! Select failed: local modifications would be overwritten by checkout`
+     - Log: `[git-brx] Error: Select failed: local modifications would be overwritten by checkout`
      - Log: `[git-brx] Hint: Commit or stash your changes before switching branches`
      - Exit with Exit Code `5`.
    - If uncommitted changes were carried over to the new branch, log defensive warning via `checks.CheckDirtyWorktree`:
@@ -68,10 +68,10 @@
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | Switched successfully or already on target branch. | `[git-brx] Selecting '<default>' branch by default` / `[git-brx] Already on '<branch>'` | None. |
-| `2` | Excess positional arguments (>1) or unknown flags. | `[git-brx] ! Unexpected argument: <arg>` | None. |
-| `3` | Outside repository or branch not found locally or remotely. | `[git-brx] ! Branch '<branch>' not found` (with optional `Hint: Did you mean...?`) | None. |
-| `4` | Mandatory remote fetch failed and branch not found locally. | `[git-brx] ! Select failed (git fetch failed)` | None. |
-| `5` | Active operation in progress, detached HEAD commit loss risk, or uncommitted collision. | `[git-brx] ! Cannot switch branches during an active <op>` / `! You are on a detached HEAD...` | None. |
+| `2` | Excess positional arguments (>1) or unknown flags. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
+| `3` | Outside repository or branch not found locally or remotely. | `[git-brx] Error: Branch '<branch>' not found` (with optional `Hint: Did you mean...?`) | None. |
+| `4` | Mandatory remote fetch failed and branch not found locally. | `[git-brx] Error: Select failed (git fetch failed)` | None. |
+| `5` | Active operation in progress, detached HEAD commit loss risk, or uncommitted collision. | `[git-brx] Error: Cannot switch branches during an active <op>` / `! You are on a detached HEAD...` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Hard Dependency on Network (`git fetch --all`):** Legacy `select.sh` unconditionally executed `git fetch --all`. Modern Go spec introduces `--offline` and network failure fallbacks for local branches.

@@ -28,8 +28,8 @@
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | Branch or detached commit resolved successfully. | None (unless warning on detached HEAD). | None. |
-| `2` | Unexpected positional arguments or unknown flags passed. | `[git-brx] ! Unexpected argument: <arg>` | None. |
-| `3` | Invoked outside a valid Git repository or inside `.git`. | `[git-brx] ! Awh! This is not a git repository` | None. |
+| `2` | Unexpected positional arguments or unknown flags passed. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
+| `3` | Invoked outside a valid Git repository or inside `.git`. | `[git-brx] Error: Awh! This is not a git repository` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Stdout Contamination:** Legacy `name.sh` invoked `branch::common::no_args`, which logged `This command takes no argument(s), input '$*' is discarded` to `stdout`. This broke shell script captures (`NAME=$(git branch-name)`). In the Go rewrite, unexpected arguments must trigger exit code `2` on `stderr`, keeping `stdout` purely machine-readable.

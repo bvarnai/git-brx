@@ -81,9 +81,9 @@ func (u *UI) Warn(format string, args ...any) {
 func (u *UI) Error(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	if u.Color {
-		fmt.Fprintf(u.Stderr, "%s %s! %s%s\n", u.PrefixText, colorRed, msg, colorReset)
+		fmt.Fprintf(u.Stderr, "%s %sError: %s%s\n", u.PrefixText, colorRed, msg, colorReset)
 	} else {
-		fmt.Fprintf(u.Stderr, "%s ! %s\n", u.PrefixText, msg)
+		fmt.Fprintf(u.Stderr, "%s Error: %s\n", u.PrefixText, msg)
 	}
 }
 
