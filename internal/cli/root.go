@@ -82,6 +82,7 @@ upstream synchronization, clean rebasing, and Atlassian toolchain integration.`,
 	rootCmd.AddCommand(app.newCreateCmd())
 	rootCmd.AddCommand(app.newPublishCmd())
 	rootCmd.AddCommand(app.newDeleteCmd())
+	rootCmd.AddCommand(app.newReviewCmd())
 
 	app.RootCmd = rootCmd
 	return app
