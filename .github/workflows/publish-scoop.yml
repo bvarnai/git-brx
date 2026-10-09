@@ -41,33 +41,32 @@ jobs:
 
           echo "Processing Scoop publication for tag: $TAG_NAME"
 
-          # Fetch assets metadata for this release
-          ASSETS=$(gh release view "$TAG_NAME" --repo "${{ github.repository }}" --json assets --jq '.assets[]')
+          mkdir -p dist_hashes
+          gh release download "$TAG_NAME" \
+            --repo "${{ github.repository }}" \
+            --pattern "*.sha256" \
+            --dir dist_hashes
 
-          # Locate Windows x64 and arm64 archive URLs and checksum URLs
-          X64_ZIP_URL=$(echo "$ASSETS" | jq -r 'select(.name | endswith("windows_amd64.zip")) | .url')
-          X64_SHA_URL=$(echo "$ASSETS" | jq -r 'select(.name | endswith("windows_amd64.zip.sha256")) | .url')
+          X64_HASH_FILE=$(ls dist_hashes/*windows_amd64.zip.sha256 2>/dev/null || true)
+          ARM64_HASH_FILE=$(ls dist_hashes/*windows_arm64.zip.sha256 2>/dev/null || true)
 
-          ARM64_ZIP_URL=$(echo "$ASSETS" | jq -r 'select(.name | endswith("windows_arm64.zip")) | .url')
-          ARM64_SHA_URL=$(echo "$ASSETS" | jq -r 'select(.name | endswith("windows_arm64.zip.sha256")) | .url')
-
-          if [[ -z "$X64_ZIP_URL" || -z "$X64_SHA_URL" ]]; then
-            echo "Error: Could not find Windows amd64 zip or sha256 assets in release $TAG_NAME."
+          if [[ -z "$X64_HASH_FILE" ]]; then
+            echo "Error: windows_amd64 sha256 file not found in downloaded release assets."
             exit 1
           fi
 
-          echo "Downloading x64 SHA256 from $X64_SHA_URL..."
-          curl -fL -s "$X64_SHA_URL" -o x64.sha256
-          X64_HASH=$(awk '{print $1}' x64.sha256)
+          X64_HASH=$(awk '{print $1}' "$X64_HASH_FILE")
           echo "Extracted x64 hash: $X64_HASH"
 
           ARM64_HASH=""
-          if [[ -n "$ARM64_SHA_URL" ]]; then
-            echo "Downloading arm64 SHA256 from $ARM64_SHA_URL..."
-            curl -fL -s "$ARM64_SHA_URL" -o arm64.sha256
-            ARM64_HASH=$(awk '{print $1}' arm64.sha256)
+          if [[ -n "$ARM64_HASH_FILE" ]]; then
+            ARM64_HASH=$(awk '{print $1}' "$ARM64_HASH_FILE")
             echo "Extracted arm64 hash: $ARM64_HASH"
           fi
+
+          # Canonical release download URLs for Scoop manifest
+          X64_ZIP_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/git-brx_${TAG_NAME}_windows_amd64.zip"
+          ARM64_ZIP_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/git-brx_${TAG_NAME}_windows_arm64.zip"
 
           # Strip leading 'v' for standard Scoop versioning (e.g. v1.0.0 -> 1.0.0)
           VERSION="${TAG_NAME#v}"
