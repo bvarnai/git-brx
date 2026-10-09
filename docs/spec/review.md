@@ -51,20 +51,20 @@
 6. **Description Composition:**
    - Assemble review body from template:
      - Load markdown checklist from `config.review.template` (or fallback template).
-     - Append `# Merge instructions` block containing:
-       - **Squash commit:** Title `__<issueKey> <trimmedSummary>__`, Merge strategy: `__Squash, fast-forward only (default)__`, Delete source: `yes`.
-       - **Merge commit:** Title `__Merge <branch> to <targetBranch>__`, Merge strategy: `__Merge commit__`, Delete source: `yes`.
+     - Append `# Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.instructions: false`):
+       - **Squash & Merge (recommended):** Commit title formatted as `<issueKey>: <summary>` (or `<branch>` if issue is unlinked).
+       - **Branch Cleanup:** Instructs deletion of source branch after merge.
+       - Timeless, platform-agnostic format focusing on Git intent rather than volatile web UI button labels.
 7. **Dry-Run Check:**
    - If `--dry-run` is active: Format and print the pull request request payload and reviewer assignment without making API calls, then exit with Exit Code `0`.
 8. **Pull Request Submission:**
-   - Submit PR via the configured `SCMProvider` (Bitbucket REST, GitHub Pull Requests API, etc.).
-   - Payload fields:
-     - `title`: `<branch>`
+   - Submit PR via the configured `SCMProvider` (GitHub Pull Requests API, Bitbucket Server REST API, etc.).
+   - Standard payload fields:
+     - `title`: `<branch>` (or custom `--title`)
      - `description`: `<reviewDescription>`
-     - `state`: `OPEN`
-     - `fromRef`: `refs/heads/<branch>`
-     - `toRef`: `refs/heads/<targetBranch>`
-     - `reviewers`: `[ { user: { name: "<selectedReviewer>" } } ]`
+     - `sourceBranch`: `<branch>`
+     - `targetBranch`: `<targetBranch>`
+     - `reviewers`: List of resolved reviewer user handles.
 9. **Response Handling:**
    - If HTTP 201 Created:
      - Log: `[git-brx] Created pull-request <links.self.href>`.

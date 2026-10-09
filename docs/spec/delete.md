@@ -37,6 +37,12 @@
        Log `[git-brx] ! Unable to reach remote; are you offline?` and fail with Exit Code `4`.
      - If ref output is non-empty (branch still exists on remote):
        - Log: `[git-brx] Branch '<current_branch>' found on remote origin`
+       - **SCM-Aware Pull Request Diagnostic:**
+         - Query configured SCM provider (`scm.GetPullRequestForBranch(ctx, branch)`).
+         - If an active or merged pull request is discovered, provide tailored status context:
+           - **Merged:** `[git-brx] Pull request is merged (<url>), but the remote branch has not been deleted yet.`
+           - **Open:** `[git-brx] ! Pull request is still open (<url>). Merge or close it before deleting.`
+           - **Closed:** `[git-brx] Pull request is closed without merge (<url>).`
        - Log: `[git-brx] ! Branch must be deleted on remote first (e.g., after merging pull request)`
        - Log: `[git-brx] Hint: Use '--force' to bypass remote check if you intend to delete an unpublished branch`
        - Fail with Exit Code `3`.
@@ -80,3 +86,4 @@
   The string contains a phantom `-D` flag that does not exist in `git ls-remote`. Fixed in modern spec.
 - **Master Divergence After Deletion:** Legacy deletes the branch and switches to `master`, but does not pull latest `master` commits, leaving `master` out-of-date after a PR squash. The spec emits a clear hint to run `update`.
 - **Recursive Command Dispatch:** Legacy executed `git branch-select master` (invoking another shell script via Git alias) rather than invoking `git checkout master` directly. Modern Go calls internal Git checkout logic directly.
+- **SCM Pull Request Context:** Legacy script gave an unhelpful generic error if the remote branch still existed. Modern Go queries the SCM provider API (GitHub, Bitbucket) and advises whether the PR is already merged, still open, or closed, guiding the user to cleanly delete the remote branch or use `--force`.

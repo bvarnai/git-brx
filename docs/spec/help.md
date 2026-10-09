@@ -32,7 +32,7 @@
          create     Create a new validated development branch
          publish    Push local changes to remote with lease and set upstream
          delete     Delete the current branch after remote deletion check
-         review     Create a pull request in Bitbucket Server
+         review     Create a pull request on configured SCM platform
          help       Display help information for git-brx commands
        ```
      - Exit with Exit Code `0`.

@@ -21,7 +21,7 @@
 | `create` | `create.sh` / `create.groovy` | Validates against issue tracker (JIRA) and provisions local topic branch. |
 | `publish` | `publish.sh` | Pushes branch to remote with lease and configures upstream tracking. |
 | `delete` | `delete.sh` | Validates remote branch deletion, switches to `master`, and deletes local branch. |
-| `review` | `review.sh` | Creates a pull request on Bitbucket Server via REST API with reviewer mapping. |
+| `review` | `review.sh` | Creates a pull request on configured SCM platform (Bitbucket, GitHub) via REST API with reviewer mapping. |
 | `help` | `help.sh` | Displays global command catalog or subcommand-specific documentation. |
 
 ### Global Flags
@@ -248,6 +248,21 @@ classDiagram
         +string URL
     }
 
+    class PullRequestDetail {
+        +string ID
+        +string URL
+        +string Title
+        +string State
+        +bool Merged
+    }
+
+    class MergeInstructionOptions {
+        +string IssueKey
+        +string Summary
+        +string Branch
+        +string TargetBranch
+    }
+
     class TrackerConfig {
         +string Provider
         +string URI
@@ -272,6 +287,7 @@ classDiagram
     class ReviewConfig {
         +map Mapping
         +string Template
+        +bool Instructions
     }
 
     class ProjectConfig {
@@ -345,7 +361,9 @@ Provider-agnostic pull request models and interface:
 type SCMProvider interface {
     Name() string
     CreatePullRequest(ctx context.Context, req PullRequestRequest) (*PullRequestResult, error)
+    GetPullRequestForBranch(ctx context.Context, branch string) (*PullRequestDetail, error)
     ResolveReviewers(components []string) []string
+    FormatMergeInstructions(opts MergeInstructionOptions) string
 }
 ```
 
