@@ -57,10 +57,10 @@
      - If issue not found: Fail with Exit Code `6` (`Issue not found in issue tracker`).
      - Check issue type mapping: If `config.branch.mapping` has an entry for `issue.Type`, verify `mapping[issue.Type] == branchPath`.
        - If mismatch: Log `[git-brx] ! Issue type '<type>' is not allowed on '<branchPath>' branch` with hint and fail with Exit Code `8`.
-     - Display assignee and status:
-       `[git-brx] Issue '<issueKey>' is assigned to '<assignee>' in status '<status>'`
+     - If issue status is closed/resolved, display warning:
+       `[git-brx] Warning: Issue '<issueKey>' is currently marked as '<status>'`
      - Confirmation prompt (unless `--yes` is specified):
-       `Are you sure [y/n]?`
+       `Create branch '<branch>' [Y/n]?` (defaults to Yes on Enter).
        - If rejected (`n` / `N`), exit with Exit Code `7`.
 6. **Branch Provisioning:**
    - If `--dry-run` is active: Log planned creation and exit with Exit Code `0`.

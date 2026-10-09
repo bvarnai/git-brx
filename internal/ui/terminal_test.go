@@ -2,6 +2,7 @@ package ui_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/ui"
@@ -67,4 +68,33 @@ func TestUIHyperlink(t *testing.T) {
 	uColor := &ui.UI{Color: true}
 	link := uColor.Hyperlink("https://example.com", "my link")
 	assert.Equal(t, "\033]8;;https://example.com\033\\my link\033]8;;\033\\", link)
+}
+
+func TestUIConfirm(t *testing.T) {
+	t.Run("default yes on empty input with [Y/n]", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		u := ui.New(&stdout, &stderr, true, false, false)
+		u.SetStdin(strings.NewReader("\n"))
+		ok, err := u.Confirm("Create branch 'issue/123' [Y/n]?")
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("explicit yes with [Y/n]", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		u := ui.New(&stdout, &stderr, true, false, false)
+		u.SetStdin(strings.NewReader("yes\n"))
+		ok, err := u.Confirm("Create branch 'issue/123' [Y/n]?")
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("explicit no with [Y/n]", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		u := ui.New(&stdout, &stderr, true, false, false)
+		u.SetStdin(strings.NewReader("n\n"))
+		ok, err := u.Confirm("Create branch 'issue/123' [Y/n]?")
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
 }

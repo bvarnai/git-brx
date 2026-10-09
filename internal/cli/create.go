@@ -175,9 +175,16 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 				a.UI.Log("  URL:      %s", a.UI.Hyperlink(issue.URL, issue.URL))
 			}
 
+			// Warn if the issue is closed or resolved
+			st := strings.ToLower(strings.TrimSpace(issue.Status))
+			if st == "closed" || st == "resolved" || st == "done" || st == "completed" {
+				a.UI.Warn("Issue #%s is currently marked as '%s'", issue.Key, issue.Status)
+			}
+
 			// Confirmation prompt unless --yes
 			if !opts.Yes {
-				confirmed, err := a.UI.Confirm("Are you sure [y/n]?")
+				prompt := fmt.Sprintf("Create branch '%s' [Y/n]?", targetBranch)
+				confirmed, err := a.UI.Confirm(prompt)
 				if err != nil || !confirmed {
 					return domain.NewError(domain.ExitUserAborted, "Branch creation aborted by user")
 				}

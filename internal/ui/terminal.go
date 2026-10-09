@@ -129,6 +129,15 @@ func (u *UI) Confirm(prompt string) (bool, error) {
 		}
 		trimmed := strings.TrimSpace(line)
 		switch strings.ToLower(trimmed) {
+		case "":
+			// If prompt indicates [Y/n] (uppercase Y), default to true on empty Enter
+			if strings.Contains(prompt, "[Y/n]") {
+				return true, nil
+			}
+			if strings.Contains(prompt, "[y/N]") {
+				return false, nil
+			}
+			u.Log("Please enter 'y' or 'n'")
 		case "y", "yes":
 			return true, nil
 		case "n", "no":
