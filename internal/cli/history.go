@@ -50,6 +50,8 @@ limiting output count (-l / --limit), and peeking file stats (--stat) or patches
 	cmd.Flags().BoolVar(&opts.Stat, "stat", false, "Show diffstat summary of changed files for each commit")
 	cmd.Flags().BoolVarP(&opts.Patch, "patch", "p", false, "Show code diff patch for each commit")
 
+	_ = cmd.RegisterFlagCompletionFunc("branch", a.completeBranchNames)
+
 	return cmd
 }
 

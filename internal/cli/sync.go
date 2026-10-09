@@ -31,6 +31,7 @@ or merge (for feature/epic branches).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runSync(cmd.Context(), opts, args)
 		},
+		ValidArgsFunction: a.completeBranchNames,
 	}
 
 	cmd.Flags().BoolVarP(&opts.Merge, "merge", "m", false, "Force merge strategy regardless of branch type default")

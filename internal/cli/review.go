@@ -33,6 +33,7 @@ the pull request on the configured SCM platform (e.g. GitHub or Bitbucket).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runReview(cmd.Context(), opts, args)
 		},
+		ValidArgsFunction: a.completeBranchNames,
 	}
 
 	cmd.Flags().StringVarP(&opts.Reviewer, "reviewer", "r", "", "Designate an explicit reviewer instead of component mapping")

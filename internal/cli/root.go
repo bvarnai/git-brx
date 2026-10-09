@@ -88,6 +88,7 @@ for local branch lifecycles, upstream synchronization, clean rebasing, and code 
 	rootCmd.AddCommand(app.newPublishCmd())
 	rootCmd.AddCommand(app.newDeleteCmd())
 	rootCmd.AddCommand(app.newReviewCmd())
+	rootCmd.AddCommand(app.newCompletionCmd())
 
 	app.RootCmd = rootCmd
 	return app

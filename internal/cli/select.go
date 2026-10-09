@@ -28,6 +28,7 @@ from origin before switching.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runSelect(cmd.Context(), opts, args)
 		},
+		ValidArgsFunction: a.completeBranchNames,
 	}
 
 	cmd.Flags().BoolVarP(&opts.Offline, "offline", "o", false, "Skip remote fetch and switch between existing local references only")

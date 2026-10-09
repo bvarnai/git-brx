@@ -56,6 +56,33 @@ git brx create issue/VSB-101
 
 Both invocations are completely identical. You do not need to install Git aliases.
 
+### Shell autocompletion
+`git-brx` features built-in shell autocompletion for subcommands, flags, and **dynamic Git branch names** (`select`, `sync`, `review`, and `history -b`).
+
+To enable autocompletion in your shell:
+
+#### Bash (including Ubuntu/WSL and Git Bash on Windows):
+```bash
+# In your ~/.bashrc or ~/.bash_profile:
+source <(git-brx completion bash)
+```
+
+#### Zsh (macOS / Linux):
+```bash
+# In your ~/.zshrc:
+source <(git-brx completion zsh)
+```
+
+#### Fish:
+```bash
+git-brx completion fish | source
+```
+
+#### PowerShell:
+```powershell
+git-brx completion powershell | Out-String | Invoke-Expression
+```
+
 ---
 
 ## 3. Configuration cascade
