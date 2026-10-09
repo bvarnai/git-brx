@@ -38,28 +38,26 @@
      - Log: `[git-brx] Hint: Run 'git-brx publish' to push your branch before creating a review`
      - Fail with Exit Code `4`.
 4. **Configuration & Issue Loading:**
-   - Load configuration via the discovery cascade (`GIT_BRX_CONFIG_PATH` -> `.git-brx/config.json` -> `~/.config/git-brx/config.json`) and review template (`.git-brx/review.template` or user template).
+   - Load configuration via the discovery cascade (`GIT_BRX_CONFIG_PATH` -> `.git-brx.yaml` -> `.git-brx/config.yaml` -> `~/.config/git-brx/config.yaml` -> zero-config remote origin auto-discovery).
    - Extract `issueKey` from `<branch>` using the configured branch template regex.
-   - Fetch issue details from JIRA REST API (`/rest/api/2/issue/<issueKey>?fields=components,summary`).
-   - If JIRA call fails (401/404): Fail with Exit Code `6`.
+   - Fetch issue details using the configured `IssueTracker` (Jira REST, GitHub, etc.) to retrieve components/labels and summary.
+   - If issue call fails (401/404): Fail with Exit Code `6`.
 5. **Reviewer Resolution:**
    - If `--reviewer` flag was provided, use specified user.
-   - Otherwise, resolve reviewer from JIRA issue components:
-     - Inspect `issue.fields.components[0].name`.
-     - Lookup in `configuration.bitbucket.review.mapping[component]`.
-     - If unmapped or no components specified, fallback to `configuration.bitbucket.review.mapping.default`.
-     - If the mapping contains a comma-separated list of candidate reviewers, randomly select one candidate.
+   - Otherwise, resolve reviewers from issue components using `config.review.mapping`:
+     - Lookup each component in mapping.
+     - If unmapped or no components specified, fallback to `config.review.mapping.default`.
+     - Supports list or comma-separated candidate reviewers.
 6. **Description Composition:**
    - Assemble review body from template:
-     - Load markdown checklist from `branch-review.template`.
+     - Load markdown checklist from `config.review.template` (or fallback template).
      - Append `# Merge instructions` block containing:
        - **Squash commit:** Title `__<issueKey> <trimmedSummary>__`, Merge strategy: `__Squash, fast-forward only (default)__`, Delete source: `yes`.
        - **Merge commit:** Title `__Merge <branch> to <targetBranch>__`, Merge strategy: `__Merge commit__`, Delete source: `yes`.
 7. **Dry-Run Check:**
-   - If `--dry-run` is active: Format and print the Bitbucket JSON request payload and reviewer assignment without making HTTP calls, then exit with Exit Code `0`.
-8. **Bitbucket Server Pull Request Submission:**
-   - Construct JSON payload targeting Bitbucket REST API:
-     `POST /rest/api/1.0/projects/<projectKey>/repos/<repoKey>/pull-requests`
+   - If `--dry-run` is active: Format and print the pull request request payload and reviewer assignment without making API calls, then exit with Exit Code `0`.
+8. **Pull Request Submission:**
+   - Submit PR via the configured `SCMProvider` (Bitbucket REST, GitHub Pull Requests API, etc.).
    - Payload fields:
      - `title`: `<branch>`
      - `description`: `<reviewDescription>`

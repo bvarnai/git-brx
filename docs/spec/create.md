@@ -44,18 +44,18 @@
        - Log: `[git-brx] Hint: To select this branch, use 'git-brx select <branch>' instead`
        - Exit with Exit Code `0`.
 4. **Configuration & Template Matching:**
-   - Load configuration via the discovery cascade (`GIT_BRX_CONFIG_PATH` -> `.git-brx/config.json` -> `~/.config/git-brx/config.json`). If missing or invalid, exit with Exit Code `8`.
-   - Compile regular expression template from `config.bitbucket.branch.template` (interpolating `config.jira.projectkey`).
+   - Load configuration via the discovery cascade (`GIT_BRX_CONFIG_PATH` -> `.git-brx.yaml` -> `.git-brx/config.yaml` -> `~/.config/git-brx/config.yaml` -> zero-config remote origin auto-discovery). If invalid, exit with Exit Code `8`.
+   - Compile regular expression template from `config.branch.template` (interpolating `config.tracker.project` if set).
    - Match `<branch>` against the template. Extract:
      - `branchPath` (e.g., `issue`, `feature`, `epic`)
-     - `issueKey` (e.g., `VSB-1234`)
+     - `issueKey` (e.g., `VSB-1234` or `#42` or `42`)
    - If regex does not match, log `[git-brx] ! Branch name '<branch>' doesn't match pattern <pattern>` and exit with Exit Code `8`.
 5. **Issue Tracker Validation (Online Mode):**
    - If `--offline` is NOT set:
-     - Fetch issue details from JIRA REST API (`/rest/api/2/issue/<issueKey>?fields=issuetype,status,assignee`).
-     - If HTTP 401/403: Fail with Exit Code `6` (`Authorization failure`).
-     - If HTTP 404: Fail with Exit Code `6` (`Issue not found in JIRA`).
-     - Check issue type mapping: Verify `configuration.bitbucket.branch.mapping[issue.fields.issuetype.name] == branchPath`.
+     - Fetch issue details using the configured `IssueTracker` adapter (Jira REST, GitHub Issues, etc.).
+     - If authorization fails: Fail with Exit Code `6` (`Authorization failure`).
+     - If issue not found: Fail with Exit Code `6` (`Issue not found in issue tracker`).
+     - Check issue type mapping: If `config.branch.mapping` has an entry for `issue.Type`, verify `mapping[issue.Type] == branchPath`.
        - If mismatch: Log `[git-brx] ! Issue type '<type>' is not allowed on '<branchPath>' branch` with hint and fail with Exit Code `8`.
      - Display assignee and status:
        `[git-brx] Issue '<issueKey>' is assigned to '<assignee>' in status '<status>'`

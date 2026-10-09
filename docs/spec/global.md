@@ -226,42 +226,69 @@ classDiagram
         +bool WorktreeClean
     }
 
-    class JiraIssue {
+    class Issue {
         +string Key
-        +string Summary
-        +string IssueType
+        +string Title
+        +string Type
         +string Status
-        +string AssigneeName
-        +string AssigneeDisplayName
+        +string Assignee
         +string[] Components
     }
 
-    class PullRequest {
+    class PullRequestRequest {
         +string Title
         +string Description
         +string SourceBranch
         +string TargetBranch
-        +string ProjectKey
-        +string RepoSlug
         +string[] Reviewers
-        +string State
+    }
+
+    class PullRequestResult {
+        +string ID
+        +string URL
+    }
+
+    class TrackerConfig {
+        +string Provider
+        +string URI
+        +string Project
+        +string Owner
+        +string Repo
+    }
+
+    class SCMConfig {
+        +string Provider
+        +string URI
+        +string Project
+        +string Repo
+        +string Owner
+    }
+
+    class BranchConfig {
+        +string Template
+        +map Mapping
+    }
+
+    class ReviewConfig {
+        +map Mapping
+        +string Template
     }
 
     class ProjectConfig {
-        +string JiraURI
-        +string JiraProjectKey
-        +string BitbucketURI
-        +string BitbucketProjectKey
-        +string BitbucketRepoKey
-        +string BranchTemplate
-        +map BranchMapping
-        +map ReviewerMapping
-        +string ReviewTemplate
+        +string Platform
+        +TrackerConfig Tracker
+        +SCMConfig SCM
+        +BranchConfig Branch
+        +ReviewConfig Review
     }
 
     BranchRecord --> BranchType
     RepositoryState --> BranchRecord
     RepositoryState --> BranchDelta
+    ProjectConfig --> TrackerConfig
+    ProjectConfig --> SCMConfig
+    ProjectConfig --> BranchConfig
+    ProjectConfig --> ReviewConfig
 ```
 
 ### 1. `BranchRecord`
@@ -293,38 +320,42 @@ Encapsulates global repository topology and active transient operations:
 - `MergeActive`: True if `.git/MERGE_HEAD` exists.
 - `WorktreeClean`: True if index and working tree contain no staged or unstaged diffs.
 
-### 4. `JiraIssue`
-Represents issue metadata retrieved from JIRA REST API (`/rest/api/2/issue/{issueKey}`):
-- `Key`: Issue key (e.g., `VSB-5294`).
-- `Summary`: Title and summary text of the issue.
-- `IssueType`: Type descriptor (e.g., `Bug`, `Tech Dept`, `Story`, `Epic`).
-- `Status`: Current workflow state (e.g., `Open`, `In Progress`, `Resolved`).
-- `AssigneeName`: Username of the assigned developer.
-- `AssigneeDisplayName`: Full formatted name of the assignee.
-- `Components`: List of project component names associated with the issue.
+### 4. `Issue` & `IssueTracker`
+Provider-agnostic issue representation and interface:
+- `Key`: Unique issue identifier (e.g. `VSB-5294`, `#101`).
+- `Title`: Summary or title of the issue.
+- `Type`: Issue category (e.g. `Bug`, `Story`, `Task`, `feature`).
+- `Status`: Current state (e.g. `Open`, `In Progress`, `Closed`).
+- `Assignee`: Assigned username or handle.
+- `Components`: Components or labels linked to the issue.
 
-### 5. `PullRequest`
-Data transfer model for Bitbucket Server REST API (`/rest/api/1.0/projects/{projectKey}/repos/{repoKey}/pull-requests`):
-- `Title`: Pull request title string.
-- `Description`: Formatted markdown review body, composed from review template and merge instructions.
-- `SourceBranch`: Source branch ref (`refs/heads/...`).
-- `TargetBranch`: Target branch ref (`refs/heads/master` by default).
-- `ProjectKey`: Bitbucket project key.
-- `RepoSlug`: Bitbucket repository slug.
-- `Reviewers`: Array of Bitbucket usernames designated as reviewers.
-- `State`: Target PR state (e.g., `OPEN`).
+```go
+type IssueTracker interface {
+    Name() string
+    GetIssue(ctx context.Context, key string) (*Issue, error)
+}
+```
+
+### 5. `PullRequest` & `SCMProvider`
+Provider-agnostic pull request models and interface:
+- `PullRequestRequest`: Input payload specifying `Title`, `Description`, `SourceBranch`, `TargetBranch`, and `Reviewers`.
+- `PullRequestResult`: Created PR identifiers (`ID` string, `URL` string).
+
+```go
+type SCMProvider interface {
+    Name() string
+    CreatePullRequest(ctx context.Context, req PullRequestRequest) (*PullRequestResult, error)
+    ResolveReviewers(components []string) []string
+}
+```
 
 ### 6. `ProjectConfig`
-Structured schema parsed from `branch.json` and `manifest.json`:
-- `JiraURI`: Base URL of the JIRA server.
-- `JiraProjectKey`: Primary JIRA project key.
-- `BitbucketURI`: Base URL of the Bitbucket Server instance.
-- `BitbucketProjectKey`: Bitbucket project key.
-- `BitbucketRepoKey`: Bitbucket repository identifier.
-- `BranchTemplate`: Regular expression template validating topic branch names.
-- `BranchMapping`: Map linking JIRA Issue Types to branch prefixes (`Bug` -> `issue`, `Story` -> `feature`).
-- `ReviewerMapping`: Map linking issue components to reviewer usernames, including a `default` fallback.
-- `ReviewTemplate`: Markdown checklist content loaded from `branch-review.template`.
+Structured schema parsed from YAML (`.git-brx.yaml` / `.git-brx/config.yaml`):
+- `Platform`: Preset identifier (`github`, `gitlab`, `bitbucket`) when one platform serves both tracking and SCM.
+- `Tracker`: Issue tracker settings (`Provider`, `URI`, `Project`, `Owner`, `Repo`).
+- `SCM`: SCM / code review settings (`Provider`, `URI`, `Project`, `Repo`, `Owner`).
+- `Branch`: Topic branch naming rules (`Template` regex, `Mapping` between issue types and branch prefixes).
+- `Review`: Code review settings (`Mapping` between components and reviewers, `Template` checklist markdown).
 
 ---
 
@@ -348,11 +379,11 @@ Structured schema parsed from `branch.json` and `manifest.json`:
      BRANCH_CONFIGURATION_PATH="${ENV_ROOT}/../conf/${PROJECT}"
      ```
    - *Failure Mode:* If a developer invoked the tool from a subdirectory, or if their repository clone folder did not contain an underscore (`_`), project detection completely failed.
-   - *Go Modernization:* Always resolve the Git root dynamically via `git rev-parse --show-toplevel`. Detect project configuration via a unified `config.json` file following a strict hierarchical discovery cascade (legacy split `manifest.json` / `branch.json` files are discontinued):
+   - *Go Modernization:* Always resolve the Git root dynamically via `git rev-parse --show-toplevel`. Detect project configuration via YAML files supporting comments, unescaped regex strings, and zero-config remote origin auto-discovery:
      1. Environment variable override: `GIT_BRX_CONFIG_PATH` (highest priority if set).
-     2. Repository-level configuration: `.git-brx/config.json` (anchored to Git repository root).
-     3. User-level configuration: `~/.config/git-brx/config.json` (user home directory).
-     4. Dynamic fallback: Extract default project and repository keys directly from Git remote origin URL (`git remote get-url origin`).
+     2. Repository-level configuration: `.git-brx.yaml`, `.git-brx.yml`, `.git-brx/config.yaml`.
+     3. User-level configuration: `~/.config/git-brx/config.yaml` (user home directory).
+     4. Dynamic Zero-Config Fallback: If no config file exists, auto-detect platform, owner/project, and repository slug directly from `git remote get-url origin` (`github.com`, `gitlab.com`, Bitbucket).
 
 3. **Reliance on Hacked Git Prompt Scripts:**
    - *Legacy Flaw:* `common.sh` sourced a modified version of `git-prompt.sh` that injected global Bash environment variables (`GIT_PROMPT_BRANCH`, `GIT_PROMPT_REBASE`, `GIT_PROMPT_MERGING`, `GIT_PROMPT_DETACHED`).
