@@ -14,11 +14,11 @@
 
 <p align="center">
   <a href="#why-git-brx">Why git-brx?</a> •
-  <a href="#the-git-brx-philosophy">Core Philosophy</a> •
-  <a href="#quick-start">Quick Start</a> •
+  <a href="#the-git-brx-philosophy">Core philosophy</a> •
+  <a href="#quick-start">Quick start</a> •
   <a href="#installation">Installation</a> •
   <a href="#configuration">Configuration</a> •
-  <a href="#documentation-wiki">User Guide Wiki</a>
+  <a href="#documentation-wiki">User guide wiki</a>
 </p>
 
 </div>
@@ -47,10 +47,10 @@ Without reliable brakes, engineers crawl through Git walking on eggshells—afra
 
 ## The git-brx philosophy
 
-### 1. Issue-First Development: The Contract of Record
-In `git-brx`, **every code change begins with an Issue** (Jira, GitHub Issues, etc.):
-- **The Issue defines "What" and "Why":** Business context, specifications, edge cases, and acceptance criteria live exclusively in the issue tracker.
-- **The Pull Request inspects "How":** Code review discussions are strictly technical—evaluating architecture, code quality, test coverage, and security. Reviewers don't have to rediscover missing requirements during code review because the issue is already the single source of truth.
+### 1. Issue-first development: the contract of record
+In `git-brx`, **every code change begins with an issue** (Jira, GitHub Issues, etc.):
+- **The issue defines "What" and "Why":** Business context, specifications, edge cases, and acceptance criteria live exclusively in the issue tracker.
+- **The pull request inspects "How":** Code review discussions are strictly technical—evaluating architecture, code quality, test coverage, and security. Reviewers don't have to rediscover missing requirements during code review because the issue is already the single source of truth.
 
 ### 2. Guardrailed, fearless collaboration
 You don't need to be a Git wizard to work safely:

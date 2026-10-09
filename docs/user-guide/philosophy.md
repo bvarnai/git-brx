@@ -29,7 +29,7 @@ If you drive a car with spongy, unpredictable brakes, you crawl cautiously at 10
 
 ## 2. Issue-driven development: the single source of truth
 
-At the heart of `git-brx` is a strict organizational philosophy: **every code change belongs to a tracked Issue.**
+At the heart of `git-brx` is a strict organizational philosophy: **every code change belongs to a tracked issue.**
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -61,8 +61,8 @@ In many development teams, Pull Requests suffer from **Scope Creep during Review
 
 | Artifact | Primary Audience | Core Purpose | Discussion Topics |
 | :--- | :--- | :--- | :--- |
-| **The Issue** | Product Managers, QA, Engineers, Stakeholders | **Source of Truth:** Defines *What* needs to be done and *Why*. Contains specifications, acceptance criteria, reproducible steps, and test plans. | Business requirements, edge cases, scope, user expectations. |
-| **The Pull Request** | Engineering Peers | **Quality Assurance:** Inspects *How* the code implements the Issue. Verifies architecture, style, test coverage, and performance. | Implementation details, code structure, algorithm efficiency, test assertions. |
+| **The issue** | Product Managers, QA, Engineers, Stakeholders | **Source of Truth:** Defines *What* needs to be done and *Why*. Contains specifications, acceptance criteria, reproducible steps, and test plans. | Business requirements, edge cases, scope, user expectations. |
+| **The pull request** | Engineering Peers | **Quality assurance:** Inspects *How* the code implements the issue. Verifies architecture, style, test coverage, and performance. | Implementation details, code structure, algorithm efficiency, test assertions. |
 
 When a developer runs `git brx create issue/TASK-101`, `git-brx` reaches out to the issue tracker, verifies that `TASK-101` is a valid, assigned ticket, and sets up a local workspace directly linked to that contract.
 

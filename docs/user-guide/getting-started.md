@@ -79,7 +79,7 @@ Here is an annotated example of a comprehensive `.git-brx.yaml` file:
 # Platform preset: 'github' or 'bitbucket'
 platform: github
 
-# Issue Tracker Configuration (optional if matching platform preset)
+# Issue tracker configuration (optional if matching platform preset)
 tracker:
   provider: github         # 'github' or 'jira'
   owner: acme-corp          # GitHub owner / org
@@ -87,13 +87,13 @@ tracker:
   project: CORE             # Jira project key (e.g., 'VSB', 'CORE')
   uri: https://jira.internal.example.com
 
-# SCM / Code Review Configuration
+# SCM / Code review configuration
 scm:
   provider: github         # 'github' or 'bitbucket'
   owner: acme-corp
   repo: core-api
 
-# Branch Creation Rules
+# Branch creation rules
 branch:
   template: "^(?P<type>issue|feature|epic)/(?P<key>[A-Za-z]+-\\d+)$"
   mapping:
@@ -102,7 +102,7 @@ branch:
     Story: feature
     Epic: epic
 
-# Code Review & Pull Request Automation
+# Code review & pull request automation
 review:
   instructions: true       # Injects standard merge instructions into PR description
   template: .github/pull_request_template.md

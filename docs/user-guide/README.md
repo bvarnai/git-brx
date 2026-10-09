@@ -8,7 +8,7 @@ Welcome to the **`git-brx` user guide**. This documentation provides comprehensi
 
 | Chapter | Title | Focus Area |
 | :---: | :--- | :--- |
-| **01** | [Core philosophy & mental model](philosophy.md) | Issue-First Development, hiding Git complexity, psychological safety, and PR review hygiene. |
+| **01** | [Core philosophy & mental model](philosophy.md) | Issue-first development, hiding Git complexity, psychological safety, and PR review hygiene. |
 | **02** | [Getting started](getting-started.md) | Installation, shell integration (`git brx`), and configuration cascade. |
 | **03** | [The branch lifecycle](branch-lifecycle.md) | End-to-end walkthrough: creating, working, publishing, reviewing, and safely deleting branches. |
 | **04** | [Synchronization, rebasing & conflict resolution](synchronization-and-rebasing.md) | How `sync` and `update` work, interactive conflict resolution with `resolve`, and resetting safely with `reset`. |

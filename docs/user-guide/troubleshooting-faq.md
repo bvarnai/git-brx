@@ -4,7 +4,7 @@ Frequently asked questions, common error diagnostics, and recovery tips for `git
 
 ---
 
-## Frequently Asked Questions
+## Frequently asked questions
 
 ### Q: Why does `git-brx` require an issue for every branch?
 **A:** Traceability and team velocity. When every change is tethered to a ticket in Jira or GitHub Issues, the team maintains an authoritative record of *why* changes were introduced. Code reviewers don't have to guess requirements, and future maintainers can immediately see the rationale behind complex changes via `git blame`.
@@ -26,7 +26,7 @@ This bypasses remote network calls and allows full offline productivity.
 
 ---
 
-## Common Error Diagnostics
+## Common error diagnostics
 
 ### 1. `! Publish rejected: remote has newer commits`
 - **Cause:** Someone pushed commits to `origin/<your-branch>` since you last fetched, or you rebased locally without updating from remote first.
