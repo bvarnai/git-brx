@@ -256,3 +256,20 @@ func (i *Inspector) ListAllBranchNames(ctx context.Context, dir string) ([]strin
 
 	return names, nil
 }
+
+// UnmergedFiles returns the list of paths that currently have unmerged conflict stages.
+func (i *Inspector) UnmergedFiles(ctx context.Context, dir string) ([]string, error) {
+	lines, err := i.runner.RunLines(ctx, dir, "diff", "--name-only", "--diff-filter=U")
+	if err != nil {
+		return nil, fmt.Errorf("failed to query unmerged files: %w", err)
+	}
+
+	var unmerged []string
+	for _, l := range lines {
+		trimmed := strings.TrimSpace(l)
+		if trimmed != "" {
+			unmerged = append(unmerged, trimmed)
+		}
+	}
+	return unmerged, nil
+}

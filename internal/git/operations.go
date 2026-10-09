@@ -80,3 +80,35 @@ func (o *Operations) Clean(ctx context.Context, dir string) error {
 	_, err := o.runner.Run(ctx, dir, "clean", "-fd")
 	return err
 }
+
+// MergeTool runs git mergetool --no-prompt, optionally specifying a custom tool.
+func (o *Operations) MergeTool(ctx context.Context, dir, tool string) error {
+	args := []string{"mergetool", "--no-prompt"}
+	if tool != "" {
+		args = append(args, "-t", tool)
+	}
+	_, err := o.runner.Run(ctx, dir, args...)
+	return err
+}
+
+// Add stages specified paths via git add -- <paths...>.
+func (o *Operations) Add(ctx context.Context, dir string, paths ...string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	args := append([]string{"add", "--"}, paths...)
+	_, err := o.runner.Run(ctx, dir, args...)
+	return err
+}
+
+// CommitNoEdit commits current index using git commit --no-edit.
+func (o *Operations) CommitNoEdit(ctx context.Context, dir string) error {
+	_, err := o.runner.Run(ctx, dir, "commit", "--no-edit")
+	return err
+}
+
+// RebaseContinue continues an in-flight rebase via git rebase --continue.
+func (o *Operations) RebaseContinue(ctx context.Context, dir string) error {
+	_, err := o.runner.RunWithEnv(ctx, dir, []string{"GIT_EDITOR=true"}, "rebase", "--continue")
+	return err
+}
