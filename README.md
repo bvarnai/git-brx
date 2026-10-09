@@ -27,10 +27,12 @@
 
 ## Why git-brx?
 
-Git is an immensely flexible and powerful distributed version control system, but with that power comes accidental complexity:
-- **Esoteric Plumbing:** Cryptic flags (`--force-with-lease`, `rev-parse`, `merge-base`) intimidate new team members and junior engineers.
-- **Costly Pitfalls:** Accidental force pushes overwrite colleagues' work, detached HEAD states lead to orphaned commits, blind `git add .` stages secrets or unwanted diffs during conflict resolution, and diverged local branches break builds.
-- **Inconsistent Team Conventions:** Every engineer follows slightly different branching, rebasing, and PR naming patterns.
+Git is undeniably the industry standard for source control, but its command-line interface was designed as a low-level plumbing toolkit rather than an ergonomic user interface. As teams grow, several systemic problems reliably emerge:
+
+- **Tooling Intimidation & Onboarding Friction:** New hires, junior engineers, and specialists from non-software backgrounds (data scientists, hardware designers, technical writers) are often intimidated by Git's cryptic error messages, endless plumbing flags, and steep learning curve.
+- **Fear of Breaking Things:** Developers hesitate to rebase, synchronize, or clean up branches because one wrong command (`git push --force`, `git reset --hard`, `git checkout .`) can silently discard hours of work or overwrite a teammate's commits.
+- **Inconsistent Team Habits:** Without standard tooling, every developer invents their own ad-hoc aliases, naming conventions, and merge practices. Some squash locally, some create tangled merge webs, and some leave dozens of abandoned branches lingering on the remote.
+- **Overengineered Workflows:** Many teams suffer under heavy, bureaucratic branching models designed for massive enterprises with dedicated DevOps support. Smaller or fast-moving teams need a clean, lightweight flow that just works without overhead.
 
 **`git-brx` eliminates this friction.** It acts as an intelligent, guardrailed layer over Git that hides low-level complexity, prevents disastrous mistakes, and gives teams a simple, intuitive workflow from task creation to merged code.
 
