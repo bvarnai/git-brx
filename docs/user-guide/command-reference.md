@@ -199,3 +199,18 @@ git brx history --stat src/api
 **Usage:** `git-brx name [flags]`
 
 Prints the current branch name to `stdout` with a trailing newline. Plumbing-safe for script variable capture (`BRANCH=$(git brx name)`).
+
+---
+
+## 12. `git-brx help`
+**Usage:** `git-brx help [<subcommand>]`
+
+Displays the command catalog or detailed usage for a specific subcommand. When using Git plugins in Windows or terminal environments where Git intercepts `git brx --help` looking for internal manpages or `git-doc`, `git brx help` provides direct, reliable CLI help.
+
+### Examples:
+```bash
+git brx help
+git brx help create
+git brx help sync
+```
+

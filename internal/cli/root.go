@@ -67,7 +67,6 @@ for local branch lifecycles, upstream synchronization, clean rebasing, and code 
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
 	rootCmd.SetOut(stdout)
 	rootCmd.SetErr(stderr)
-	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// Persistent global flags

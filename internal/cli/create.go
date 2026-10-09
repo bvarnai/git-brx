@@ -226,7 +226,7 @@ func (a *App) resolveTracker(cfg *domain.ProjectConfig) (domain.IssueTracker, er
 	case "github":
 		token := github.ResolveToken(context.Background(), a.Runner, "github.com")
 		opts := []github.Option{}
-		if cfg.Tracker.URI != "" {
+		if cfg.Tracker.URI != "" && cfg.Tracker.URI != "https://github.com" && cfg.Tracker.URI != "http://github.com" {
 			opts = append(opts, github.WithBaseURL(cfg.Tracker.URI))
 		}
 		return github.NewClient(cfg.Tracker.Owner, cfg.Tracker.Repo, token, opts...), nil

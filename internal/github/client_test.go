@@ -211,3 +211,14 @@ func TestClient_GetPullRequestForBranch(t *testing.T) {
 		assert.Nil(t, pr)
 	})
 }
+
+func TestClient_WithBaseURL_NormalizesGithubCom(t *testing.T) {
+	c1 := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL("https://github.com"))
+	assert.Equal(t, "https://api.github.com", c1.BaseURL)
+
+	c2 := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL("http://github.com/"))
+	assert.Equal(t, "https://api.github.com", c2.BaseURL)
+
+	c3 := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL("https://ghe.company.com/api/v3"))
+	assert.Equal(t, "https://ghe.company.com/api/v3", c3.BaseURL)
+}
