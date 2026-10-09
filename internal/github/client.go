@@ -38,7 +38,12 @@ func WithHTTPClient(httpClient *http.Client) Option {
 // WithBaseURL overrides the default GitHub API base URL (for GitHub Enterprise or testing).
 func WithBaseURL(baseURL string) Option {
 	return func(c *Client) {
-		c.BaseURL = strings.TrimSuffix(baseURL, "/")
+		trimmed := strings.TrimSuffix(baseURL, "/")
+		if trimmed == "https://github.com" || trimmed == "http://github.com" {
+			c.BaseURL = "https://api.github.com"
+		} else {
+			c.BaseURL = trimmed
+		}
 	}
 }
 
@@ -92,6 +97,12 @@ type rawGitHubIssue struct {
 type gitHubErrorResponse struct {
 	Message          string `json:"message"`
 	DocumentationURL string `json:"documentation_url"`
+	Errors           []struct {
+		Resource string `json:"resource"`
+		Field    string `json:"field"`
+		Code     string `json:"code"`
+		Message  string `json:"message"`
+	} `json:"errors"`
 }
 
 // GetIssue fetches an issue by its number or key.
@@ -317,7 +328,7 @@ func (c *Client) requestReviewers(ctx context.Context, prNumber int, reviewers [
 
 func (c *Client) setHeaders(req *http.Request) {
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", "2026-03-10")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	req.Header.Set("Content-Type", "application/json")
 	if c.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Token)
@@ -331,13 +342,28 @@ func (c *Client) handleErrorResponse(resp *http.Response, actionFormat string, a
 	var ghErr gitHubErrorResponse
 	_ = json.Unmarshal(body, &ghErr)
 	msg := strings.TrimSpace(ghErr.Message)
+	if len(ghErr.Errors) > 0 {
+		var errDetails []string
+		for _, e := range ghErr.Errors {
+			if e.Message != "" {
+				errDetails = append(errDetails, e.Message)
+			} else if e.Field != "" && e.Code != "" {
+				errDetails = append(errDetails, fmt.Sprintf("%s: %s", e.Field, e.Code))
+			}
+		}
+		if len(errDetails) > 0 {
+			if msg != "" {
+				msg = fmt.Sprintf("%s (%s)", msg, strings.Join(errDetails, "; "))
+			} else {
+				msg = strings.Join(errDetails, "; ")
+			}
+		}
+	}
 	if msg == "" {
 		bodyStr := strings.TrimSpace(string(body))
 		// If the response is HTML, don't dump raw HTML markup into terminal
 		if strings.HasPrefix(strings.ToLower(bodyStr), "<!doctype") || strings.HasPrefix(strings.ToLower(bodyStr), "<html") {
 			msg = fmt.Sprintf("HTTP %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
-		} else if len(bodyStr) > 200 {
-			msg = bodyStr[:200] + "..."
 		} else {
 			msg = bodyStr
 		}
@@ -356,7 +382,7 @@ func (c *Client) handleErrorResponse(resp *http.Response, actionFormat string, a
 		}
 		return err
 	case http.StatusUnprocessableEntity:
-		return domain.NewError(domain.ExitAPIError, "GitHub validation failed during %s: %s", action, msg)
+		return domain.NewError(domain.ExitAPIError, "GitHub validation failed during %s (%d): %s", action, resp.StatusCode, msg)
 	default:
 		return domain.NewError(domain.ExitAPIError, "GitHub API returned status %d during %s: %s", resp.StatusCode, action, msg)
 	}
