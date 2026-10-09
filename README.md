@@ -4,7 +4,7 @@
 
 # git-brx
 
-**Opinionated, guardrailed Git automation for modern software teams.**
+**Opinionated, simple Git workflow with user-friendly automation.**
 
 [![CI](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml)
 [![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?style=flat&logo=go)](go.mod)

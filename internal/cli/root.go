@@ -54,9 +54,9 @@ func NewApp(stdout, stderr io.Writer, runner git.Runner) *App {
 	rootCmd := &cobra.Command{
 		Use:     "git-brx",
 		Version: version.String(),
-		Short:   "Opinionated Git extension for local branch workflows",
-		Long: `git-brx provides fast, opinionated automation for local branch lifecycles,
-upstream synchronization, clean rebasing, and Atlassian toolchain integration.`,
+		Short:   "Opinionated, simple Git workflow with user-friendly automation",
+		Long: `git-brx provides a simple, opinionated Git workflow with user-friendly automation
+for local branch lifecycles, upstream synchronization, clean rebasing, and code reviews.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

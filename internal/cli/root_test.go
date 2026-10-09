@@ -16,7 +16,7 @@ func TestCliRunSuccess(t *testing.T) {
 
 	code := cli.Run(ctx, []string{"--help"}, &stdout, &stderr)
 	assert.Equal(t, int(domain.ExitSuccess), code)
-	assert.Contains(t, stdout.String(), "git-brx provides fast, opinionated automation")
+	assert.Contains(t, stdout.String(), "git-brx provides a simple, opinionated Git workflow")
 	assert.Empty(t, stderr.String())
 }
 
