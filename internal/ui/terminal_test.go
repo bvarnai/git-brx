@@ -78,6 +78,7 @@ func TestUIConfirm(t *testing.T) {
 		ok, err := u.Confirm("Create branch 'issue/123' [Y/n]?")
 		assert.NoError(t, err)
 		assert.True(t, ok)
+		assert.Contains(t, stderr.String(), "[git-brx] Create branch 'issue/123' [Y/n]?: ")
 	})
 
 	t.Run("explicit yes with [Y/n]", func(t *testing.T) {

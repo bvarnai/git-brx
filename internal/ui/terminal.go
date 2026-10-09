@@ -122,7 +122,7 @@ func (u *UI) Confirm(prompt string) (bool, error) {
 
 	reader := bufio.NewReader(u.Stdin)
 	for count := 1; count <= 5; count++ {
-		fmt.Fprintf(u.Stderr, "%s: ", prompt)
+		fmt.Fprintf(u.Stderr, "%s %s: ", u.PrefixText, prompt)
 		line, err := reader.ReadString('\n')
 		if err != nil && line == "" {
 			return false, err
