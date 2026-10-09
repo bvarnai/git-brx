@@ -93,7 +93,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			errSubstr:    "Cannot sync in a detached HEAD state",
+			errSubstr:    "Cannot execute on a detached HEAD",
 		},
 		{
 			name: "unsupported custom branch type without override returns code 3",

@@ -20,6 +20,12 @@ func (o *Operations) Fetch(ctx context.Context, dir, remote string) error {
 	return err
 }
 
+// FetchRef fetches a specific reference from the remote.
+func (o *Operations) FetchRef(ctx context.Context, dir, remote, ref string) error {
+	_, err := o.runner.Run(ctx, dir, "fetch", remote, ref)
+	return err
+}
+
 // Checkout switches the working tree to the specified branch.
 func (o *Operations) Checkout(ctx context.Context, dir, branch string) error {
 	_, err := o.runner.Run(ctx, dir, "checkout", branch)

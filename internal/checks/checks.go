@@ -68,8 +68,20 @@ func AttachedBranch(ctx context.Context, inspector *git.Inspector, rootDir strin
 		return nil, domain.WrapError(domain.ExitGeneralError, err, "failed to get current branch")
 	}
 	if curr.IsDetached {
-		return nil, domain.NewError(domain.ExitPreconditionRepo, "Cannot sync in a detached HEAD state").
+		return nil, domain.NewError(domain.ExitPreconditionRepo, "Cannot execute on a detached HEAD").
 			WithHint("Checkout or create a branch first: 'git-brx select <branch>'")
 	}
 	return curr, nil
+}
+
+// HasOrigin ensures that the remote 'origin' is configured.
+func HasOrigin(ctx context.Context, inspector *git.Inspector, rootDir string) error {
+	hasOrigin, _, err := inspector.HasOrigin(ctx, rootDir)
+	if err != nil {
+		return domain.WrapError(domain.ExitGeneralError, err, "failed to check remote origin")
+	}
+	if !hasOrigin {
+		return domain.NewError(domain.ExitPreconditionRemote, "Your repository has no remote origin")
+	}
+	return nil
 }

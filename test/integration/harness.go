@@ -79,3 +79,23 @@ func (h *Harness) CreateBranch(name string) {
 	h.T.Helper()
 	h.Git("checkout", "-b", name)
 }
+
+// CloneHarness provisions a second clone from a remote URL.
+func CloneHarness(t *testing.T, remoteURL string) *Harness {
+	t.Helper()
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+
+	cmd := exec.Command("git", "clone", remoteURL, cloneDir)
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "git clone failed: %s", string(out))
+
+	h := &Harness{
+		T:       t,
+		RepoDir: cloneDir,
+	}
+	h.Git("config", "user.name", "Test User 2")
+	h.Git("config", "user.email", "test2@example.com")
+	h.Git("config", "commit.gpgsign", "false")
+	return h
+}

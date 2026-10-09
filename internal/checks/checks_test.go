@@ -223,3 +223,31 @@ func TestAttachedBranch(t *testing.T) {
 		assert.Contains(t, appErr.Message, "detached HEAD")
 	})
 }
+
+func TestHasOrigin(t *testing.T) {
+	t.Run("origin configured passes", func(t *testing.T) {
+		runner := &mockRunner{
+			responses: map[string]string{
+				"remote get-url origin": "https://remote.example.com/repo.git",
+			},
+		}
+		inspector := git.NewInspector(runner)
+		err := checks.HasOrigin(context.Background(), inspector, "/repo")
+		assert.NoError(t, err)
+	})
+
+	t.Run("origin missing returns ExitPreconditionRemote", func(t *testing.T) {
+		runner := &mockRunner{
+			errors: map[string]error{
+				"remote get-url origin": errors.New("fatal: No such remote 'origin'"),
+			},
+		}
+		inspector := git.NewInspector(runner)
+		err := checks.HasOrigin(context.Background(), inspector, "/repo")
+		assert.Error(t, err)
+		var appErr *domain.AppError
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, domain.ExitPreconditionRemote, appErr.Code)
+		assert.Contains(t, appErr.Message, "no remote origin")
+	})
+}
