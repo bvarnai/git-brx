@@ -11,7 +11,7 @@
 
 | Subcommand | Legacy Equivalent | Primary Purpose |
 | :--- | :--- | :--- |
-| `name` | `name.sh` | Emits current active branch name. |
+| `name` | `name.sh` | Prints the current active branch name. |
 | `history` | `history.sh` | Renders a formatted commit graph / DAG. |
 | `update` | `update.sh` | Pulls remote changes using rebase onto the local branch. |
 | `select` | `select.sh` | Fetches remotes and switches working tree to target branch (default: `master`). |

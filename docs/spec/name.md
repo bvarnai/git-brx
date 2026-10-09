@@ -17,10 +17,10 @@
 ## 3. Core Execution Flow
 1. **Repository Verification:** Run `git rev-parse --is-inside-work-tree`. If non-zero, fail immediately.
 2. **Branch Name Resolution:** Execute `git symbolic-ref --short -q HEAD`.
-   - **Attached HEAD:** If exit code is `0`, output the resulting string followed by a newline (`\n`) directly to `stdout`. Exit code `0`.
+   - **Attached HEAD:** If exit code is `0`, print the resulting string followed by a newline (`\n`) directly to `stdout`. Exit code `0`.
    - **Detached HEAD:** If exit code is non-zero (indicating detached HEAD):
      - Resolve the current detached commit hash via `git rev-parse --short HEAD`.
-     - Emit the short commit hash or `HEAD` to `stdout`.
+     - Print the short commit hash or `HEAD` to `stdout`.
      - In diagnostic mode (`stderr`), log: `[git-brx] Warning: HEAD is detached at <commit>`.
      - Exit code `0` (or `3` if strict attached validation is requested).
 
