@@ -61,7 +61,7 @@ You don't need to be a Git wizard to work safely:
 
 ```mermaid
 flowchart LR
-    A["1. Issue<br/>(Jira / GitHub)"] -->|"git brx create"| B["2. Topic Branch<br/>(issue/PROJ-101)"]
+    A["1. Issue<br/>(Jira / GitHub)"] -->|"git brx create"| B["2. Topic Branch<br/>(issue/TASK-101)"]
     B -->|"git brx sync / update"| C["3. Work & Collaborate<br/>(Safe Rebase & Leased Push)"]
     C -->|"git brx review"| D["4. Code Review<br/>(PR with Checklist & Reviewers)"]
     D -->|"git brx delete"| E["5. Done & Cleaned<br/>(Pruned & Up to Date)"]
@@ -75,7 +75,7 @@ Experience the full branch workflow with just 5 commands:
 
 ```bash
 # 1. Create and checkout a validated branch linked to your tracker
-git brx create issue/PROJ-101
+git brx create issue/TASK-101
 
 # ... write code, make regular git commits ...
 

@@ -112,5 +112,5 @@ review:
 ```
 
 When you run:
-- `git brx create issue/PROJ-101`: Validates against **Jira**.
-- `git brx review`: Creates the pull request on **GitHub**, automatically linking back to Jira ticket `PROJ-101`.
+- `git brx create issue/TASK-101`: Validates against **Jira**.
+- `git brx review`: Creates the pull request on **GitHub**, automatically linking back to Jira ticket `TASK-101`.

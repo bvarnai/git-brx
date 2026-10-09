@@ -9,25 +9,25 @@ This guide walks you through the complete lifecycle of a development branch in `
 Every change in your codebase begins with a validated topic branch:
 
 ```bash
-git brx create issue/PROJ-101
+git brx create issue/TASK-101
 ```
 
 ### What Happens Behind the Scenes:
 1. **Repository Verification:** Asserts that you are inside a valid Git worktree and that no active merge or rebase is blocking your workspace.
 2. **Naming Validation:** Matches the target branch against your configured regex template (e.g. `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`).
 3. **Collision Checks:**
-   - Checks if the branch already exists locally. If so, `git-brx` provides an informational message and advises running `git brx select issue/PROJ-101`.
+   - Checks if the branch already exists locally. If so, `git-brx` provides an informational message and advises running `git brx select issue/TASK-101`.
    - Checks if the branch exists on the remote `origin`.
 4. **Tracker Verification:**
    - Queries your issue tracker (Jira or GitHub Issues).
-   - Validates that `PROJ-101` exists, checks the issue type against your branch prefix mapping (e.g., verifying that a `Bug` maps to `issue/`), and prints the issue title and current assignee.
+   - Validates that `TASK-101` exists, checks the issue type against your branch prefix mapping (e.g., verifying that a `Bug` maps to `issue/`), and prints the issue title and current assignee.
    - Prompts for confirmation: `Are you sure [y/n]?` (bypassable in automation via `-y` or `--yes`).
-5. **Checkout:** Executes `git checkout -b issue/PROJ-101` from your current clean base.
+5. **Checkout:** Executes `git checkout -b issue/TASK-101` from your current clean base.
 
 ### Offline Mode:
 Working on an airplane or without VPN access? Use `--offline` / `-o`:
 ```bash
-git brx create --offline issue/PROJ-101
+git brx create --offline issue/TASK-101
 ```
 This skips the remote Git check and tracker API lookup, provisioning the branch locally based purely on syntax rules.
 
@@ -43,15 +43,15 @@ Switching branches with raw `git checkout` can lead to lost work, detached HEAD 
 git brx select
 
 # Switch to a specific topic branch:
-git brx select issue/PROJ-101
+git brx select issue/TASK-101
 ```
 
 **Guardrails Provided by `select`:**
 - **Auto-Fetch:** Automatically fetches the latest remote refs before switching.
 - **Behind Hint:** If you are already on the target branch and it is behind remote origin, `git-brx` warns you:
   ```text
-  [git-brx] Already on 'issue/PROJ-101'
-  [git-brx] Hint: Your branch is behind 'origin/issue/PROJ-101' by 2 commit(s). Run 'git-brx sync' to update.
+  [git-brx] Already on 'issue/TASK-101'
+  [git-brx] Hint: Your branch is behind 'origin/issue/TASK-101' by 2 commit(s). Run 'git-brx sync' to update.
   ```
 - **Fuzzy Typo Suggestions:** Made a typo like `git brx select featrue/login`? `git-brx` computes Levenshtein distances:
   ```text
@@ -123,8 +123,8 @@ git brx review
    ```markdown
    # Merge instructions
    - **Strategy:** Squash & Merge (recommended)
-     - **Commit Title:** `PROJ-101: Add user authentication API`
-   - **Branch Cleanup:** Delete source branch `issue/PROJ-101` after merging
+     - **Commit Title:** `TASK-101: Add user authentication API`
+   - **Branch Cleanup:** Delete source branch `issue/TASK-101` after merging
    ```
 5. **PR Submission:** Calls the GitHub or Bitbucket Server REST API, prints the clickable PR URL to `stdout`, and logs confirmation to `stderr`.
 
@@ -153,6 +153,6 @@ git brx delete
 4. **Local Removal & Pruning:** Deletes the local topic branch (`git branch -D`) and prunes stale remote tracking references (`git remote prune origin`).
 5. **Next Step Hint:** Reminds you:
    ```text
-   [git-brx] Deleted local branch 'issue/PROJ-101' and pruned origin
+   [git-brx] Deleted local branch 'issue/TASK-101' and pruned origin
    [git-brx] Hint: Your local 'master' may not be up-to-date. Use 'git-brx update' to update changes.
    ```

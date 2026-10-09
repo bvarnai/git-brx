@@ -64,7 +64,7 @@ In many development teams, Pull Requests suffer from **Scope Creep during Review
 | **The Issue** | Product Managers, QA, Engineers, Stakeholders | **Source of Truth:** Defines *What* needs to be done and *Why*. Contains specifications, acceptance criteria, reproducible steps, and test plans. | Business requirements, edge cases, scope, user expectations. |
 | **The Pull Request** | Engineering Peers | **Quality Assurance:** Inspects *How* the code implements the Issue. Verifies architecture, style, test coverage, and performance. | Implementation details, code structure, algorithm efficiency, test assertions. |
 
-When a developer runs `git brx create issue/PROJ-101`, `git-brx` reaches out to the issue tracker, verifies that `PROJ-101` is a valid, assigned ticket, and sets up a local workspace directly linked to that contract.
+When a developer runs `git brx create issue/TASK-101`, `git-brx` reaches out to the issue tracker, verifies that `TASK-101` is a valid, assigned ticket, and sets up a local workspace directly linked to that contract.
 
 ---
 
@@ -73,7 +73,7 @@ When a developer runs `git brx create issue/PROJ-101`, `git-brx` reaches out to 
 ```mermaid
 flowchart TD
     subgraph S1 ["Stage 1: Intent & Creation"]
-        Issue["Tracker Issue<br/>(PROJ-101)"] -->|"git brx create"| TopicBranch["Validated Branch<br/>(issue/PROJ-101)"]
+        Issue["Tracker Issue<br/>(TASK-101)"] -->|"git brx create"| TopicBranch["Validated Branch<br/>(issue/TASK-101)"]
     end
 
     subgraph S2 ["Stage 2: Iteration & Sync"]

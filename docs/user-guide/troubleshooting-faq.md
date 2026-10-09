@@ -12,8 +12,8 @@ Frequently asked questions, common error diagnostics, and recovery tips for `git
 ### Q: Can I use `git-brx` without network access or offline?
 **A:** Yes! Both `create` and `select` feature an `--offline` (`-o`) flag:
 ```bash
-git brx create --offline issue/PROJ-101
-git brx select --offline issue/PROJ-101
+git brx create --offline issue/TASK-101
+git brx select --offline issue/TASK-101
 ```
 This bypasses remote network calls and allows full offline productivity.
 
@@ -21,8 +21,8 @@ This bypasses remote network calls and allows full offline productivity.
 **A:** No. `git-brx` never mutates your global Git configuration. It respects your existing credentials, diff tools, and git settings natively.
 
 ### Q: What is the difference between `sync` and `update`?
-- **`git brx sync`**: Brings in new work from your **base branch** (e.g. `master` ➔ `issue/PROJ-101`).
-- **`git brx update`**: Pulls remote commits on your **own branch** (e.g. `origin/issue/PROJ-101` ➔ `issue/PROJ-101`).
+- **`git brx sync`**: Brings in new work from your **base branch** (e.g. `master` ➔ `issue/TASK-101`).
+- **`git brx update`**: Pulls remote commits on your **own branch** (e.g. `origin/issue/TASK-101` ➔ `issue/TASK-101`).
 
 ---
 
@@ -38,7 +38,7 @@ This bypasses remote network calls and allows full offline productivity.
   ```bash
   git brx select master
   git brx update
-  git brx select issue/PROJ-101
+  git brx select issue/TASK-101
   git brx sync
   ```
 
