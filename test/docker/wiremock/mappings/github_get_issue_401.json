@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/repos/test-owner/test-repo/issues/401"
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "message": "Bad credentials",
+      "documentation_url": "https://docs.github.com/rest"
+    }
+  }
+}

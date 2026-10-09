@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:github:rest:v3:pull-request",
+  "title": "GitHubPullRequest",
+  "description": "GitHub REST API v3 Pull Request response schema extracted from official GitHub REST documentation",
+  "source": {
+    "product": "GitHub REST API",
+    "version": "2026-03-10",
+    "extractedFrom": "official_openapi_v3_specification",
+    "docUrl": "https://docs.github.com/en/rest/pulls/pulls#create-a-pull-request",
+    "resourcePath": "/repos/{owner}/{repo}/pulls",
+    "method": "POST",
+    "responseStatus": 201,
+    "modelName": "pull-request-simple",
+    "extractionNotes": "Extracted from official GitHub REST API OpenAPI v3 specification for POST /repos/{owner}/{repo}/pulls"
+  },
+  "type": "object",
+  "properties": {
+    "number": {
+      "type": "integer"
+    },
+    "html_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "state": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    }
+  },
+  "required": ["number", "html_url"]
+}

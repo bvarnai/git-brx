@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "/repos/test-owner/test-repo/pulls"
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "number": 105,
+      "html_url": "https://github.com/test-owner/test-repo/pull/105",
+      "state": "open",
+      "title": "issue/42"
+    }
+  }
+}

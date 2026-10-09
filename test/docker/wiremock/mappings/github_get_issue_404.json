@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/repos/test-owner/test-repo/issues/999"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "message": "Not Found",
+      "documentation_url": "https://docs.github.com/rest/issues/issues#get-an-issue"
+    }
+  }
+}

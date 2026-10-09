@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:github:rest:v3:issue",
+  "title": "GitHubIssue",
+  "description": "GitHub REST API v3 Issue response schema extracted from official GitHub REST documentation",
+  "source": {
+    "product": "GitHub REST API",
+    "version": "2026-03-10",
+    "extractedFrom": "official_openapi_v3_specification",
+    "docUrl": "https://docs.github.com/en/rest/issues/issues#get-an-issue",
+    "resourcePath": "/repos/{owner}/{repo}/issues/{issue_number}",
+    "method": "GET",
+    "responseStatus": 200,
+    "modelName": "issue",
+    "extractionNotes": "Extracted from official GitHub REST API OpenAPI v3 specification for GET /repos/{owner}/{repo}/issues/{issue_number}"
+  },
+  "type": "object",
+  "properties": {
+    "number": {
+      "type": "integer"
+    },
+    "title": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["open", "closed"]
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" }
+        },
+        "required": ["name"]
+      }
+    },
+    "assignee": {
+      "type": ["object", "null"],
+      "properties": {
+        "login": { "type": "string" }
+      },
+      "required": ["login"]
+    },
+    "assignees": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "login": { "type": "string" }
+        },
+        "required": ["login"]
+      }
+    }
+  },
+  "required": ["number", "title", "state"]
+}

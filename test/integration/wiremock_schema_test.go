@@ -177,3 +177,63 @@ func TestSchemaValidationRejection(t *testing.T) {
 	assert.Error(t, err, "schema validator MUST reject malformed payload")
 	assert.Contains(t, strings.ToLower(err.Error()), "missing", "error message should mention missing properties")
 }
+
+// TestGitHubIssueCompatibilityMatrix validates GitHub issue stubs against the GitHub v3 issue schema.
+func TestGitHubIssueCompatibilityMatrix(t *testing.T) {
+	schemaPath := filepath.Join("github", "v3", "issue.json")
+	schema := compileSchema(t, schemaPath)
+
+	stubFile := "github_get_issue_42.json"
+	t.Run("v3/"+stubFile, func(t *testing.T) {
+		status, body := loadRawStubBody(t, stubFile)
+		assert.Equal(t, 200, status)
+
+		err := schema.Validate(body)
+		if err != nil {
+			t.Fatalf("Validation failed for %s against schema %s:\n%#v", stubFile, schemaPath, err)
+		}
+	})
+}
+
+// TestGitHubPullRequestCompatibilityMatrix validates GitHub PR stubs against the GitHub v3 PR schema.
+func TestGitHubPullRequestCompatibilityMatrix(t *testing.T) {
+	schemaPath := filepath.Join("github", "v3", "pull_request.json")
+	schema := compileSchema(t, schemaPath)
+
+	stubFile := "github_post_pull_request_201.json"
+	t.Run("v3/"+stubFile, func(t *testing.T) {
+		status, body := loadRawStubBody(t, stubFile)
+		assert.Equal(t, 201, status)
+
+		err := schema.Validate(body)
+		if err != nil {
+			t.Fatalf("Validation failed for %s against schema %s:\n%#v", stubFile, schemaPath, err)
+		}
+	})
+}
+
+// TestGitHubErrorsCompatibilityMatrix validates GitHub error stubs against the GitHub v3 errors schema.
+func TestGitHubErrorsCompatibilityMatrix(t *testing.T) {
+	schemaPath := filepath.Join("github", "v3", "errors.json")
+	schema := compileSchema(t, schemaPath)
+
+	errorStubs := []struct {
+		file           string
+		expectedStatus int
+	}{
+		{file: "github_get_issue_404.json", expectedStatus: 404},
+		{file: "github_get_issue_401.json", expectedStatus: 401},
+	}
+
+	for _, stub := range errorStubs {
+		t.Run("v3/"+stub.file, func(t *testing.T) {
+			status, body := loadRawStubBody(t, stub.file)
+			assert.Equal(t, stub.expectedStatus, status)
+
+			err := schema.Validate(body)
+			if err != nil {
+				t.Fatalf("Validation failed for %s against schema %s:\n%#v", stub.file, schemaPath, err)
+			}
+		})
+	}
+}

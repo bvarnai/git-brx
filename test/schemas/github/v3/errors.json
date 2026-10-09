@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:github:rest:v3:errors",
+  "title": "GitHubErrorResponse",
+  "description": "GitHub REST API v3 Error Response schema extracted from official GitHub REST documentation",
+  "source": {
+    "product": "GitHub REST API",
+    "version": "2026-03-10",
+    "extractedFrom": "official_openapi_v3_specification",
+    "docUrl": "https://docs.github.com/en/rest/overview/resources-in-the-rest-api#client-errors",
+    "resourcePath": "/repos/{owner}/{repo}/*",
+    "responseStatus": 404,
+    "modelName": "basic-error",
+    "extractionNotes": "Extracted from official GitHub REST API OpenAPI v3 specification for client error responses (401, 403, 404)"
+  },
+  "type": "object",
+  "properties": {
+    "message": {
+      "type": "string"
+    },
+    "documentation_url": {
+      "type": "string"
+    }
+  },
+  "required": ["message"]
+}

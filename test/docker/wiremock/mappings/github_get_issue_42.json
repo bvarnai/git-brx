@@ -1,0 +1,35 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/repos/test-owner/test-repo/issues/42"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "number": 42,
+      "title": "Fix login crash",
+      "state": "open",
+      "assignee": {
+        "login": "octocat"
+      },
+      "assignees": [
+        {
+          "login": "octocat"
+        }
+      ],
+      "labels": [
+        {
+          "id": 1,
+          "name": "bug"
+        },
+        {
+          "id": 2,
+          "name": "ui"
+        }
+      ]
+    }
+  }
+}
