@@ -57,4 +57,3 @@ func TestCliRunHelp(t *testing.T) {
 		assert.Empty(t, stderr.String())
 	})
 }
-

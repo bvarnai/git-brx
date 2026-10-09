@@ -222,4 +222,3 @@ func TestClient_WithBaseURL_NormalizesGithubCom(t *testing.T) {
 	c3 := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL("https://ghe.company.com/api/v3"))
 	assert.Equal(t, "https://ghe.company.com/api/v3", c3.BaseURL)
 }
-
