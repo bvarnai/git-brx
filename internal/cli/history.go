@@ -155,8 +155,8 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 			} else if currBranch.Name != baseBranch {
 				logArgs = append(logArgs, fmt.Sprintf("%s..%s", baseBranch, currBranch.Name))
 			} else {
-				a.UI.Log("Already on base branch '%s'", baseBranch)
-				logArgs = append(logArgs, baseBranch)
+				a.UI.Log("You are on base branch '%s'; there is no topic branch delta to display", baseBranch)
+				return nil
 			}
 		}
 	}

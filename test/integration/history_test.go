@@ -108,6 +108,18 @@ func TestHistoryIntegration(t *testing.T) {
 		assert.NotContains(t, out, "Base master commit")
 	})
 
+	t.Run("TopicBranchModeOnMasterBranchLogsNoticeAndExitsCleanly", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("base.txt", "base", "Base master commit")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Empty(t, stdout.String())
+		assert.Contains(t, stderr.String(), "You are on base branch 'master'; there is no topic branch delta to display")
+	})
+
 	t.Run("BranchFlagScopesToNamedBranch", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("base.txt", "base", "Base master commit")

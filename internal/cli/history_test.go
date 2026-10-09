@@ -167,7 +167,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | issue commit [Test User]\n",
 		},
 		{
-			name: "topic flag when already on master logs notice and streams master history",
+			name: "topic flag when already on master logs notice and exits cleanly",
 			args: []string{"history", "--topic", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                              {out: "true"},
@@ -177,13 +177,10 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":                                       {out: "abc1234"},
 				"for-each-ref --format=%(upstream:short) refs/heads/master":    {out: "origin/master"},
 				"show-ref --verify --quiet refs/heads/master":                  {out: ""},
-				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color master`: {
-					out: "* abc1234 2026-10-09 | root commit (HEAD -> master) [Test User]",
-				},
 			},
 			expectedCode: int(domain.ExitSuccess),
-			expectStdout: "* abc1234 2026-10-09 | root commit (HEAD -> master) [Test User]\n",
-			expectStderr: "Already on base branch 'master'",
+			expectStdout: "",
+			expectStderr: "You are on base branch 'master'; there is no topic branch delta to display",
 		},
 		{
 			name: "path scoping appends follow to regular file",

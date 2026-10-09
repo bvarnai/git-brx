@@ -31,7 +31,7 @@
    - Limit: If `--limit` > 0, append `--max-count=<N>`.
    - Search: If `--search` is non-empty, append `--grep=<query>` and `-i`.
    - Diff peeking: If `--stat` is active, append `--stat`. If `--patch` / `-p` is active, append `-p`.
-   - Branch relativity: If `--branch` / `-b` is provided, append `<branch>`. If `--topic` is active, resolve base branch (`master` or autodetected default) and append `<base>..<current_branch>`. If current branch is identical to base branch, display recent branch commits with informational note.
+   - Branch relativity: If `--branch` / `-b` is provided, append `<branch>`. If `--topic` is active, resolve base branch (`master` or autodetected default) and append `<base>..<current_branch>`. If current branch is identical to base branch, emit notice (`[git-brx] You are on base branch '<base>'; there is no topic branch delta to display`) and return cleanly without outputting the full base branch log.
    - Path scoping: If `<path>` is provided, check if path is a directory. If directory, append `-- <path>`. If regular file or past path, append `--follow -- <path>`.
 4. **Color & Pager Management:** If `--no-color` or `NO_COLOR` is active, pass `--no-color` to Git. If `stdout` is connected to a TTY, attach standard Git pager configuration (`PAGER` or `less`).
 
