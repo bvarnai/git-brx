@@ -8,14 +8,22 @@ Git is undeniably the industry standard for source control, but its command-line
 2. **Fear of Breaking Things:** Developers hesitate to rebase, synchronize, or clean up branches because one wrong command (`git push --force`, `git reset --hard`, `git checkout .`) can silently discard hours of work or overwrite a teammate's commits.
 3. **Inconsistent Team Habits:** Without standard tooling, every developer invents their own ad-hoc aliases, naming conventions, and merge practices. Some squash locally, some create tangled merge webs, and some leave dozens of abandoned branches lingering on the remote.
 
-### The `git-brx` Solution: Guardrails & Psychological Safety
+### The `git-brx` Solution: Guardrails, Brakes & Psychological Safety
 `git-brx` was engineered with a clear design goal: **hide low-level Git complexities behind sensible, guardrailed automation so that developers can ship changes quickly with confidence.**
 
-Instead of memorizing dozens of obscure Git flags, developers interact with high-level workflow verbs (`create`, `sync`, `publish`, `review`, `delete`). Under the hood, `git-brx` enforces best practices:
-- Pushes always use **lease protection** (`--force-with-lease`).
-- Branch switches warn if uncommitted changes would be carried across branches.
-- Conflict resolution isolates and stages **only** conflicted files.
-- Branch deletion validates that the change was successfully merged in your SCM platform first.
+#### Why the name "brx"?
+Originally a concise abbreviation for **branch**, `brx` also sounds like **brakes**—and that analogy illuminates the tool's engineering purpose:
+
+> *"The purpose of brakes on a car isn't just to make you stop; it's to give you the confidence and control to drive fast."*
+
+If you drive a car with spongy, unpredictable brakes, you crawl cautiously at 10 mph because every curve is terrifying. That is precisely how many developers interact with Git: paralyzed by the fear of corrupting repository history or losing their work.
+
+`git-brx` provides the automotive brakes and stability control your team needs to move at top speed:
+- **Anti-Lock Pushes:** Pushes always use **lease protection** (`--force-with-lease`), preventing high-speed overwrites of teammates' commits.
+- **Lane Keep & Drift Detection:** Branch switches (`git brx select`) warn if uncommitted changes would be carried across branches, preventing cross-contamination.
+- **Targeted Conflict Management:** Conflict resolution (`git brx resolve`) isolates and stages **only** conflicted files—never blind whole-repo staging.
+- **Merge-Gated Branch Cleanup:** Branch deletion (`git brx delete`) validates that your PR was safely merged on the remote SCM before discarding local refs.
+- **Emergency Handbrake:** When an experiment or rebase goes awry, `git brx reset` acts as an immediate, clean stop, restoring your worktree safely from remote truth.
 
 ---
 

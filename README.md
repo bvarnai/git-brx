@@ -32,6 +32,13 @@ Git is an immensely flexible and powerful distributed version control system, bu
 
 **`git-brx` eliminates this friction.** It acts as an intelligent, guardrailed layer over Git that hides low-level complexity, prevents disastrous mistakes, and gives teams a simple, intuitive workflow from task creation to merged code.
 
+### Why the name "brx"?
+Originally short for **branch**, `brx` also sounds like **brakes**—and that analogy perfectly captures the tool's core philosophy:
+
+> *"The purpose of brakes on a car isn't just to make you stop; it's to give you the confidence and control to drive fast."*
+
+Without reliable brakes, engineers crawl through Git walking on eggshells—afraid of messy rebases, destructive force pushes, or losing uncommitted work. `git-brx` equips your development workflow with high-performance brakes and guardrails. You stay in complete control, stop safely whenever needed, and enjoy a smooth, confident ride from branch creation to merged code.
+
 ---
 
 ## The git-brx Philosophy
