@@ -1,10 +1,10 @@
-# Complete Command Reference
+# Complete command reference
 
 This chapter documents all 10 subcommands available in `git-brx`, including flag definitions, accepted arguments, error codes, and practical examples.
 
 ---
 
-## Global Flags
+## Global flags
 
 The following flags are accepted across all commands:
 

@@ -1,10 +1,10 @@
-# Multi-Platform Setup
+# Multi-platform setup
 
 `git-brx` is architected with a decoupled provider model, allowing it to seamlessly integrate with GitHub, Atlassian Bitbucket Server & Jira, or hybrid toolchains.
 
 ---
 
-## 1. Zero-Config Mode (GitHub / Bitbucket Auto-Detection)
+## 1. Zero-config mode (GitHub / Bitbucket auto-detection)
 
 If your repository uses GitHub or Bitbucket Server, you typically **do not need any `.git-brx.yaml` file at all**.
 
@@ -16,7 +16,7 @@ All branch naming rules and issue validations immediately work with standard def
 
 ---
 
-## 2. GitHub Configuration
+## 2. GitHub configuration
 
 To customize GitHub integration, place `.git-brx.yaml` in your repository root:
 
@@ -42,7 +42,7 @@ review:
 
 ---
 
-## 3. Atlassian Bitbucket Server & Jira Configuration
+## 3. Atlassian Bitbucket Server & Jira configuration
 
 For on-premises Atlassian enterprise deployments (Bitbucket Server / Data Center and Jira Server):
 
@@ -85,7 +85,7 @@ export GIT_BRX_TOKEN="your_atlassian_pat"
 
 ---
 
-## 4. Hybrid Setups (Jira + GitHub)
+## 4. Hybrid setups (Jira + GitHub)
 
 Many modern organizations track user stories and bugs in Atlassian Jira, while hosting source code and doing code reviews on GitHub. `git-brx` natively supports this split configuration:
 

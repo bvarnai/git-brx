@@ -1,4 +1,4 @@
-# Getting Started
+# Getting started
 
 This guide walks you through installing `git-brx`, integrating it with your shell environment, and configuring project settings.
 
@@ -8,7 +8,7 @@ This guide walks you through installing `git-brx`, integrating it with your shel
 
 `git-brx` is distributed as a self-contained, statically linked binary with zero runtime dependencies. It does not require Java, Groovy, Python, or external scripts.
 
-### Option A: Download Pre-Built Binaries
+### Option A: Download pre-built binaries
 Download the binary for your platform from the [Releases](https://github.com/bvarnai/git-brx/releases) page:
 - Linux (`git-brx_linux_amd64.tar.gz`)
 - macOS (`git-brx_darwin_arm64.tar.gz` / `amd64`)
@@ -25,14 +25,14 @@ mv git-brx.exe ~/bin/
 # Ensure ~/bin is in your PATH in ~/.bashrc or ~/.bash_profile
 ```
 
-### Option B: Build from Source (Go >= 1.22)
+### Option B: Build from source (Go >= 1.22)
 ```bash
 git clone https://github.com/bvarnai/git-brx.git
 cd git-brx
 go build -o /usr/local/bin/git-brx ./cmd/git-brx
 ```
 
-### Verifying the Installation
+### Verifying the installation
 Run the `--version` flag:
 ```bash
 git-brx --version
@@ -41,7 +41,7 @@ git-brx --version
 
 ---
 
-## 2. Shell Integration (`git brx`)
+## 2. Shell integration (`git brx`)
 
 Because Git automatically resolves executables named `git-<subcommand>` from your system `PATH`, placing `git-brx` in your `PATH` immediately enables native Git plugin dispatch.
 
@@ -58,20 +58,20 @@ Both invocations are completely identical. You do not need to install Git aliase
 
 ---
 
-## 3. Configuration Cascade
+## 3. Configuration cascade
 
 `git-brx` uses a hierarchical discovery cascade to locate project configurations. You can run with **zero configuration** on standard GitHub or Bitbucket repositories, or customize rules using YAML files.
 
 ### Priority Order:
-1. **Environment Variable Override:** `GIT_BRX_CONFIG_PATH` pointing to a specific file or folder.
-2. **Repository Configuration:** `.git-brx.yaml` or `.git-brx.yml` in the repository root directory.
-3. **Repository Folder Configuration:** `.git-brx/config.yaml`.
-4. **User-Level Configuration:** `~/.config/git-brx/config.yaml` (global settings for your machine).
-5. **Zero-Config Auto-Discovery (Default):** If no config file is found, `git-brx` inspects `git remote get-url origin` and automatically discovers the platform, organization/owner, and repository name.
+1. **Environment variable override:** `GIT_BRX_CONFIG_PATH` pointing to a specific file or folder.
+2. **Repository configuration:** `.git-brx.yaml` or `.git-brx.yml` in the repository root directory.
+3. **Repository folder configuration:** `.git-brx/config.yaml`.
+4. **User-Level configuration:** `~/.config/git-brx/config.yaml` (global settings for your machine).
+5. **Zero-Config auto-discovery (default):** If no config file is found, `git-brx` inspects `git remote get-url origin` and automatically discovers the platform, organization/owner, and repository name.
 
 ---
 
-## 4. Configuration Schema (`.git-brx.yaml`)
+## 4. Configuration schema (`.git-brx.yaml`)
 
 Here is an annotated example of a comprehensive `.git-brx.yaml` file:
 
@@ -115,11 +115,11 @@ review:
 
 ---
 
-## 5. Authentication & Tokens
+## 5. Authentication & tokens
 
 `git-brx` securely reads tokens without leaking secrets to the process table or log files:
 
-### GitHub Authentication
+### GitHub authentication
 Set one of the standard GitHub environment variables:
 ```bash
 export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
@@ -128,7 +128,7 @@ export GH_TOKEN="ghp_xxxxxxxxxxxx"
 ```
 Or allow `git-brx` to consult your Git credential helper automatically (`git credential fill`).
 
-### Bitbucket Server & Jira Authentication
+### Bitbucket server & Jira authentication
 For Atlassian enterprise servers, define:
 ```bash
 export GIT_BRX_TOKEN="your_personal_access_token"

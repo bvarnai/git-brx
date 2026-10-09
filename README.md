@@ -10,7 +10,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?style=flat&logo=go)](go.mod)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Single Binary](https://img.shields.io/badge/Architecture-Single%20Static%20Binary-success.svg)]()
+[![Single binary](https://img.shields.io/badge/Architecture-Single%20Static%20Binary-success.svg)]()
 
 <p align="center">
   <a href="#why-git-brx">Why git-brx?</a> •
@@ -29,10 +29,10 @@
 
 Git is undeniably the industry standard for source control, but its command-line interface was designed as a low-level plumbing toolkit rather than an ergonomic user interface. As teams grow, several systemic problems reliably emerge:
 
-- **Tooling Intimidation & Onboarding Friction:** New hires, junior engineers, and specialists from non-software backgrounds (data scientists, hardware designers, technical writers) are often intimidated by Git's cryptic error messages, endless plumbing flags, and steep learning curve.
-- **Fear of Breaking Things:** Developers hesitate to rebase, synchronize, or clean up branches because one wrong command (`git push --force`, `git reset --hard`, `git checkout .`) can silently discard hours of work or overwrite a teammate's commits.
-- **Inconsistent Team Habits:** Without standard tooling, every developer invents their own ad-hoc aliases, naming conventions, and merge practices. Some squash locally, some create tangled merge webs, and some leave dozens of abandoned branches lingering on the remote.
-- **Overengineered Workflows:** Many teams suffer under heavy, bureaucratic branching models designed for massive enterprises with dedicated DevOps support. Smaller or fast-moving teams need a clean, lightweight flow that just works without overhead.
+- **Tooling intimidation & onboarding friction:** New hires, junior engineers, and specialists from non-software backgrounds (data scientists, hardware designers, technical writers) are often intimidated by Git's cryptic error messages, endless plumbing flags, and steep learning curve.
+- **Fear of breaking things:** Developers hesitate to rebase, synchronize, or clean up branches because one wrong command (`git push --force`, `git reset --hard`, `git checkout .`) can silently discard hours of work or overwrite a teammate's commits.
+- **Inconsistent team habits:** Without standard tooling, every developer invents their own ad-hoc aliases, naming conventions, and merge practices. Some squash locally, some create tangled merge webs, and some leave dozens of abandoned branches lingering on the remote.
+- **Overengineered workflows:** Many teams suffer under heavy, bureaucratic branching models designed for massive enterprises with dedicated DevOps support. Smaller or fast-moving teams need a clean, lightweight flow that just works without overhead.
 
 **`git-brx` eliminates this friction.** It acts as an intelligent, guardrailed layer over Git that hides low-level complexity, prevents disastrous mistakes, and gives teams a simple, intuitive workflow from task creation to merged code.
 
@@ -45,21 +45,21 @@ Without reliable brakes, engineers crawl through Git walking on eggshells—afra
 
 ---
 
-## The git-brx Philosophy
+## The git-brx philosophy
 
 ### 1. Issue-First Development: The Contract of Record
 In `git-brx`, **every code change begins with an Issue** (Jira, GitHub Issues, etc.):
 - **The Issue defines "What" and "Why":** Business context, specifications, edge cases, and acceptance criteria live exclusively in the issue tracker.
 - **The Pull Request inspects "How":** Code review discussions are strictly technical—evaluating architecture, code quality, test coverage, and security. Reviewers don't have to rediscover missing requirements during code review because the issue is already the single source of truth.
 
-### 2. Guardrailed, Fearless Collaboration
+### 2. Guardrailed, fearless collaboration
 You don't need to be a Git wizard to work safely:
 - All remote pushes use **leased safety** (`--force-with-lease`) to prevent stale branch overwrites.
 - Branch synchronization defaults to **clean linear rebasing** for issue tasks, keeping `master`/`main` bisectable.
 - Conflict resolution (`git brx resolve`) interactively launches your GUI merge tool and stages **only** the conflicting files—never indiscriminate directory staging.
 - Deleting a branch (`git brx delete`) verifies that your PR has been merged on the remote platform first.
 
-### 3. The 4-Step Branch Lifecycle
+### 3. The 4-Step branch lifecycle
 
 ```mermaid
 flowchart LR
@@ -71,7 +71,7 @@ flowchart LR
 
 ---
 
-## Quick Start
+## Quick start
 
 Experience the full branch workflow with just 5 commands:
 
@@ -98,7 +98,7 @@ git brx delete
 
 ---
 
-## Available Commands
+## Available commands
 
 When installed in your `PATH`, `git-brx` is automatically available as a native Git plugin via `git brx <command>`:
 
@@ -122,10 +122,10 @@ All commands support `--help`, `-h`, and `--dry-run` (`-n`) for safe previewing.
 
 ## Installation
 
-### Pre-Built Binaries
+### Pre-built binaries
 Download the latest release for Linux, macOS, or Windows from the [Releases](https://github.com/bvarnai/git-brx/releases) page. Extract and place `git-brx` in your `PATH` (e.g. `/usr/local/bin` or `~/bin`).
 
-### From Source (Go >= 1.22)
+### From source (Go >= 1.22)
 ```bash
 git clone https://github.com/bvarnai/git-brx.git
 cd git-brx
@@ -164,17 +164,17 @@ See [Configuration Guide](docs/user-guide/getting-started.md#configuration-casca
 
 ---
 
-## Documentation Wiki
+## Documentation wiki
 
 Explore the complete user guide and technical manuals:
 
-- 📖 **[User Guide Index](docs/user-guide/README.md)**: Full table of contents.
-- 🎯 **[Philosophy & Principles](docs/user-guide/philosophy.md)**: Deep dive on the mental model, psychological safety, and issue-driven development.
-- 🚀 **[Getting Started](docs/user-guide/getting-started.md)**: Setup, credentials, and configuration cascade.
-- 🔄 **[Branch Lifecycle Guide](docs/user-guide/branch-lifecycle.md)**: Step-by-step from branch creation to post-merge deletion.
-- ⚡ **[Synchronization & Rebasing](docs/user-guide/synchronization-and-rebasing.md)**: Rebase workflows, resolving conflicts, and resetting.
-- 🌐 **[Multi-Platform Integration](docs/user-guide/multi-platform.md)**: Setting up GitHub, Bitbucket Server, and Jira.
-- 📚 **[Command Reference](docs/user-guide/command-reference.md)**: Comprehensive reference for all commands and flags.
+- 📖 **[User guide index](docs/user-guide/README.md)**: Full table of contents.
+- 🎯 **[Philosophy & principles](docs/user-guide/philosophy.md)**: Deep dive on the mental model, psychological safety, and issue-driven development.
+- 🚀 **[Getting started](docs/user-guide/getting-started.md)**: Setup, credentials, and configuration cascade.
+- 🔄 **[Branch lifecycle guide](docs/user-guide/branch-lifecycle.md)**: Step-by-step from branch creation to post-merge deletion.
+- ⚡ **[Synchronization & rebasing](docs/user-guide/synchronization-and-rebasing.md)**: Rebase workflows, resolving conflicts, and resetting.
+- 🌐 **[Multi-platform integration](docs/user-guide/multi-platform.md)**: Setting up GitHub, Bitbucket Server, and Jira.
+- 📚 **[Command reference](docs/user-guide/command-reference.md)**: Comprehensive reference for all commands and flags.
 - 💡 **[Troubleshooting & FAQ](docs/user-guide/troubleshooting-faq.md)**: Common questions and diagnostic solutions.
 
 ---
