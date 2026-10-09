@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 // ANSI color escape sequences
@@ -16,6 +18,7 @@ const (
 
 // UI manages CLI diagnostic output, standard output, and ANSI colorization.
 type UI struct {
+	Stdin      io.Reader
 	Stdout     io.Writer
 	Stderr     io.Writer
 	Color      bool
@@ -40,6 +43,7 @@ func New(stdout, stderr io.Writer, noColorFlag, quietFlag, verboseFlag bool) *UI
 	}
 
 	return &UI{
+		Stdin:      os.Stdin,
 		Stdout:     stdout,
 		Stderr:     stderr,
 		Color:      colorEnabled,
@@ -47,6 +51,11 @@ func New(stdout, stderr io.Writer, noColorFlag, quietFlag, verboseFlag bool) *UI
 		Verbose:    verboseFlag,
 		PrefixText: "[git-brx]",
 	}
+}
+
+// SetStdin overrides standard input reader (e.g. for testing or automation).
+func (u *UI) SetStdin(stdin io.Reader) {
+	u.Stdin = stdin
 }
 
 // Log writes an informational message to stderr.
@@ -103,4 +112,34 @@ func (u *UI) Debug(format string, args ...any) {
 // Out writes functional data to stdout followed by a newline.
 func (u *UI) Out(format string, args ...any) {
 	fmt.Fprintf(u.Stdout, format+"\n", args...)
+}
+
+// Confirm prompts the user for interactive confirmation [y/n] with up to 5 attempts.
+func (u *UI) Confirm(prompt string) (bool, error) {
+	if u.Stdin == nil {
+		u.Stdin = os.Stdin
+	}
+
+	reader := bufio.NewReader(u.Stdin)
+	for count := 1; count <= 5; count++ {
+		fmt.Fprintf(u.Stderr, "%s: ", prompt)
+		line, err := reader.ReadString('\n')
+		if err != nil && line == "" {
+			return false, err
+		}
+		trimmed := strings.TrimSpace(line)
+		switch strings.ToLower(trimmed) {
+		case "y", "yes":
+			return true, nil
+		case "n", "no":
+			return false, nil
+		default:
+			u.Log("Sorry I don't understand, please try again")
+		}
+		if count == 5 {
+			u.Log("Aborting after 5 tries")
+			return false, nil
+		}
+	}
+	return false, nil
 }

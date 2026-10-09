@@ -223,6 +223,17 @@ func (i *Inspector) BranchExists(ctx context.Context, dir, branch string) (local
 	return localExists, remoteExists, nil
 }
 
+// RemoteBranchExistsOnServer queries remote origin using git ls-remote --heads origin <branch>.
+// Returns (true, nil) if ref exists on remote origin.
+// Returns (false, err) if git ls-remote fails (e.g. network/remote unreachable).
+func (i *Inspector) RemoteBranchExistsOnServer(ctx context.Context, dir, branch string) (bool, error) {
+	out, err := i.runner.RunWithEnv(ctx, dir, []string{"GIT_TERMINAL_PROMPT=0"}, "ls-remote", "--heads", "origin", branch)
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) != "", nil
+}
+
 // HasOrphanedCommits checks if HEAD is detached and contains commits not reachable from any local or remote branch.
 func (i *Inspector) HasOrphanedCommits(ctx context.Context, dir string) (bool, error) {
 	// If HEAD is attached to a branch, switching away cannot orphan commits.

@@ -32,6 +32,12 @@ func (o *Operations) Checkout(ctx context.Context, dir, branch string) error {
 	return err
 }
 
+// CreateAndCheckout provisions a new local branch and switches the working tree to it.
+func (o *Operations) CreateAndCheckout(ctx context.Context, dir, branch string) error {
+	_, err := o.runner.Run(ctx, dir, "checkout", "-b", branch)
+	return err
+}
+
 // Rebase runs git rebase against the specified upstream ref.
 func (o *Operations) Rebase(ctx context.Context, dir, upstream string, autostash, interactive bool) error {
 	args := []string{"rebase"}
