@@ -182,4 +182,38 @@ func TestHistoryIntegration(t *testing.T) {
 		assert.Equal(t, int(domain.ExitUsageError), code)
 		assert.Contains(t, stderr.String(), "Unexpected argument: path2")
 	})
+
+	t.Run("BranchNameAsPathRejectedWithUsageError", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("root.txt", "root", "Root commit")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "master"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitUsageError), code)
+		assert.Contains(t, stderr.String(), "'master' is a branch name, not a file path. '-b' does not accept arguments")
+	})
+
+	t.Run("NonexistentPathRejectedWithUsageError", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("root.txt", "root", "Root commit")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "does_not_exist.txt"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitUsageError), code)
+		assert.Contains(t, stderr.String(), "Path 'does_not_exist.txt' does not exist in repository")
+	})
+
+	t.Run("ZeroCommitsFeedback", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("root.txt", "root", "Root commit")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-s", "nonexistent-query-string", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "No commits found matching the specified criteria")
+		assert.Empty(t, stdout.String())
+	})
 }

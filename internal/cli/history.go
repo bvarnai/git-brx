@@ -3,8 +3,10 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
 	"github.com/bvarnai/git-brx/internal/domain"
@@ -108,6 +110,38 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 		logArgs = append(logArgs, "--no-color")
 	}
 
+	pathArg := ""
+	pathIsDir := false
+	if len(args) == 1 && args[0] != "" {
+		targetPath := args[0]
+		targetFullPath := filepath.Join(workDir, targetPath)
+		fi, statErr := os.Stat(targetFullPath)
+		pathExists := statErr == nil
+
+		if !pathExists {
+			// Check if path exists in git history at HEAD
+			relPath := targetPath
+			if rel, err := filepath.Rel(rootDir, targetFullPath); err == nil && !strings.HasPrefix(rel, "..") {
+				relPath = rel
+			}
+			_, catErr := a.Runner.Run(ctx, rootDir, "cat-file", "-e", fmt.Sprintf("HEAD:%s", relPath))
+			if catErr == nil {
+				pathExists = true
+			}
+		}
+
+		if !pathExists {
+			localExists, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, targetPath)
+			if localExists || remoteExists {
+				return domain.NewError(domain.ExitUsageError, "'%s' is a branch name, not a file path. '-b' does not accept arguments", targetPath)
+			}
+			return domain.NewError(domain.ExitUsageError, "Path '%s' does not exist in repository", targetPath)
+		}
+
+		pathArg = targetPath
+		pathIsDir = statErr == nil && fi.IsDir()
+	}
+
 	if opts.Branch {
 		currBranch, branchErr := a.Inspector.CurrentBranch(ctx, rootDir)
 		if branchErr == nil {
@@ -122,24 +156,39 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 				logArgs = append(logArgs, fmt.Sprintf("%s..%s", baseBranch, currBranch.Name))
 			} else {
 				a.UI.Log("Already on base branch '%s'", baseBranch)
+				logArgs = append(logArgs, baseBranch)
 			}
 		}
 	}
 
-	if len(args) == 1 && args[0] != "" {
-		targetPath := args[0]
-		fi, statErr := os.Stat(filepath.Join(workDir, targetPath))
-		if statErr == nil && fi.IsDir() {
-			logArgs = append(logArgs, "--", targetPath)
+	if pathArg != "" {
+		if pathIsDir {
+			logArgs = append(logArgs, "--", pathArg)
 		} else {
-			logArgs = append(logArgs, "--follow", "--", targetPath)
+			logArgs = append(logArgs, "--follow", "--", pathArg)
 		}
 	}
 
-	err = a.Runner.RunStream(ctx, workDir, a.UI.Stdout, a.UI.Stderr, nil, logArgs...)
+	cw := &countingWriter{writer: a.UI.Stdout}
+	err = a.Runner.RunStream(ctx, workDir, cw, a.UI.Stderr, nil, logArgs...)
 	if err != nil {
 		return domain.WrapError(domain.ExitGeneralError, err, "Getting history failed (git log failed)")
 	}
 
+	if cw.bytesWritten == 0 {
+		a.UI.Log("No commits found matching the specified criteria")
+	}
+
 	return nil
+}
+
+type countingWriter struct {
+	writer       io.Writer
+	bytesWritten int64
+}
+
+func (c *countingWriter) Write(p []byte) (n int, err error) {
+	n, err = c.writer.Write(p)
+	c.bytesWritten += int64(n)
+	return n, err
 }

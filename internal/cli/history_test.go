@@ -151,12 +151,32 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | issue commit [Test User]\n",
 		},
 		{
+			name: "branch flag when already on master logs notice and streams master history",
+			args: []string{"history", "-b", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                              {out: "true"},
+				"rev-parse --show-toplevel":                                    {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                                   {out: "abc1234"},
+				"symbolic-ref --short -q HEAD":                                 {out: "master"},
+				"rev-parse --short HEAD":                                       {out: "abc1234"},
+				"for-each-ref --format=%(upstream:short) refs/heads/master":    {out: "origin/master"},
+				"show-ref --verify --quiet refs/heads/master":                  {out: ""},
+				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color master`: {
+					out: "* abc1234 2026-10-09 | root commit (HEAD -> master) [Test User]",
+				},
+			},
+			expectedCode: int(domain.ExitSuccess),
+			expectStdout: "* abc1234 2026-10-09 | root commit (HEAD -> master) [Test User]\n",
+			expectStderr: "Already on base branch 'master'",
+		},
+		{
 			name: "path scoping appends follow to regular file",
 			args: []string{"history", "main.go", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
+				"cat-file -e HEAD:main.go":        {out: ""},
 				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color --follow -- main.go`: {
 					out: "* abc1234 2026-10-09 | touch main.go [Test User]",
 				},
@@ -177,6 +197,49 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			},
 			expectedCode: int(domain.ExitGeneralError),
 			errSubstr:    "Getting history failed (git log failed)",
+		},
+		{
+			name: "passing branch name as path returns usage error",
+			args: []string{"history", "main", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":             {out: "true"},
+				"rev-parse --show-toplevel":                   {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                  {out: "abc1234"},
+				"cat-file -e HEAD:main":                       {err: errors.New("not a blob")},
+				"show-ref --verify --quiet refs/heads/main":   {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/main": {out: ""},
+			},
+			expectedCode: int(domain.ExitUsageError),
+			errSubstr:    "'main' is a branch name, not a file path. '-b' does not accept arguments",
+		},
+		{
+			name: "passing nonexistent path returns usage error",
+			args: []string{"history", "nonexistent.go", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                      {out: "true"},
+				"rev-parse --show-toplevel":                            {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                           {out: "abc1234"},
+				"cat-file -e HEAD:nonexistent.go":                      {err: errors.New("not a blob")},
+				"show-ref --verify --quiet refs/heads/nonexistent.go":  {err: errors.New("not a ref")},
+				"show-ref --verify --quiet refs/remotes/origin/nonexistent.go": {err: errors.New("not a ref")},
+			},
+			expectedCode: int(domain.ExitUsageError),
+			errSubstr:    "Path 'nonexistent.go' does not exist in repository",
+		},
+		{
+			name: "zero commits matched notifies stderr",
+			args: []string{"history", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree": {out: "true"},
+				"rev-parse --show-toplevel":       {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":      {out: "abc1234"},
+				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color`: {
+					out: "",
+				},
+			},
+			expectedCode: int(domain.ExitSuccess),
+			expectStdout: "",
+			expectStderr: "No commits found matching the specified criteria",
 		},
 	}
 
