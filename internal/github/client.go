@@ -228,6 +228,63 @@ func (c *Client) CreatePullRequest(ctx context.Context, req domain.PullRequestRe
 	}, nil
 }
 
+type rawPRQueryItem struct {
+	Number   int     `json:"number"`
+	HTMLURL  string  `json:"html_url"`
+	State    string  `json:"state"`
+	MergedAt *string `json:"merged_at"`
+}
+
+// GetPullRequestForBranch queries GitHub for an existing pull request associated with the given branch.
+func (c *Client) GetPullRequestForBranch(ctx context.Context, branch string) (*domain.PullRequestDetail, error) {
+	// Query: GET /repos/{owner}/{repo}/pulls?head={owner}:{branch}&state=all
+	url := fmt.Sprintf("%s/repos/%s/%s/pulls?head=%s:%s&state=all", c.BaseURL, c.Owner, c.Repo, c.Owner, branch)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, domain.WrapError(domain.ExitGeneralError, err, "failed to create HTTP request")
+	}
+
+	c.setHeaders(httpReq)
+
+	resp, err := c.HTTPClient.Do(httpReq)
+	if err != nil {
+		return nil, domain.WrapError(domain.ExitPreconditionRemote, err, "GitHub API request failed")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.handleErrorResponse(resp, "query pull request for branch %s", branch)
+	}
+
+	var rawList []rawPRQueryItem
+	if err := json.NewDecoder(resp.Body).Decode(&rawList); err != nil {
+		return nil, domain.WrapError(domain.ExitAPIError, err, "failed to parse pull request list response")
+	}
+
+	if len(rawList) == 0 {
+		return nil, nil // No PR found for branch
+	}
+
+	pr := rawList[0]
+	state := domain.PRStateOpen
+	merged := pr.MergedAt != nil && *pr.MergedAt != ""
+
+	if merged {
+		state = domain.PRStateMerged
+	} else if strings.EqualFold(pr.State, "closed") {
+		state = domain.PRStateClosed
+	}
+
+	return &domain.PullRequestDetail{
+		ID:     strconv.Itoa(pr.Number),
+		Number: pr.Number,
+		URL:    pr.HTMLURL,
+		State:  state,
+		Merged: merged,
+	}, nil
+}
+
 // ResolveReviewers maps issue labels or components to reviewers.
 func (c *Client) ResolveReviewers(components []string) []string {
 	return config.ResolveReviewers(c.ReviewCfg, components)

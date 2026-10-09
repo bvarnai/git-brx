@@ -17,9 +17,28 @@ type PullRequestResult struct {
 	URL string `json:"url"`
 }
 
+// PullRequestState defines the lifecycle state of a pull request.
+type PullRequestState string
+
+const (
+	PRStateOpen   PullRequestState = "OPEN"
+	PRStateMerged PullRequestState = "MERGED"
+	PRStateClosed PullRequestState = "CLOSED"
+)
+
+// PullRequestDetail captures detailed metadata about an existing pull request.
+type PullRequestDetail struct {
+	ID     string           `json:"id"`
+	Number int              `json:"number"`
+	URL    string           `json:"url"`
+	State  PullRequestState `json:"state"`
+	Merged bool             `json:"merged"`
+}
+
 // SCMProvider defines the abstract interface for source control platforms (Bitbucket, GitHub, GitLab).
 type SCMProvider interface {
 	Name() string
 	CreatePullRequest(ctx context.Context, req PullRequestRequest) (*PullRequestResult, error)
+	GetPullRequestForBranch(ctx context.Context, branch string) (*PullRequestDetail, error)
 	ResolveReviewers(components []string) []string
 }

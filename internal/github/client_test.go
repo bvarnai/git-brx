@@ -143,3 +143,71 @@ func TestClient_ResolveReviewers(t *testing.T) {
 	assert.Equal(t, []string{"charlie"}, client.ResolveReviewers([]string{"backend"}))
 	assert.Equal(t, []string{"lead"}, client.ResolveReviewers([]string{"unknown"}))
 }
+
+func TestClient_GetPullRequestForBranch(t *testing.T) {
+	t.Run("OpenPullRequest", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/repos/my-org/my-repo/pulls", r.URL.Path)
+			assert.Equal(t, "my-org:issue/42", r.URL.Query().Get("head"))
+			assert.Equal(t, "all", r.URL.Query().Get("state"))
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{
+					"number": 42,
+					"html_url": "https://github.com/my-org/my-repo/pull/42",
+					"state": "open",
+					"merged_at": null
+				}
+			]`))
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL(server.URL))
+		pr, err := client.GetPullRequestForBranch(context.Background(), "issue/42")
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		assert.Equal(t, 42, pr.Number)
+		assert.Equal(t, domain.PRStateOpen, pr.State)
+		assert.False(t, pr.Merged)
+	})
+
+	t.Run("MergedPullRequest", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{
+					"number": 42,
+					"html_url": "https://github.com/my-org/my-repo/pull/42",
+					"state": "closed",
+					"merged_at": "2026-10-09T08:00:00Z"
+				}
+			]`))
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL(server.URL))
+		pr, err := client.GetPullRequestForBranch(context.Background(), "issue/42")
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		assert.Equal(t, 42, pr.Number)
+		assert.Equal(t, domain.PRStateMerged, pr.State)
+		assert.True(t, pr.Merged)
+	})
+
+	t.Run("NoPullRequestFound", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[]`))
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL(server.URL))
+		pr, err := client.GetPullRequestForBranch(context.Background(), "feature/none")
+		require.NoError(t, err)
+		assert.Nil(t, pr)
+	})
+}

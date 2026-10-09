@@ -2,9 +2,12 @@ package cli
 
 import (
 	"context"
+	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
+	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/github"
 	"github.com/spf13/cobra"
 )
 
@@ -81,6 +84,12 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 		}
 		if existsOnServer {
 			a.UI.Log("Branch '%s' found on remote origin", currBranch.Name)
+
+			// Try SCM diagnostic lookup if configured
+			if scmErr := a.checkSCMPullRequestState(ctx, rootDir, currBranch.Name); scmErr != nil {
+				return scmErr
+			}
+
 			return domain.NewError(domain.ExitPreconditionRepo, "Branch must be deleted on remote first (e.g., after merging pull request)").
 				WithHint("Use '--force' to bypass remote check if you intend to delete an unpublished branch")
 		}
@@ -114,4 +123,53 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 	a.UI.Hint("Your local '%s' may not be up-to-date. Use 'git-brx update' to update changes", baseBranch)
 
 	return nil
+}
+
+func (a *App) checkSCMPullRequestState(ctx context.Context, rootDir, branch string) error {
+	_, originURL, _ := a.Inspector.HasOrigin(ctx, rootDir)
+	cfg, err := config.Load(rootDir, originURL)
+	if err != nil || cfg == nil {
+		return nil
+	}
+
+	scm, err := a.resolveSCM(cfg)
+	if err != nil || scm == nil {
+		return nil
+	}
+
+	pr, err := scm.GetPullRequestForBranch(ctx, branch)
+	if err != nil || pr == nil {
+		return nil
+	}
+
+	switch pr.State {
+	case domain.PRStateOpen:
+		return domain.NewError(domain.ExitPreconditionRepo, "Pull request #%d is still OPEN (%s)", pr.Number, pr.URL).
+			WithHint("Merge and close the pull request on %s before deleting the branch", scm.Name())
+	case domain.PRStateMerged:
+		return domain.NewError(domain.ExitPreconditionRepo, "Pull request #%d is MERGED, but remote branch '%s' has not been deleted yet", pr.Number, branch).
+			WithHint("Delete the branch on %s (%s) or use '--force' to clean up local branch now", scm.Name(), pr.URL)
+	case domain.PRStateClosed:
+		return domain.NewError(domain.ExitPreconditionRepo, "Pull request #%d was CLOSED without merging (%s)", pr.Number, pr.URL).
+			WithHint("Use '--force' to bypass remote check if you intend to delete this abandoned branch")
+	}
+
+	return nil
+}
+
+func (a *App) resolveSCM(cfg *domain.ProjectConfig) (domain.SCMProvider, error) {
+	provider := strings.ToLower(cfg.SCM.Provider)
+	switch provider {
+	case "github":
+		token := github.ResolveToken(context.Background(), a.Runner, "github.com")
+		opts := []github.Option{}
+		if cfg.SCM.URI != "" {
+			opts = append(opts, github.WithBaseURL(cfg.SCM.URI))
+		}
+		return github.NewClient(cfg.SCM.Owner, cfg.SCM.Repo, token, opts...), nil
+	case "", "none":
+		return nil, nil
+	default:
+		return nil, nil
+	}
 }
