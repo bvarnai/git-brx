@@ -8,6 +8,7 @@ import (
 	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/git"
 	"github.com/bvarnai/git-brx/internal/ui"
+	"github.com/bvarnai/git-brx/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -51,8 +52,9 @@ func NewApp(stdout, stderr io.Writer, runner git.Runner) *App {
 	app.Operations = git.NewOperations(runner)
 
 	rootCmd := &cobra.Command{
-		Use:   "git-brx",
-		Short: "Opinionated Git extension for local branch workflows",
+		Use:     "git-brx",
+		Version: version.String(),
+		Short:   "Opinionated Git extension for local branch workflows",
 		Long: `git-brx provides fast, opinionated automation for local branch lifecycles,
 upstream synchronization, clean rebasing, and Atlassian toolchain integration.`,
 		SilenceUsage:  true,
@@ -62,6 +64,7 @@ upstream synchronization, clean rebasing, and Atlassian toolchain integration.`,
 		},
 	}
 
+	rootCmd.SetVersionTemplate("{{.Version}}\n")
 	rootCmd.SetOut(stdout)
 	rootCmd.SetErr(stderr)
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})

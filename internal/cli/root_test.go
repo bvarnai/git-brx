@@ -20,6 +20,16 @@ func TestCliRunSuccess(t *testing.T) {
 	assert.Empty(t, stderr.String())
 }
 
+func TestCliRunVersion(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	ctx := context.Background()
+
+	code := cli.Run(ctx, []string{"--version"}, &stdout, &stderr)
+	assert.Equal(t, int(domain.ExitSuccess), code)
+	assert.Contains(t, stdout.String(), "git-brx version")
+	assert.Empty(t, stderr.String())
+}
+
 func TestCliRunUnknownFlag(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	ctx := context.Background()
