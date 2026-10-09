@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -88,6 +89,13 @@ func (h *Harness) SetupRemoteBare() string {
 func (h *Harness) CreateBranch(name string) {
 	h.T.Helper()
 	h.Git("checkout", "-b", name)
+}
+
+// CurrentBranch returns the currently checked-out branch name.
+func (h *Harness) CurrentBranch() string {
+	h.T.Helper()
+	out := h.Git("symbolic-ref", "--short", "-q", "HEAD")
+	return strings.TrimSpace(out)
 }
 
 // CloneHarness provisions a second clone from a remote URL.
