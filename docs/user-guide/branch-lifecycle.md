@@ -13,12 +13,12 @@ git brx create issue/TASK-101
 ```
 
 ### What happens behind the scenes:
-1. **Repository Verification:** Asserts that you are inside a valid Git worktree and that no active merge or rebase is blocking your workspace.
-2. **Naming Validation:** Matches the target branch against your configured regex template (e.g. `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`).
-3. **Collision Checks:**
+1. **Repository verification:** Asserts that you are inside a valid Git worktree and that no active merge or rebase is blocking your workspace.
+2. **Naming validation:** Matches the target branch against your configured regex template (e.g. `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`).
+3. **Collision checks:**
    - Checks if the branch already exists locally. If so, `git-brx` provides an informational message and advises running `git brx select issue/TASK-101`.
    - Checks if the branch exists on the remote `origin`.
-4. **Tracker Verification:**
+4. **Tracker verification:**
    - Queries your issue tracker (Jira or GitHub Issues).
    - Validates that `TASK-101` exists, checks the issue type against your branch prefix mapping (e.g., verifying that a `Bug` maps to `issue/`), and prints the issue title and current assignee.
    - Prompts for confirmation: `Are you sure [y/n]?` (bypassable in automation via `-y` or `--yes`).

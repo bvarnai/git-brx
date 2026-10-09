@@ -52,7 +52,7 @@ At the heart of `git-brx` is a strict organizational philosophy: **every code ch
 
 ### Why separate the "What" from the "How"?
 
-In many development teams, Pull Requests suffer from **Scope Creep during Review**:
+In many development teams, pull requests suffer from **Scope creep during review**:
 - An engineer opens a PR with minimal explanation.
 - Reviewers spend days debating what the feature was actually supposed to do.
 - Halfway through code review, stakeholders realize core business requirements were misunderstood.
@@ -61,7 +61,7 @@ In many development teams, Pull Requests suffer from **Scope Creep during Review
 
 | Artifact | Primary Audience | Core Purpose | Discussion Topics |
 | :--- | :--- | :--- | :--- |
-| **The issue** | Product Managers, QA, Engineers, Stakeholders | **Source of Truth:** Defines *What* needs to be done and *Why*. Contains specifications, acceptance criteria, reproducible steps, and test plans. | Business requirements, edge cases, scope, user expectations. |
+| **The issue** | Product Managers, QA, Engineers, Stakeholders | **Source of truth:** Defines *What* needs to be done and *Why*. Contains specifications, acceptance criteria, reproducible steps, and test plans. | Business requirements, edge cases, scope, user expectations. |
 | **The pull request** | Engineering Peers | **Quality assurance:** Inspects *How* the code implements the issue. Verifies architecture, style, test coverage, and performance. | Implementation details, code structure, algorithm efficiency, test assertions. |
 
 When a developer runs `git brx create issue/TASK-101`, `git-brx` reaches out to the issue tracker, verifies that `TASK-101` is a valid, assigned ticket, and sets up a local workspace directly linked to that contract.
@@ -72,23 +72,23 @@ When a developer runs `git brx create issue/TASK-101`, `git-brx` reaches out to 
 
 ```mermaid
 flowchart TD
-    subgraph S1 ["Stage 1: Intent & Creation"]
+    subgraph S1 ["Stage 1: Intent & creation"]
         Issue["Tracker Issue<br/>(TASK-101)"] -->|"git brx create"| TopicBranch["Validated Branch<br/>(issue/TASK-101)"]
     end
 
-    subgraph S2 ["Stage 2: Iteration & Sync"]
-        TopicBranch -->|"Write code"| LocalCommits["Local Commits"]
-        LocalCommits -->|"git brx sync"| Rebased["Clean Rebase onto Base"]
-        Rebased -->|"git brx publish"| RemoteBranch["Leased Push to Origin"]
+    subgraph S2 ["Stage 2: Iteration & sync"]
+        TopicBranch -->|"Write code"| LocalCommits["Local commits"]
+        LocalCommits -->|"git brx sync"| Rebased["Clean rebase onto base"]
+        Rebased -->|"git brx publish"| RemoteBranch["Leased push to origin"]
     end
 
-    subgraph S3 ["Stage 3: Peer Review"]
-        RemoteBranch -->|"git brx review"| PullRequest["Pull Request<br/>• Checklist<br/>• Reviewers<br/>• Merge Instructions"]
+    subgraph S3 ["Stage 3: Peer review"]
+        RemoteBranch -->|"git brx review"| PullRequest["Pull request<br/>• Checklist<br/>• Reviewers<br/>• Merge instructions"]
     end
 
-    subgraph S4 ["Stage 4: Merge & Cleanup"]
-        PullRequest -->|"Approved & Merged"| SCM["Remote Merged"]
-        SCM -->|"git brx delete"| Clean["Local Deleted & Pruned"]
+    subgraph S4 ["Stage 4: Merge & cleanup"]
+        PullRequest -->|"Approved & merged"| SCM["Remote merged"]
+        SCM -->|"git brx delete"| Clean["Local deleted & pruned"]
     end
 ```
 
@@ -118,13 +118,13 @@ Once approved and merged, local branch clutter can become overwhelming. `git brx
 
 | Prefix | Lifespan | Typical Source | Merge Strategy | Rationale |
 | :--- | :--- | :--- | :--- | :--- |
-| `issue/` | Short (hours to days) | Bugs, tasks, small improvements | **Squash & Merge** | Collapses experimental commits into a single clean commit on `master` with the issue title, preserving clean bisectability. |
-| `feature/` | Medium (days to weeks) | Larger functional capabilities | **Merge Commit (`--no-ff`)** | Preserves individual milestone commits while encapsulating the feature under a distinct merge bubble. |
-| `epic/` | Long (weeks to months) | Multi-team initiatives | **Merge Commit (`--no-ff`)** | Groups large architectural changes together. |
-| `master` / `main` | Permanent | Trunk / Single Source of Truth | N/A | Production-ready, always buildable and releasable. |
+| `issue/` | Short (hours to days) | Bugs, tasks, small improvements | **Squash & merge** | Collapses experimental commits into a single clean commit on `master` with the issue title, preserving clean bisectability. |
+| `feature/` | Medium (days to weeks) | Larger functional capabilities | **Merge commit (`--no-ff`)** | Preserves individual milestone commits while encapsulating the feature under a distinct merge bubble. |
+| `epic/` | Long (weeks to months) | Multi-team initiatives | **Merge commit (`--no-ff`)** | Groups large architectural changes together. |
+| `master` / `main` | Permanent | Trunk / single source of truth | N/A | Production-ready, always buildable and releasable. |
 
 ### The power of squash & merge for issues
-Why does `git-brx` recommend **Squash & Merge** for standard issue branches?
+Why does `git-brx` recommend **squash & merge** for standard issue branches?
 - **Linear history:** The main trunk becomes an easily readable narrative: every commit represents a complete, verified unit of work linked to an issue key.
 - **Flawless `git bisect`:** If a regression is introduced, `git bisect` lands directly on the single commit that introduced the issue, rather than an intermediate "WIP: fix typo" commit where the code may not even build.
 - **Freedom to commit locally:** Engineers can make as many micro-commits locally as they want without worrying about polluting the shared repository history.

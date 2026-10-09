@@ -97,7 +97,7 @@ In raw Git, developers often guess between `git rebase --abort`, `git merge --ab
 git brx reset
 ```
 
-### What `git brx reset` Does:
+### What `git brx reset` does:
 1. **Aborts in-flight operations first:** Checks for `.git/rebase-merge`, `.git/rebase-apply`, or `.git/MERGE_HEAD`. If found, it safely runs `git rebase --abort` or `git merge --abort`, restoring HEAD from detached state.
 2. **Restores tracking state:** Performs `git reset --hard origin/<current-branch>`, restoring your working directory and staging area to the exact commit currently on the remote server.
 3. **Optional workspace cleaning (`--clean` / `-c`):** To also remove untracked build artifacts, generated files, and editor leftovers:

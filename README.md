@@ -47,7 +47,7 @@ Without reliable brakes, engineers crawl through Git walking on eggshells—afra
 
 ## The git-brx philosophy
 
-### 1. Issue-first development: the contract of record
+### 1. Issue-first development
 In `git-brx`, **every code change begins with an issue** (Jira, GitHub Issues, etc.):
 - **The issue defines "What" and "Why":** Business context, specifications, edge cases, and acceptance criteria live exclusively in the issue tracker.
 - **The pull request inspects "How":** Code review discussions are strictly technical—evaluating architecture, code quality, test coverage, and security. Reviewers don't have to rediscover missing requirements during code review because the issue is already the single source of truth.
