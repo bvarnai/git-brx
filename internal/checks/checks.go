@@ -48,3 +48,28 @@ func NoOrphanedCommits(ctx context.Context, inspector *git.Inspector, rootDir st
 	}
 	return nil
 }
+
+// NotShallow asserts that the repository is not a shallow clone.
+func NotShallow(ctx context.Context, inspector *git.Inspector, rootDir string) error {
+	shallow, err := inspector.IsShallow(ctx, rootDir)
+	if err != nil {
+		return domain.WrapError(domain.ExitGeneralError, err, "failed to check shallow repository state")
+	}
+	if shallow {
+		return domain.NewError(domain.ExitPreconditionRepo, "You are in a shallow repository")
+	}
+	return nil
+}
+
+// AttachedBranch ensures the repository is on a named branch and not in a detached HEAD state.
+func AttachedBranch(ctx context.Context, inspector *git.Inspector, rootDir string) (*domain.BranchRecord, error) {
+	curr, err := inspector.CurrentBranch(ctx, rootDir)
+	if err != nil {
+		return nil, domain.WrapError(domain.ExitGeneralError, err, "failed to get current branch")
+	}
+	if curr.IsDetached {
+		return nil, domain.NewError(domain.ExitPreconditionRepo, "Cannot sync in a detached HEAD state").
+			WithHint("Checkout or create a branch first: 'git-brx select <branch>'")
+	}
+	return curr, nil
+}
