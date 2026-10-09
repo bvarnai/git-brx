@@ -79,7 +79,7 @@
 | `3` | Outside Git repository. | `[git-brx] Error: Awh! This is not a git repository` | None. |
 | `4` | Remote `origin` unreachable in online mode. | `[git-brx] Error: Unable to reach remote` | None. |
 | `6` | JIRA API authentication failure or issue not found. | `[git-brx] Error: Authorization failure` / `[git-brx] Error: Issue not found` | None. |
-| `7` | User aborted creation during interactive confirmation. | None (aborted cleanly). | None. |
+| `7` | User aborted creation during interactive confirmation. | `[git-brx] Aborted` | None. |
 | `8` | Configuration file missing or branch name fails regex naming contract. | `[git-brx] Error: Configuration file not found` / `[git-brx] Error: Branch name doesn't match pattern` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered

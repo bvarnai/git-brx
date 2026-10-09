@@ -186,7 +186,7 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 				prompt := fmt.Sprintf("Create branch '%s' [Y/n]?", targetBranch)
 				confirmed, err := a.UI.Confirm(prompt)
 				if err != nil || !confirmed {
-					return domain.NewError(domain.ExitUserAborted, "Branch creation aborted by user")
+					return domain.NewError(domain.ExitUserAborted, "Aborted")
 				}
 			}
 		}

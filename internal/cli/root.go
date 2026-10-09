@@ -118,6 +118,12 @@ func RunInDir(ctx context.Context, dir string, args []string, stdout, stderr io.
 
 	var appErr *domain.AppError
 	if errors.As(err, &appErr) {
+		if appErr.Code == domain.ExitUserAborted {
+			if appErr.Message != "" {
+				app.UI.Log("%s", appErr.Message)
+			}
+			return int(appErr.Code)
+		}
 		app.UI.Error("%s", appErr.Message)
 		if appErr.Hint != "" {
 			app.UI.Hint("%s", appErr.Hint)
