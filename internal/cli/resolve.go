@@ -62,12 +62,14 @@ func (a *App) runResolve(ctx context.Context, opts ResolveOptions, args []string
 }
 
 func (a *App) resolveMerge(ctx context.Context, rootDir, tool string) error {
+	a.UI.Log("Resolving merge conflicts...")
 	if err := a.runMergeToolAndStage(ctx, rootDir, tool); err != nil {
 		return err
 	}
 
 	if err := a.Operations.CommitNoEdit(ctx, rootDir); err != nil {
-		return domain.WrapError(domain.ExitConflict, err, "Failed to complete merge commit")
+		return domain.WrapError(domain.ExitConflict, err, "Failed to complete merge commit").
+			WithHint("Use 'git-brx reset' to abort the merge and restore your branch")
 	}
 
 	a.UI.Log("Merge completed")
@@ -81,7 +83,15 @@ func (a *App) resolveRebase(ctx context.Context, rootDir, tool string) error {
 	for {
 		iterations++
 		if iterations > maxIterations {
-			return domain.NewError(domain.ExitConflict, "Exceeded maximum rebase iterations (%d); aborting loop", maxIterations)
+			return domain.NewError(domain.ExitConflict, "Exceeded maximum rebase iterations (%d); aborting loop", maxIterations).
+				WithHint("Use 'git-brx reset' to abort the rebase and restore your branch")
+		}
+
+		progress, _ := a.Inspector.RebaseProgress(ctx, rootDir)
+		if progress != nil && progress.TotalSteps > 0 {
+			a.UI.Log("Resolving rebase conflict at step %d of %d...", progress.CurrentStep, progress.TotalSteps)
+		} else {
+			a.UI.Log("Resolving rebase conflicts...")
 		}
 
 		if err := a.runMergeToolAndStage(ctx, rootDir, tool); err != nil {
@@ -98,12 +108,13 @@ func (a *App) resolveRebase(ctx context.Context, rootDir, tool string) error {
 		// Check if rebase is still active due to conflicts on subsequent commits
 		op, active := a.Inspector.ActiveOperation(ctx, rootDir)
 		if active && op == "rebase" {
-			a.UI.Log("Conflicts encountered on subsequent commit")
+			a.UI.Log("Conflicts encountered on subsequent commit in rebase series")
 			continue
 		}
 
 		// Rebase failed for another reason
-		return domain.WrapError(domain.ExitConflict, err, "Failed to continue rebase")
+		return domain.WrapError(domain.ExitConflict, err, "Failed to continue rebase").
+			WithHint("Use 'git-brx reset' to abort the rebase and restore your branch")
 	}
 }
 

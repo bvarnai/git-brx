@@ -144,6 +144,51 @@ func (i *Inspector) ActiveOperation(ctx context.Context, rootDir string) (op str
 	return "", false
 }
 
+// RebaseProgress holds step and commit details for an active rebase operation.
+type RebaseProgress struct {
+	CurrentStep int
+	TotalSteps  int
+	CommitDesc  string
+}
+
+// RebaseProgress returns progress information for an active rebase, if available.
+func (i *Inspector) RebaseProgress(ctx context.Context, rootDir string) (*RebaseProgress, error) {
+	gitDir, err := i.runner.Run(ctx, rootDir, "rev-parse", "--git-dir")
+	if err != nil {
+		gitDir = filepath.Join(rootDir, ".git")
+	} else if !filepath.IsAbs(gitDir) {
+		gitDir = filepath.Join(rootDir, gitDir)
+	}
+
+	rebaseDir := filepath.Join(gitDir, "rebase-merge")
+	if _, err := os.Stat(rebaseDir); err != nil {
+		rebaseDir = filepath.Join(gitDir, "rebase-apply")
+		if _, err := os.Stat(rebaseDir); err != nil {
+			return nil, fmt.Errorf("no active rebase directory found")
+		}
+	}
+
+	cur := 0
+	total := 0
+	if msgNumBytes, err := os.ReadFile(filepath.Join(rebaseDir, "msgnum")); err == nil {
+		_, _ = fmt.Sscanf(strings.TrimSpace(string(msgNumBytes)), "%d", &cur)
+	}
+	if endBytes, err := os.ReadFile(filepath.Join(rebaseDir, "end")); err == nil {
+		_, _ = fmt.Sscanf(strings.TrimSpace(string(endBytes)), "%d", &total)
+	}
+
+	desc := ""
+	if headNameBytes, err := os.ReadFile(filepath.Join(rebaseDir, "head-name")); err == nil {
+		desc = strings.TrimSpace(string(headNameBytes))
+	}
+
+	return &RebaseProgress{
+		CurrentStep: cur,
+		TotalSteps:  total,
+		CommitDesc:  desc,
+	}, nil
+}
+
 // ComputeDelta calculates ahead and behind commit counts between a local ref and its upstream.
 func (i *Inspector) ComputeDelta(ctx context.Context, dir string, localRef, remoteRef string) (*domain.BranchDelta, error) {
 	out, err := i.runner.Run(ctx, dir, "rev-list", "--left-right", "--count", fmt.Sprintf("%s...%s", localRef, remoteRef))
