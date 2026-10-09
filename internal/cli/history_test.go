@@ -63,8 +63,8 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | commit message (HEAD -> master) [Test User]\n",
 		},
 		{
-			name: "max-count flag appends limit to git log",
-			args: []string{"history", "-n", "5", "--no-color"},
+			name: "limit short flag -l appends limit to git log",
+			args: []string{"history", "-l", "5", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
@@ -77,7 +77,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | commit message [Test User]\n",
 		},
 		{
-			name: "limit flag alias appends limit to git log",
+			name: "limit flag --limit appends limit to git log",
 			args: []string{"history", "--limit", "3", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "true"},
@@ -133,8 +133,24 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | commit message [Test User]\ndiff --git a/f b/f\n",
 		},
 		{
-			name: "branch flag filters to current branch delta vs master",
-			args: []string{"history", "-b", "--no-color"},
+			name: "branch flag scopes to specified branch",
+			args: []string{"history", "-b", "feature/auth", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                              {out: "true"},
+				"rev-parse --show-toplevel":                                    {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                                   {out: "abc1234"},
+				"show-ref --verify --quiet refs/heads/feature/auth":           {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/feature/auth":   {out: ""},
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color feature/auth`: {
+					out: "* abc1234 2026-10-09 | feature commit [Test User]",
+				},
+			},
+			expectedCode: int(domain.ExitSuccess),
+			expectStdout: "* abc1234 2026-10-09 | feature commit [Test User]\n",
+		},
+		{
+			name: "topic flag filters to current branch delta vs master",
+			args: []string{"history", "--topic", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                                  {out: "true"},
 				"rev-parse --show-toplevel":                                        {out: "/mock/repo"},
@@ -151,8 +167,8 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | issue commit [Test User]\n",
 		},
 		{
-			name: "branch flag when already on master logs notice and streams master history",
-			args: []string{"history", "-b", "--no-color"},
+			name: "topic flag when already on master logs notice and streams master history",
+			args: []string{"history", "--topic", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                              {out: "true"},
 				"rev-parse --show-toplevel":                                    {out: "/mock/repo"},
@@ -210,7 +226,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/main": {out: ""},
 			},
 			expectedCode: int(domain.ExitUsageError),
-			errSubstr:    "'main' is a branch name, not a file path. '-b' does not accept arguments",
+			errSubstr:    "'main' is a branch name, not a file path. Use '-b main' to scope to this branch",
 		},
 		{
 			name: "passing nonexistent path returns usage error",

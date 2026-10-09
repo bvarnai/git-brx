@@ -5,13 +5,12 @@
 - **Arguments:**
   - `[<path>]` (Optional): Scope history to a specific file or directory path. Automatically passes `--follow` for regular files to track commits across renames.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
   - Extension flags:
-    - `--max-count` (`-n` `<int>`): Limit the number of commits rendered in the graph (default: unconstrained or pager-governed).
-    - `--limit` (`-l` `<int>`): Alias for `--max-count`.
-    - `--branch` (`-b`): Show only commits on active topic branch relative to the base branch (`master` / default).
+    - `--limit` (`-l` `<int>`): Limit the number of commits rendered in the graph (default: unconstrained or pager-governed).
+    - `--branch` (`-b` `<string>`): Scope history to a specific named branch.
+    - `--topic`: Show only commits on active topic branch relative to the base branch (`master` / default).
     - `--search` (`-s` `<string>`): Filter commits whose message matches the query string (case-insensitive).
-    - `--grep` (`<string>`): Alias for `--search`.
     - `--stat`: Show diffstat summary of changed files for each commit.
     - `--patch` (`-p`): Show code diff patch for each commit.
 
@@ -28,11 +27,11 @@
 1. **Repository Verification:** Run `git rev-parse --is-inside-work-tree`. If non-zero, fail with Exit Code `3`.
 2. **Commit Existence Check:** Verify HEAD points to an existing commit: `git rev-parse --verify -q HEAD`. If non-zero, output diagnostic note: `[git-brx] ! Repository has no commits yet` and exit with Exit Code `3`.
 3. **Query Parameter Assembly:**
-   - Base command: `git log --pretty=format:"%h %ad | %s%d [%an]" --graph --decorate --date=short`
-   - Limit: If `--max-count` or `--limit` > 0, append `--max-count=<N>`.
-   - Search: If `--search` or `--grep` is non-empty, append `--grep=<query>` and `-i`.
+   - Base command: `git log --pretty=tformat:"%h %ad | %s%d [%an]" --graph --decorate --date=short`
+   - Limit: If `--limit` > 0, append `--max-count=<N>`.
+   - Search: If `--search` is non-empty, append `--grep=<query>` and `-i`.
    - Diff peeking: If `--stat` is active, append `--stat`. If `--patch` / `-p` is active, append `-p`.
-   - Branch relativity: If `--branch` / `-b` is active, resolve base branch (`master` or autodetected default) and append `<base>..<current_branch>`. If current branch is identical to base branch, display recent branch commits with informational note.
+   - Branch relativity: If `--branch` / `-b` is provided, append `<branch>`. If `--topic` is active, resolve base branch (`master` or autodetected default) and append `<base>..<current_branch>`. If current branch is identical to base branch, display recent branch commits with informational note.
    - Path scoping: If `<path>` is provided, check if path is a directory. If directory, append `-- <path>`. If regular file or past path, append `--follow -- <path>`.
 4. **Color & Pager Management:** If `--no-color` or `NO_COLOR` is active, pass `--no-color` to Git. If `stdout` is connected to a TTY, attach standard Git pager configuration (`PAGER` or `less`).
 

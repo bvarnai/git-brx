@@ -30,7 +30,6 @@ Automatically configures upstream tracking if the branch has not been published 
 	}
 
 	cmd.Flags().BoolVar(&opts.NoForce, "no-force", false, "Push with standard fast-forward constraints without --force-with-lease")
-	cmd.Flags().BoolVarP(&a.Opts.DryRun, "dry-run", "n", false, "Simulate execution without modifying Git state or remote services")
 
 	return cmd
 }

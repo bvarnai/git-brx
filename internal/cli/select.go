@@ -31,7 +31,6 @@ from origin before switching.`,
 	}
 
 	cmd.Flags().BoolVarP(&opts.Offline, "offline", "o", false, "Skip remote fetch and switch between existing local references only")
-	cmd.Flags().BoolVarP(&a.Opts.DryRun, "dry-run", "n", false, "Simulate execution without modifying Git state or remote services")
 
 	return cmd
 }

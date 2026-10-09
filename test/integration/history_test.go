@@ -33,14 +33,14 @@ func TestHistoryIntegration(t *testing.T) {
 		assert.True(t, strings.HasPrefix(out, "*"), "stdout must contain graph asterisk prefix")
 	})
 
-	t.Run("MaxCountLimitsOutput", func(t *testing.T) {
+	t.Run("LimitShortFlag", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("f1.txt", "1", "Commit 1")
 		h.CommitFile("f2.txt", "2", "Commit 2")
 		h.CommitFile("f3.txt", "3", "Commit 3")
 
 		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-n", "1", "--no-color"}, &stdout, &stderr)
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-l", "1", "--no-color"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
 		out := stdout.String()
@@ -93,19 +93,34 @@ func TestHistoryIntegration(t *testing.T) {
 		assert.NotContains(t, out, "Commit in docs")
 	})
 
-	t.Run("BranchOnlyModeFiltersToTopicBranchCommits", func(t *testing.T) {
+	t.Run("TopicBranchModeFiltersToTopicBranchCommits", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("base.txt", "base", "Base master commit")
 		h.CreateBranch("issue/VSB-200")
 		h.CommitFile("topic.txt", "topic", "Topic branch commit only")
 
 		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-b", "--no-color"}, &stdout, &stderr)
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "Topic branch commit only")
 		assert.NotContains(t, out, "Base master commit")
+	})
+
+	t.Run("BranchFlagScopesToNamedBranch", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("base.txt", "base", "Base master commit")
+		h.CreateBranch("feature/other")
+		h.CommitFile("other.txt", "other", "Other branch commit")
+		h.Git("checkout", "master")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-b", "feature/other", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		out := stdout.String()
+		assert.Contains(t, out, "Other branch commit")
 	})
 
 	t.Run("SearchKeywordFilter", func(t *testing.T) {
@@ -191,7 +206,7 @@ func TestHistoryIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "master"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitUsageError), code)
-		assert.Contains(t, stderr.String(), "'master' is a branch name, not a file path. '-b' does not accept arguments")
+		assert.Contains(t, stderr.String(), "'master' is a branch name, not a file path. Use '-b master' to scope to this branch")
 	})
 
 	t.Run("NonexistentPathRejectedWithUsageError", func(t *testing.T) {

@@ -32,7 +32,6 @@ Ensures current branch exists on origin and is not in an in-flight conflict.`,
 	}
 
 	cmd.Flags().BoolVarP(&opts.Autostash, "autostash", "a", false, "Automatically stash unstaged/staged changes before rebasing and pop stash afterwards")
-	cmd.Flags().BoolVarP(&a.Opts.DryRun, "dry-run", "n", false, "Simulate execution without modifying Git state or remote services")
 
 	return cmd
 }

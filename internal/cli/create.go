@@ -37,7 +37,6 @@ following repository branching conventions.`,
 
 	cmd.Flags().BoolVarP(&opts.Offline, "offline", "o", false, "Skip issue validation and remote Git availability checks")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Automatically accept confirmation prompts without interactive input")
-	cmd.Flags().BoolVarP(&a.Opts.DryRun, "dry-run", "n", false, "Simulate execution without modifying Git state or remote services")
 
 	return cmd
 }

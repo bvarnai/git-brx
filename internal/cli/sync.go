@@ -37,7 +37,6 @@ or merge (for feature/epic branches).`,
 	cmd.Flags().BoolVarP(&opts.Rebase, "rebase", "r", false, "Force rebase strategy regardless of branch type default")
 	cmd.Flags().BoolVarP(&opts.Autostash, "autostash", "a", false, "Enable automatic stashing of uncommitted changes (rebase only)")
 	cmd.Flags().BoolVarP(&opts.Interactive, "interactive", "i", false, "Launch interactive rebase (rebase only)")
-	cmd.Flags().BoolVarP(&a.Opts.DryRun, "dry-run", "n", false, "Simulate execution without modifying Git state or remote services")
 
 	return cmd
 }
