@@ -189,3 +189,11 @@ Explore the complete user guide and technical manuals:
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 🤖 AI Disclosure
+
+![AI Assisted](https://img.shields.io/badge/AI-Assisted-blue?style=flat-square)
+
+This project was developed with the assistance of AI tools. All AI-generated code has been reviewed, tested, and manually refined.
