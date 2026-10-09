@@ -25,7 +25,15 @@ mv git-brx.exe ~/bin/
 # Ensure ~/bin is in your PATH in ~/.bashrc or ~/.bash_profile
 ```
 
-### Option B: Build from source (Go >= 1.22)
+### Option B: Windows via Scoop
+If you use [Scoop](https://scoop.sh/) on Windows:
+```powershell
+scoop bucket add bvarnai-bucket https://github.com/bvarnai/scoop-bucket
+scoop install git-brx
+```
+This automatically configures the `git-brx` shim in your Scoop shims directory, making `git-brx` and `git brx` immediately available in Command Prompt, PowerShell, and Git Bash.
+
+### Option C: Build from source (Go >= 1.22)
 ```bash
 git clone https://github.com/bvarnai/git-brx.git
 cd git-brx

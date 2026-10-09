@@ -125,6 +125,13 @@ All commands support `--help`, `-h`, and `--dry-run` (`-n`) for safe previewing.
 ### Pre-built binaries
 Download the latest release for Linux, macOS, or Windows from the [Releases](https://github.com/bvarnai/git-brx/releases) page. Extract and place `git-brx` in your `PATH` (e.g. `/usr/local/bin` or `~/bin`).
 
+### Windows (Scoop)
+You can install `git-brx` on Windows via [Scoop](https://scoop.sh/):
+```powershell
+scoop bucket add bvarnai-bucket https://github.com/bvarnai/scoop-bucket
+scoop install git-brx
+```
+
 ### From source (Go >= 1.22)
 ```bash
 git clone https://github.com/bvarnai/git-brx.git
