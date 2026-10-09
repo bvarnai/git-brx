@@ -80,7 +80,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 
 	logArgs := []string{
 		"log",
-		"--pretty=format:%h %ad | %s%d [%an]",
+		"--pretty=tformat:%h %ad | %s%d [%an]",
 		"--graph",
 		"--decorate",
 		"--date=short",

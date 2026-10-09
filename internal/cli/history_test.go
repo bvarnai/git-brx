@@ -55,7 +55,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color`: {
 					out: "* abc1234 2026-10-09 | commit message (HEAD -> master) [Test User]",
 				},
 			},
@@ -69,7 +69,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --max-count=5 --no-color`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --max-count=5 --no-color`: {
 					out: "* abc1234 2026-10-09 | commit message [Test User]",
 				},
 			},
@@ -83,7 +83,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --max-count=3 --no-color`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --max-count=3 --no-color`: {
 					out: "* abc1234 2026-10-09 | commit message [Test User]",
 				},
 			},
@@ -97,7 +97,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --grep=VSB-101 -i --no-color`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --grep=VSB-101 -i --no-color`: {
 					out: "* abc1234 2026-10-09 | VSB-101 fix auth issue [Test User]",
 				},
 			},
@@ -111,7 +111,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --stat --no-color`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --stat --no-color`: {
 					out: "* abc1234 2026-10-09 | commit message [Test User]\n 1 file changed, 1 insertion(+)",
 				},
 			},
@@ -125,7 +125,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short -p --no-color`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short -p --no-color`: {
 					out: "* abc1234 2026-10-09 | commit message [Test User]\ndiff --git a/f b/f",
 				},
 			},
@@ -143,7 +143,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":                                           {out: "abc1234"},
 				"for-each-ref --format=%(upstream:short) refs/heads/issue/VSB-101": {out: "origin/issue/VSB-101"},
 				"show-ref --verify --quiet refs/heads/master":                      {out: ""},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color master..issue/VSB-101`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color master..issue/VSB-101`: {
 					out: "* abc1234 2026-10-09 | issue commit [Test User]",
 				},
 			},
@@ -161,7 +161,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":                                       {out: "abc1234"},
 				"for-each-ref --format=%(upstream:short) refs/heads/master":    {out: "origin/master"},
 				"show-ref --verify --quiet refs/heads/master":                  {out: ""},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color master`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color master`: {
 					out: "* abc1234 2026-10-09 | root commit (HEAD -> master) [Test User]",
 				},
 			},
@@ -177,7 +177,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
 				"cat-file -e HEAD:main.go":        {out: ""},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color --follow -- main.go`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color --follow -- main.go`: {
 					out: "* abc1234 2026-10-09 | touch main.go [Test User]",
 				},
 			},
@@ -191,7 +191,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color`: {
 					err: errors.New("broken pipe"),
 				},
 			},
@@ -233,7 +233,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
-				`log --pretty=format:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color`: {
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color`: {
 					out: "",
 				},
 			},
