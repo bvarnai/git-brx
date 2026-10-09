@@ -1,0 +1,136 @@
+# Getting Started
+
+This guide walks you through installing `git-brx`, integrating it with your shell environment, and configuring project settings.
+
+---
+
+## 1. Installation
+
+`git-brx` is distributed as a self-contained, statically linked binary with zero runtime dependencies. It does not require Java, Groovy, Python, or external scripts.
+
+### Option A: Download Pre-Built Binaries
+Download the binary for your platform from the [Releases](https://github.com/bvarnai/git-brx/releases) page:
+- Linux (`git-brx_linux_amd64.tar.gz`)
+- macOS (`git-brx_darwin_arm64.tar.gz` / `amd64`)
+- Windows (`git-brx_windows_amd64.zip`)
+
+Extract the archive and move the `git-brx` executable into a directory in your system `PATH`:
+```bash
+# On Linux / macOS:
+sudo mv git-brx /usr/local/bin/
+
+# On Windows (Git Bash):
+mkdir -p ~/bin
+mv git-brx.exe ~/bin/
+# Ensure ~/bin is in your PATH in ~/.bashrc or ~/.bash_profile
+```
+
+### Option B: Build from Source (Go >= 1.22)
+```bash
+git clone https://github.com/bvarnai/git-brx.git
+cd git-brx
+go build -o /usr/local/bin/git-brx ./cmd/git-brx
+```
+
+### Verifying the Installation
+Run the `--version` flag:
+```bash
+git-brx --version
+# Output: git-brx version v1.0.0 (commit: abc1234, built at: 2026-10-09, linux/amd64)
+```
+
+---
+
+## 2. Shell Integration (`git brx`)
+
+Because Git automatically resolves executables named `git-<subcommand>` from your system `PATH`, placing `git-brx` in your `PATH` immediately enables native Git plugin dispatch.
+
+You can run `git-brx` in either format:
+```bash
+# Direct binary execution:
+git-brx create issue/VSB-101
+
+# Native Git command dispatch (recommended):
+git brx create issue/VSB-101
+```
+
+Both invocations are completely identical. You do not need to install Git aliases.
+
+---
+
+## 3. Configuration Cascade
+
+`git-brx` uses a hierarchical discovery cascade to locate project configurations. You can run with **zero configuration** on standard GitHub or Bitbucket repositories, or customize rules using YAML files.
+
+### Priority Order:
+1. **Environment Variable Override:** `GIT_BRX_CONFIG_PATH` pointing to a specific file or folder.
+2. **Repository Configuration:** `.git-brx.yaml` or `.git-brx.yml` in the repository root directory.
+3. **Repository Folder Configuration:** `.git-brx/config.yaml`.
+4. **User-Level Configuration:** `~/.config/git-brx/config.yaml` (global settings for your machine).
+5. **Zero-Config Auto-Discovery (Default):** If no config file is found, `git-brx` inspects `git remote get-url origin` and automatically discovers the platform, organization/owner, and repository name.
+
+---
+
+## 4. Configuration Schema (`.git-brx.yaml`)
+
+Here is an annotated example of a comprehensive `.git-brx.yaml` file:
+
+```yaml
+# Platform preset: 'github' or 'bitbucket'
+platform: github
+
+# Issue Tracker Configuration (optional if matching platform preset)
+tracker:
+  provider: github         # 'github' or 'jira'
+  owner: acme-corp          # GitHub owner / org
+  repo: core-api            # GitHub repo name
+  project: CORE             # Jira project key (e.g., 'VSB', 'CORE')
+  uri: https://jira.internal.example.com
+
+# SCM / Code Review Configuration
+scm:
+  provider: github         # 'github' or 'bitbucket'
+  owner: acme-corp
+  repo: core-api
+
+# Branch Creation Rules
+branch:
+  template: "^(?P<type>issue|feature|epic)/(?P<key>[A-Za-z]+-\\d+)$"
+  mapping:
+    Bug: issue
+    Task: issue
+    Story: feature
+    Epic: epic
+
+# Code Review & Pull Request Automation
+review:
+  instructions: true       # Injects standard merge instructions into PR description
+  template: .github/pull_request_template.md
+  mapping:
+    backend: [alice, bob]
+    frontend: [carol, dave]
+    security: [eve]
+    default: [charlie]     # Fallback reviewer if no components match
+```
+
+---
+
+## 5. Authentication & Tokens
+
+`git-brx` securely reads tokens without leaking secrets to the process table or log files:
+
+### GitHub Authentication
+Set one of the standard GitHub environment variables:
+```bash
+export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
+# or
+export GH_TOKEN="ghp_xxxxxxxxxxxx"
+```
+Or allow `git-brx` to consult your Git credential helper automatically (`git credential fill`).
+
+### Bitbucket Server & Jira Authentication
+For Atlassian enterprise servers, define:
+```bash
+export GIT_BRX_TOKEN="your_personal_access_token"
+```
+`git-brx` uses HTTP Bearer tokens or Basic Authentication negotiated safely in-memory.
