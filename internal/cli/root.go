@@ -68,7 +68,7 @@ upstream synchronization, clean rebasing, and Atlassian toolchain integration.`,
 	// Persistent global flags
 	rootCmd.PersistentFlags().BoolVarP(&app.Opts.Verbose, "verbose", "v", false, "Enable verbose diagnostic output")
 	rootCmd.PersistentFlags().BoolVarP(&app.Opts.Quiet, "quiet", "q", false, "Suppress informational notices and hints")
-	rootCmd.PersistentFlags().BoolVarP(&app.Opts.DryRun, "dry-run", "n", false, "Simulate execution without modifying Git state or remote services")
+	rootCmd.PersistentFlags().BoolVar(&app.Opts.DryRun, "dry-run", false, "Simulate execution without modifying Git state or remote services")
 	rootCmd.PersistentFlags().BoolVar(&app.Opts.NoColor, "no-color", false, "Disable ANSI color styling")
 
 	// Register subcommands
@@ -78,6 +78,7 @@ upstream synchronization, clean rebasing, and Atlassian toolchain integration.`,
 	rootCmd.AddCommand(app.newResetCmd())
 	rootCmd.AddCommand(app.newResolveCmd())
 	rootCmd.AddCommand(app.newNameCmd())
+	rootCmd.AddCommand(app.newHistoryCmd())
 
 	app.RootCmd = rootCmd
 	return app

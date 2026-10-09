@@ -85,3 +85,11 @@ func HasOrigin(ctx context.Context, inspector *git.Inspector, rootDir string) er
 	}
 	return nil
 }
+
+// HasCommits ensures that the repository contains at least one valid commit ref.
+func HasCommits(ctx context.Context, inspector *git.Inspector, rootDir string) error {
+	if !inspector.HasCommits(ctx, rootDir) {
+		return domain.NewError(domain.ExitPreconditionRepo, "Repository has no commits yet")
+	}
+	return nil
+}

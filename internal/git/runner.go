@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,6 +18,8 @@ type Runner interface {
 	RunLines(ctx context.Context, dir string, args ...string) ([]string, error)
 	// RunWithEnv executes a git command with additional environment variables.
 	RunWithEnv(ctx context.Context, dir string, extraEnv []string, args ...string) (string, error)
+	// RunStream executes a git command streaming stdout and stderr to the provided writers.
+	RunStream(ctx context.Context, dir string, stdout, stderr io.Writer, extraEnv []string, args ...string) error
 }
 
 // ExecRunner implements Runner using os/exec with LC_ALL=C and non-interactive safeguards.
@@ -83,4 +86,40 @@ func (r *ExecRunner) RunWithEnv(ctx context.Context, dir string, extraEnv []stri
 	}
 
 	return outStr, nil
+}
+
+// RunStream executes a git command streaming stdout and stderr to the provided writers.
+func (r *ExecRunner) RunStream(ctx context.Context, dir string, stdout, stderr io.Writer, extraEnv []string, args ...string) error {
+	if r.DebugFn != nil {
+		r.DebugFn(fmt.Sprintf("git %s", strings.Join(args, " ")))
+	}
+
+	cmd := exec.CommandContext(ctx, "git", args...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
+
+	env := os.Environ()
+	env = append(env, "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
+	if len(extraEnv) > 0 {
+		env = append(env, extraEnv...)
+	}
+	cmd.Env = env
+
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.Stdin = os.Stdin
+
+	err := cmd.Run()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			// Exit code 141 indicates SIGPIPE, typically when a pager exits early (e.g. 'q' in less).
+			if exitErr.ExitCode() == 141 {
+				return nil
+			}
+		}
+		return fmt.Errorf("git %s failed: %w", args[0], err)
+	}
+
+	return nil
 }

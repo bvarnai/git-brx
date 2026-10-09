@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"strings"
 	"testing"
 
@@ -56,6 +58,14 @@ func (m *mockGitRunner) RunLines(ctx context.Context, dir string, args ...string
 
 func (m *mockGitRunner) RunWithEnv(ctx context.Context, dir string, extraEnv []string, args ...string) (string, error) {
 	return m.Run(ctx, dir, args...)
+}
+
+func (m *mockGitRunner) RunStream(ctx context.Context, dir string, stdout, stderr io.Writer, extraEnv []string, args ...string) error {
+	out, err := m.RunWithEnv(ctx, dir, extraEnv, args...)
+	if out != "" && stdout != nil {
+		fmt.Fprintln(stdout, out)
+	}
+	return err
 }
 
 func TestSelectCommand_UnitTable(t *testing.T) {

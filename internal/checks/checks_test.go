@@ -3,6 +3,8 @@ package checks_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +46,14 @@ func (m *mockRunner) RunLines(ctx context.Context, dir string, args ...string) (
 
 func (m *mockRunner) RunWithEnv(ctx context.Context, dir string, extraEnv []string, args ...string) (string, error) {
 	return m.Run(ctx, dir, args...)
+}
+
+func (m *mockRunner) RunStream(ctx context.Context, dir string, stdout, stderr io.Writer, extraEnv []string, args ...string) error {
+	out, err := m.RunWithEnv(ctx, dir, extraEnv, args...)
+	if out != "" && stdout != nil {
+		fmt.Fprintln(stdout, out)
+	}
+	return err
 }
 
 func TestInsideWorkTree(t *testing.T) {
@@ -249,5 +259,33 @@ func TestHasOrigin(t *testing.T) {
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, domain.ExitPreconditionRemote, appErr.Code)
 		assert.Contains(t, appErr.Message, "no remote origin")
+	})
+}
+
+func TestHasCommits(t *testing.T) {
+	t.Run("repo with commits succeeds", func(t *testing.T) {
+		runner := &mockRunner{
+			responses: map[string]string{
+				"rev-parse --verify -q HEAD": "abc1234",
+			},
+		}
+		inspector := git.NewInspector(runner)
+		err := checks.HasCommits(context.Background(), inspector, "/repo")
+		require.NoError(t, err)
+	})
+
+	t.Run("repo without commits returns ExitPreconditionRepo", func(t *testing.T) {
+		runner := &mockRunner{
+			errors: map[string]error{
+				"rev-parse --verify -q HEAD": errors.New("exit status 1"),
+			},
+		}
+		inspector := git.NewInspector(runner)
+		err := checks.HasCommits(context.Background(), inspector, "/repo")
+		require.Error(t, err)
+		var appErr *domain.AppError
+		require.True(t, errors.As(err, &appErr))
+		assert.Equal(t, domain.ExitPreconditionRepo, appErr.Code)
+		assert.Contains(t, appErr.Message, "Repository has no commits yet")
 	})
 }
