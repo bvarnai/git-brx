@@ -35,10 +35,34 @@ type PullRequestDetail struct {
 	Merged bool             `json:"merged"`
 }
 
+// MergeInstructionOptions captures metadata needed to format merge instructions.
+type MergeInstructionOptions struct {
+	IssueKey     string
+	Summary      string
+	Branch       string
+	TargetBranch string
+}
+
 // SCMProvider defines the abstract interface for source control platforms (Bitbucket, GitHub, GitLab).
 type SCMProvider interface {
 	Name() string
 	CreatePullRequest(ctx context.Context, req PullRequestRequest) (*PullRequestResult, error)
 	GetPullRequestForBranch(ctx context.Context, branch string) (*PullRequestDetail, error)
 	ResolveReviewers(components []string) []string
+	FormatMergeInstructions(opts MergeInstructionOptions) string
+}
+
+// FormatDefaultMergeInstructions formats generic, UI-agnostic merge instructions.
+func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
+	squashTitle := opts.Branch
+	if opts.IssueKey != "" && opts.Summary != "" {
+		squashTitle = opts.IssueKey + ": " + opts.Summary
+	} else if opts.Summary != "" {
+		squashTitle = opts.Summary
+	}
+
+	return "# Merge instructions\n" +
+		"- **Strategy:** Squash & Merge (recommended)\n" +
+		"  - **Commit Title:** `" + squashTitle + "`\n" +
+		"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 }

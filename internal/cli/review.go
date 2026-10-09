@@ -169,7 +169,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	if issue != nil {
 		summaryText = issue.Title
 	}
-	prBody := a.composeReviewDescription(cfg, issueKey, summaryText, currBranch.Name, targetBranch)
+	prBody := a.composeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch)
 
 	// 7. Dry-Run Check
 	if a.Opts.DryRun {
@@ -206,7 +206,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	return nil
 }
 
-func (a *App) composeReviewDescription(cfg *domain.ProjectConfig, issueKey, summary, branch, targetBranch string) string {
+func (a *App) composeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string) string {
 	template := ""
 	if cfg.Review.Template != "" {
 		if content, err := os.ReadFile(cfg.Review.Template); err == nil {
@@ -228,13 +228,20 @@ func (a *App) composeReviewDescription(cfg *domain.ProjectConfig, issueKey, summ
 		sb.WriteString("### Verification & Testing\n- [ ] Automated tests pass\n- [ ] Manual verification completed\n\n")
 	}
 
-	sb.WriteString("# Merge instructions\n")
-	squashTitle := fmt.Sprintf("__%s %s__", issueKey, summary)
-	if summary == "" {
-		squashTitle = fmt.Sprintf("__%s__", branch)
+	// Append merge instructions unless explicitly disabled via review.instructions: false
+	if cfg.Review.Instructions == nil || *cfg.Review.Instructions {
+		opts := domain.MergeInstructionOptions{
+			IssueKey:     issueKey,
+			Summary:      summary,
+			Branch:       branch,
+			TargetBranch: targetBranch,
+		}
+		if scm != nil {
+			sb.WriteString(scm.FormatMergeInstructions(opts))
+		} else {
+			sb.WriteString(domain.FormatDefaultMergeInstructions(opts))
+		}
 	}
-	sb.WriteString(fmt.Sprintf("- **Squash commit:** Title %s, Merge strategy: __Squash, fast-forward only (default)__, Delete source: `yes`\n", squashTitle))
-	sb.WriteString(fmt.Sprintf("- **Merge commit:** Title __Merge %s to %s__, Merge strategy: __Merge commit__, Delete source: `yes`\n", branch, targetBranch))
 
 	return sb.String()
 }

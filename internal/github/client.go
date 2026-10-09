@@ -290,6 +290,11 @@ func (c *Client) ResolveReviewers(components []string) []string {
 	return config.ResolveReviewers(c.ReviewCfg, components)
 }
 
+// FormatMergeInstructions renders standard GitHub-aligned merge instructions.
+func (c *Client) FormatMergeInstructions(opts domain.MergeInstructionOptions) string {
+	return domain.FormatDefaultMergeInstructions(opts)
+}
+
 func (c *Client) requestReviewers(ctx context.Context, prNumber int, reviewers []string) {
 	url := fmt.Sprintf("%s/repos/%s/%s/pulls/%d/requested_reviewers", c.BaseURL, c.Owner, c.Repo, prNumber)
 	payload := rawReviewersRequest{Reviewers: reviewers}
