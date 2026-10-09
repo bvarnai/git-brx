@@ -4,10 +4,11 @@
 
 **Opinionated, guardrailed Git automation for modern software teams.**
 
-[![CI](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml/badge.svg)](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/bvarnai/git-brx)](https://goreportcard.com/report/github.com/bvarnai/git-brx)
+[![CI](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?style=flat&logo=go)](go.mod)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-Single%20Binary-brightgreen.svg)]()
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
+[![Single Binary](https://img.shields.io/badge/Architecture-Single%20Static%20Binary-success.svg)]()
 
 <p align="center">
   <a href="#why-git-brx">Why git-brx?</a> •
