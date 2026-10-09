@@ -111,6 +111,7 @@ func Load(workDir, originURL string) (*domain.ProjectConfig, error) {
 			"Story": "feature",
 			"Epic":  "epic",
 			"Task":  "issue",
+			"Issue": "issue",
 		}
 	}
 

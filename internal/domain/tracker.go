@@ -10,6 +10,7 @@ type Issue struct {
 	Status     string   `json:"status"`
 	Assignee   string   `json:"assignee,omitempty"`
 	Components []string `json:"components,omitempty"`
+	URL        string   `json:"url,omitempty"`
 }
 
 // IssueTracker defines the abstract interface for validating issues across trackers (Jira, GitHub, etc.).

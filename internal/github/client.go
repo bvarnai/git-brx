@@ -74,10 +74,11 @@ func (c *Client) Name() string {
 // --- domain.IssueTracker Implementation ---
 
 type rawGitHubIssue struct {
-	Number int    `json:"number"`
-	Title  string `json:"title"`
-	State  string `json:"state"`
-	Labels []struct {
+	Number  int    `json:"number"`
+	Title   string `json:"title"`
+	State   string `json:"state"`
+	HTMLURL string `json:"html_url"`
+	Labels  []struct {
 		Name string `json:"name"`
 	} `json:"labels"`
 	Assignee *struct {
@@ -156,6 +157,7 @@ func (c *Client) GetIssue(ctx context.Context, key string) (*domain.Issue, error
 		Status:     raw.State,
 		Assignee:   assignee,
 		Components: components,
+		URL:        raw.HTMLURL,
 	}, nil
 }
 
@@ -276,7 +278,13 @@ func (c *Client) handleErrorResponse(resp *http.Response, actionFormat string, a
 		return domain.NewError(domain.ExitAPIError, "GitHub authorization failed (%d): %s", resp.StatusCode, msg).
 			WithHint("Ensure GITHUB_TOKEN or GH_TOKEN is valid and has repository permissions")
 	case http.StatusNotFound:
-		return domain.NewError(domain.ExitAPIError, "GitHub resource not found during %s: %s", action, msg)
+		err := domain.NewError(domain.ExitAPIError, "GitHub resource not found during %s: %s", action, msg)
+		if c.Token == "" {
+			err.WithHint("If the repository or issue is private, set GITHUB_TOKEN or GH_TOKEN, or use --offline")
+		} else {
+			err.WithHint("Verify the issue exists on GitHub or check repository permissions")
+		}
+		return err
 	case http.StatusUnprocessableEntity:
 		return domain.NewError(domain.ExitAPIError, "GitHub validation failed during %s: %s", action, msg)
 	default:

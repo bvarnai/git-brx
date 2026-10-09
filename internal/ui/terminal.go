@@ -143,3 +143,70 @@ func (u *UI) Confirm(prompt string) (bool, error) {
 	}
 	return false, nil
 }
+
+// Hyperlink formats a URL as an OSC 8 clickable terminal hyperlink if color/styling is enabled.
+// If text is empty, the URL itself is used as the link text.
+func (u *UI) Hyperlink(url, text string) string {
+	if text == "" {
+		text = url
+	}
+	if !u.Color || url == "" {
+		return text
+	}
+	// OSC 8 hyperlink escape sequence: \033]8;;URL\033\TEXT\033]8;;\033\
+	return fmt.Sprintf("\033]8;;%s\033\\%s\033]8;;\033\\", url, text)
+}
+
+// Width returns the detected terminal width in columns, defaulting to 80 if undetermined.
+func (u *UI) Width() int {
+	if cols := os.Getenv("COLUMNS"); cols != "" {
+		var c int
+		if _, err := fmt.Sscanf(cols, "%d", &c); err == nil && c > 20 {
+			return c
+		}
+	}
+	return 80
+}
+
+// WrapText word-wraps text with hanging indentation to fit within maxCols.
+// prefix is prepended to the first line.
+// indent is prepended to all subsequent lines.
+func (u *UI) WrapText(prefix, indent, text string, maxCols int) []string {
+	if maxCols <= 0 {
+		maxCols = u.Width()
+	}
+
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{prefix}
+	}
+
+	var lines []string
+	current := prefix
+	currMax := maxCols
+
+	for _, word := range words {
+		// If adding word exceeds currMax (and line isn't empty after prefix)
+		spaceNeeded := 0
+		if current != prefix && current != indent {
+			spaceNeeded = 1
+		}
+
+		if len(current)+spaceNeeded+len(word) > currMax && (current != prefix && current != indent) {
+			lines = append(lines, current)
+			current = indent + word
+		} else {
+			if spaceNeeded > 0 {
+				current += " " + word
+			} else {
+				current += word
+			}
+		}
+	}
+
+	if current != "" {
+		lines = append(lines, current)
+	}
+
+	return lines
+}

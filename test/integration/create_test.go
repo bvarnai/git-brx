@@ -143,7 +143,8 @@ func TestCreateIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/42"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Issue '42' is assigned to 'octocat' in status 'open'")
+		assert.Contains(t, stderr.String(), "Issue #42: Fix login crash")
+		assert.Contains(t, stderr.String(), "Assignee: octocat")
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/42'")
 
 		currentBranch := strings.TrimSpace(h.Git("rev-parse", "--abbrev-ref", "HEAD"))

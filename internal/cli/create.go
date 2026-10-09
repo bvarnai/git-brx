@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -131,14 +132,17 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 
 			// Validate issue type mapping
 			if len(cfg.Branch.Mapping) > 0 {
-				mappedBranchPath, ok := cfg.Branch.Mapping[issue.Type]
-				if !ok {
+				if mappedBranchPath, ok := cfg.Branch.Mapping[issue.Type]; ok {
+					if mappedBranchPath != branchPath {
+						a.UI.Error("Issue type '%s' is not allowed on '%s' branch", issue.Type, branchPath)
+						a.UI.Log("Hint: use '%s' branch or check mapping rules", mappedBranchPath)
+						return domain.NewError(domain.ExitConfigError, "Issue type '%s' is not allowed on '%s' branch", issue.Type, branchPath)
+					}
+				} else if branchPath != "issue" {
+					// Unmapped custom issue type is allowed on generic 'issue/' branch, but restricted from specialized branches
+					a.UI.Error("Issue type '%s' has no mapping defined for '%s' branch", issue.Type, branchPath)
+					a.UI.Log("Hint: use 'issue/' branch or configure branch.mapping in .git-brx.yaml")
 					return domain.NewError(domain.ExitConfigError, "No branch mapping defined for issue type '%s'", issue.Type)
-				}
-				if mappedBranchPath != branchPath {
-					a.UI.Error("Issue type '%s' is not allowed on '%s' branch", issue.Type, branchPath)
-					a.UI.Log("Hint: use '%s' branch or check mapping rules", mappedBranchPath)
-					return domain.NewError(domain.ExitConfigError, "Issue type '%s' is not allowed on '%s' branch", issue.Type, branchPath)
 				}
 			}
 
@@ -146,7 +150,31 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 			if assignee == "" {
 				assignee = "nobody (not yet assigned)"
 			}
-			a.UI.Log("Issue '%s' is assigned to '%s' in status '%s'", issue.Key, assignee, issue.Status)
+
+			// Display rich issue details with clean word-wrapping
+			if issue.Title != "" {
+				prefix := fmt.Sprintf("Issue #%s: ", issue.Key)
+				indent := strings.Repeat(" ", len(prefix))
+				for _, line := range a.UI.WrapText(prefix, indent, issue.Title, 0) {
+					a.UI.Log("%s", line)
+				}
+			} else {
+				a.UI.Log("Issue #%s", issue.Key)
+			}
+			a.UI.Log("  Type:     %s", issue.Type)
+			a.UI.Log("  Status:   %s", issue.Status)
+			a.UI.Log("  Assignee: %s", assignee)
+			if len(issue.Components) > 0 {
+				prefix := "  Labels:   "
+				indent := "            "
+				labelsStr := strings.Join(issue.Components, ", ")
+				for _, line := range a.UI.WrapText(prefix, indent, labelsStr, 0) {
+					a.UI.Log("%s", line)
+				}
+			}
+			if issue.URL != "" {
+				a.UI.Log("  URL:      %s", a.UI.Hyperlink(issue.URL, issue.URL))
+			}
 
 			// Confirmation prompt unless --yes
 			if !opts.Yes {
