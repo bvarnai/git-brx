@@ -160,7 +160,7 @@ review:
     default: [charlie]
 ```
 
-See [Configuration Guide](docs/user-guide/getting-started.md#configuration-cascade) for detailed options.
+See [Configuration guide](docs/user-guide/getting-started.md#configuration-cascade) for detailed options.
 
 ---
 
