@@ -22,7 +22,6 @@
 | `publish` | `publish.sh` | Pushes branch to remote with lease and configures upstream tracking. |
 | `delete` | `delete.sh` | Validates remote branch deletion, switches to `master`, and deletes local branch. |
 | `review` | `review.sh` | Creates a pull request on configured SCM platform (Bitbucket, GitHub) via REST API with reviewer mapping. |
-| `help` | `help.sh` | Displays global command catalog or subcommand-specific documentation. |
 
 ### Global Flags
 

@@ -64,6 +64,8 @@ upstream synchronization, clean rebasing, and Atlassian toolchain integration.`,
 
 	rootCmd.SetOut(stdout)
 	rootCmd.SetErr(stderr)
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// Persistent global flags
 	rootCmd.PersistentFlags().BoolVarP(&app.Opts.Verbose, "verbose", "v", false, "Enable verbose diagnostic output")
