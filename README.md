@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.svg" alt="git-brx logo" width="128" height="128" />
+
 # git-brx
 
 **Opinionated, guardrailed Git automation for modern software teams.**

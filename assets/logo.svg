@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e222b"/>
+      <stop offset="100%" stop-color="#12151c"/>
+    </linearGradient>
+
+    <!-- Caliper & Brake Arc Gradient -->
+    <linearGradient id="caliperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F05032"/>
+      <stop offset="100%" stop-color="#E24329"/>
+    </linearGradient>
+
+    <!-- Branch Path Glow / Gradient -->
+    <linearGradient id="branchGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00ADD8"/>
+      <stop offset="100%" stop-color="#00E5FF"/>
+    </linearGradient>
+
+    <!-- Drop Shadow Filter for Depth -->
+    <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Base Icon Container (Rounded Hex-Shield) -->
+  <rect x="12" y="12" width="176" height="176" rx="42" fill="url(#bgGrad)" stroke="#2b313e" stroke-width="2.5" filter="url(#subtleShadow)"/>
+
+  <!-- Disc Brake Rotor Elements (Perforations & Inner Track) -->
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#252a36" stroke-width="1.5" stroke-dasharray="4, 6"/>
+  <circle cx="100" cy="100" r="54" fill="none" stroke="#1f2430" stroke-width="1.5" stroke-dasharray="3, 8"/>
+
+  <!-- High-Performance Brake Caliper Arc (Surrounding Guardrail) -->
+  <path d="M 50,60 A 70,70 0 0,1 150,60" fill="none" stroke="url(#caliperGrad)" stroke-width="8" stroke-linecap="round"/>
+  <!-- Caliper Pistons / Grip Accents -->
+  <circle cx="70" cy="40" r="2.5" fill="#ffffff" opacity="0.8"/>
+  <circle cx="100" cy="30" r="2.5" fill="#ffffff" opacity="0.8"/>
+  <circle cx="130" cy="40" r="2.5" fill="#ffffff" opacity="0.8"/>
+
+  <!-- Git Branching Network Topology -->
+  <!-- Base Trunk Path (Vertical) -->
+  <line x1="82" y1="145" x2="82" y2="70" stroke="#717c91" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Diverging Topic Branch Path (Curving to the right and up) -->
+  <path d="M 82,125 C 82,98 126,110 126,85 L 126,70" fill="none" stroke="url(#branchGrad)" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Base Trunk Nodes -->
+  <!-- Root Commit Node -->
+  <circle cx="82" cy="145" r="9" fill="#1e222b" stroke="#717c91" stroke-width="4.5"/>
+  <!-- Main Trunk Head Node -->
+  <circle cx="82" cy="68" r="9" fill="#1e222b" stroke="#717c91" stroke-width="4.5"/>
+
+  <!-- Topic Branch Head Node (The Active, Guardrailed Target) -->
+  <circle cx="126" cy="68" r="9.5" fill="#00E5FF" stroke="#12151c" stroke-width="3"/>
+  <circle cx="126" cy="68" r="4" fill="#ffffff"/>
+
+  <!-- Sleek Speed Accent / Guardrail Notch -->
+  <path d="M 148,135 A 70,70 0 0,1 115,165" fill="none" stroke="#F05032" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+</svg>
