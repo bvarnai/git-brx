@@ -44,21 +44,28 @@
      ```
 5. **Continuation Branching:**
    - **Merge Flow:**
+     - Log: `[git-brx] Resolving merge conflicts...`
      - Check if `.git/MERGE_MSG` exists.
      - Finalize the merge using standard Git continuation:
        ```bash
        git commit --no-edit
        ```
        *(Preserves the full default merge message without truncation).*
+     - If failed, emit hint: `[git-brx] Hint: Use 'git-brx reset' to abort the merge and restore your branch`.
      - Log: `[git-brx] Merge completed`.
    - **Rebase Flow:**
+     - Check active rebase progress via `.git/rebase-merge/msgnum` and `.git/rebase-merge/end`.
+     - Log current step: `[git-brx] Resolving rebase conflict at step <current> of <total>...`
      - Attempt to continue the rebase:
        ```bash
        git rebase --continue
        ```
+       *(Executed with `GIT_EDITOR=true` to prevent unexpected terminal hangs).*
      - If subsequent commits in the rebase series encounter new conflicts:
-       - Log: `[git-brx] Conflicts encountered on subsequent commit`
-       - Repeat the resolution cycle or prompt the user. Prevent infinite loops by checking `git mergetool` exit status.
+       - Log: `[git-brx] Conflicts encountered on subsequent commit in rebase series`
+       - Repeat the resolution cycle with updated step indicators. Loop is capped at 20 iterations to prevent infinite execution.
+     - If rebase continuation fails or is aborted:
+       - Emit hint: `[git-brx] Hint: Use 'git-brx reset' to abort the rebase and restore your branch`.
      - Once all commits are rebased, log: `[git-brx] Rebase completed`.
 6. **Completion:** Exit with Exit Code `0`.
 

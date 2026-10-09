@@ -20,19 +20,21 @@
 1. **Repository & State Verification:**
    - Verify worktree: `git rev-parse --is-inside-work-tree`.
    - Assert origin exists: `git remote get-url origin`.
-   - Assert attached branch: `git symbolic-ref --short -q HEAD`. Store current branch name.
 2. **Abort In-Flight Rebase or Merge:**
-   - Check if merge is in progress (`.git/MERGE_HEAD` exists):
-     - Log: `[git-brx] You are in the middle of a merge, aborting`
-     - Execute: `git merge --abort`. If this fails, exit with Exit Code `5`.
-   - Check if rebase is in progress (`.git/rebase-merge` or `.git/rebase-apply` exists):
-     - Log: `[git-brx] You are in the middle of a rebase, aborting`
-     - Execute: `git rebase --abort`. If this fails, exit with Exit Code `5`.
-3. **Remote Reference Validation:**
+   - Abort any in-flight operations first, ensuring that any temporary detached HEAD states induced by mid-flight rebases are restored:
+     - Check if merge is in progress (`.git/MERGE_HEAD` exists):
+       - Log: `[git-brx] You are in the middle of a merge, aborting`
+       - Execute: `git merge --abort`. If this fails, exit with Exit Code `5`.
+     - Check if rebase is in progress (`.git/rebase-merge` or `.git/rebase-apply` exists):
+       - Log: `[git-brx] You are in the middle of a rebase, aborting`
+       - Execute: `git rebase --abort`. If this fails, exit with Exit Code `5`.
+3. **Attached Branch & Remote Reference Validation:**
+   - Assert attached branch: `git symbolic-ref --short -q HEAD`. Store current branch name.
    - Verify that the remote tracking reference `origin/<branch>` exists:
      ```bash
      git rev-parse --verify -q origin/<branch>
      ```
+
    - If not found:
      - Log: `[git-brx] ! Reset failed: remote reference 'origin/<branch>' does not exist`
      - Log: `[git-brx] Hint: Your branch may not have been published yet. Use 'git-brx publish' to publish it`
