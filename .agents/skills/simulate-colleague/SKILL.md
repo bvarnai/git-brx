@@ -18,6 +18,17 @@ This skill defines turn-based collaboration scenarios between **You** (Primary D
 
 ---
 
+## Turn-Based Interaction Pattern
+
+When interacting with Alex Developer:
+1. **Request an Action:** In chat, specify what Alex should do (e.g. *"Alex, checkout main, add a function in calc.go, and push to origin/main"*).
+2. **Alex Executes & Reports:** Alex performs the action strictly within `sandbox-colleague` and reports back the commit hash / branch name and the exact command for you to run.
+3. **You Execute & Confirm:** You run your command in `sandbox-user` and reply with your results.
+
+For full architectural details and message flows, see [Colleague Simulation Guide](../../../docs/user-guide/colleague-simulation.md).
+
+---
+
 ## Playbook 1: Concurrent Feature Merge & Upstream Sync (`git brx sync`)
 
 ### Objective
