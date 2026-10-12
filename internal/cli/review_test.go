@@ -152,45 +152,59 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 
 func TestComposeReviewDescription(t *testing.T) {
 	app := cli.NewApp(nil, nil, nil)
+	scm := &mockSCMProvider{}
 
-	t.Run("numeric issue key generates Closes #key", func(t *testing.T) {
+	t.Run("scm formats closing issue in default description", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, nil, "8", "Feature summary", "feature/8", "main")
+		desc := app.ComposeReviewDescription(cfg, scm, "8", "Feature summary", "feature/8", "main")
 		assert.Contains(t, desc, "Closes #8")
 		assert.Contains(t, desc, "Feature summary")
 	})
 
-	t.Run("hash numeric issue key generates Closes #key", func(t *testing.T) {
-		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, nil, "#42", "Fix bug", "feature/42", "main")
-		assert.Contains(t, desc, "Closes #42")
-	})
-
-	t.Run("alphanumeric issue key generates Resolves KEY", func(t *testing.T) {
-		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, nil, "PROJ-123", "Jira task", "feature/PROJ-123", "main")
-		assert.Contains(t, desc, "Resolves PROJ-123")
-	})
-
-	t.Run("template without closing keyword gets closing keyword appended", func(t *testing.T) {
+	t.Run("scm formats closing issue in template", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{
 			Review: domain.ReviewConfig{
 				Template: "## Custom Template\nSome details here.",
 			},
 		}
-		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main")
+		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
 		assert.Contains(t, desc, "## Custom Template")
 		assert.Contains(t, desc, "Closes #12")
 	})
 
-	t.Run("template with existing closing keyword does not duplicate", func(t *testing.T) {
-		cfg := &domain.ProjectConfig{
-			Review: domain.ReviewConfig{
-				Template: "## Custom Template\nFixes #12 directly in body.",
-			},
-		}
-		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main")
-		assert.Contains(t, desc, "Fixes #12 directly in body.")
-		assert.False(t, strings.Contains(desc, "Closes #12"), "should not duplicate closing keyword")
+	t.Run("scm returning empty string does not inject closing line", func(t *testing.T) {
+		emptySCM := &mockSCMProvider{emptyClosing: true}
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, emptySCM, "12", "Details", "feature/12", "main")
+		assert.False(t, strings.Contains(desc, "Closes #"))
 	})
+
+	t.Run("nil scm does not panic and formats default instructions", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main")
+		assert.Contains(t, desc, "Details")
+		assert.Contains(t, desc, "# Merge instructions")
+	})
+}
+
+type mockSCMProvider struct {
+	emptyClosing bool
+}
+
+func (m *mockSCMProvider) Name() string { return "mock" }
+func (m *mockSCMProvider) CreatePullRequest(ctx context.Context, req domain.PullRequestRequest) (*domain.PullRequestResult, error) {
+	return nil, nil
+}
+func (m *mockSCMProvider) GetPullRequestForBranch(ctx context.Context, branch string) (*domain.PullRequestDetail, error) {
+	return nil, nil
+}
+func (m *mockSCMProvider) ResolveReviewers(components []string) []string { return nil }
+func (m *mockSCMProvider) FormatMergeInstructions(opts domain.MergeInstructionOptions) string {
+	return domain.FormatDefaultMergeInstructions(opts)
+}
+func (m *mockSCMProvider) FormatClosingIssue(issueKey string) string {
+	if m.emptyClosing || issueKey == "" {
+		return ""
+	}
+	return "Closes #" + strings.TrimPrefix(issueKey, "#")
 }

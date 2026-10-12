@@ -2,21 +2,16 @@ package cli
 
 import (
 	"context"
-	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
-	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
-	"github.com/bvarnai/git-brx/internal/github"
 	"github.com/spf13/cobra"
 )
 
 // PublishOptions stores flags for the publish command.
 type PublishOptions struct {
 	NoForce bool
-	Comment bool
 }
 
 // newPublishCmd constructs the 'publish' subcommand.
@@ -35,7 +30,6 @@ Automatically configures upstream tracking if the branch has not been published 
 	}
 
 	cmd.Flags().BoolVar(&opts.NoForce, "no-force", false, "Push with standard fast-forward constraints without --force-with-lease")
-	cmd.Flags().BoolVarP(&opts.Comment, "comment", "c", false, "Post a comment linking to the branch on the associated issue")
 
 	return cmd
 }
@@ -101,64 +95,7 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 	}
 
 	a.UI.Log("Branch '%s' successfully published to origin", currBranch.Name)
-
-	if opts.Comment {
-		a.postBranchCommentToIssue(ctx, rootDir, currBranch.Name)
-	}
-
 	return nil
-}
-
-func (a *App) postBranchCommentToIssue(ctx context.Context, rootDir, branchName string) {
-	hasOrigin, originURL, err := a.Inspector.HasOrigin(ctx, rootDir)
-	if err != nil || !hasOrigin {
-		return
-	}
-
-	cfg, err := config.Load(rootDir, originURL)
-	if err != nil || cfg == nil {
-		return
-	}
-
-	templatePattern := cfg.Branch.Template
-	if templatePattern == "" {
-		templatePattern = `^(issue|feature|epic)/([A-Za-z0-9_-]+)$`
-	}
-	re, _ := regexp.Compile(templatePattern)
-	var issueKey string
-	if re != nil {
-		matches := re.FindStringSubmatch(branchName)
-		if len(matches) >= 3 {
-			issueKey = matches[2]
-		}
-	}
-	if issueKey == "" {
-		parts := strings.SplitN(branchName, "/", 2)
-		if len(parts) == 2 {
-			issueKey = parts[1]
-		}
-	}
-	if issueKey == "" {
-		return
-	}
-
-	token := github.ResolveToken(ctx, a.Runner, "github.com")
-	if token == "" {
-		return
-	}
-
-	opts := []github.Option{}
-	if cfg.Tracker.URI != "" && cfg.Tracker.URI != "https://github.com" && cfg.Tracker.URI != "http://github.com" {
-		opts = append(opts, github.WithBaseURL(cfg.Tracker.URI))
-	}
-	client := github.NewClient(cfg.Tracker.Owner, cfg.Tracker.Repo, token, opts...)
-
-	branchURL := fmt.Sprintf("https://github.com/%s/%s/tree/%s", cfg.SCM.Owner, cfg.SCM.Repo, branchName)
-	commentBody := fmt.Sprintf("Working branch: [%s](%s)", branchName, branchURL)
-
-	if err := client.AddIssueComment(ctx, issueKey, commentBody); err == nil {
-		a.UI.Log("Added branch reference comment to issue #%s", issueKey)
-	}
 }
 
 func (a *App) handlePushError(pushErr error) error {

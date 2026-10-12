@@ -223,21 +223,21 @@ func TestClient_WithBaseURL_NormalizesGithubCom(t *testing.T) {
 	assert.Equal(t, "https://ghe.company.com/api/v3", c3.BaseURL)
 }
 
-func TestClient_AddIssueComment(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/repos/my-org/my-repo/issues/42/comments", r.URL.Path)
-		assert.Equal(t, http.MethodPost, r.Method)
-		var body map[string]string
-		_ = json.NewDecoder(r.Body).Decode(&body)
-		assert.Equal(t, "Working branch: feature/foo", body["body"])
+func TestClient_FormatClosingIssue(t *testing.T) {
+	client := github.NewClient("my-org", "my-repo", "token")
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{"id": 12345}`))
-	}))
-	defer server.Close()
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"8", "Closes #8"},
+		{"#42", "Closes #42"},
+		{"issue/99", "Closes #99"},
+		{"feature/100", "Closes #100"},
+		{"", ""},
+	}
 
-	client := github.NewClient("my-org", "my-repo", "test-token", github.WithBaseURL(server.URL))
-	err := client.AddIssueComment(context.Background(), "42", "Working branch: feature/foo")
-	require.NoError(t, err)
+	for _, tt := range tests {
+		assert.Equal(t, tt.expected, client.FormatClosingIssue(tt.input))
+	}
 }
