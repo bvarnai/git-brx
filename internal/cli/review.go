@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
@@ -157,18 +158,11 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	}
 
 	// 6. Title & Description Composition
-	prTitle := opts.Title
-	if prTitle == "" {
-		if issue != nil && issue.Title != "" {
-			if issueKey != "" {
-				prTitle = fmt.Sprintf("%s: %s", issueKey, issue.Title)
-			} else {
-				prTitle = fmt.Sprintf("%s: %s", currBranch.Name, issue.Title)
-			}
-		} else {
-			prTitle = currBranch.Name
-		}
+	issueTitle := ""
+	if issue != nil {
+		issueTitle = issue.Title
 	}
+	prTitle := ComposePullRequestTitle(opts.Title, currBranch.Name, issueKey, issueTitle)
 
 	summaryText := ""
 	if issue != nil {
@@ -262,4 +256,42 @@ func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 	}
 
 	return sb.String()
+}
+
+var convCommitRegex = regexp.MustCompile(`^([a-z]+)(?:\([^)]+\))?:\s*(.+)$`)
+
+// ComposePullRequestTitle constructs the PR title using Conventional Commits with issue scope.
+func ComposePullRequestTitle(customTitle, branchName, issueKey, issueTitle string) string {
+	if customTitle != "" {
+		return customTitle
+	}
+	if issueTitle == "" {
+		return branchName
+	}
+	if issueKey == "" {
+		if convCommitRegex.MatchString(issueTitle) {
+			return issueTitle
+		}
+		return fmt.Sprintf("%s: %s", branchName, issueTitle)
+	}
+
+	scope := issueKey
+	cleanKey := strings.TrimPrefix(issueKey, "#")
+	if _, err := strconv.Atoi(cleanKey); err == nil {
+		scope = "#" + cleanKey
+	}
+
+	matches := convCommitRegex.FindStringSubmatch(issueTitle)
+	if len(matches) == 3 {
+		return fmt.Sprintf("%s(%s): %s", matches[1], scope, matches[2])
+	}
+
+	if strings.HasPrefix(branchName, "feature/") || strings.HasPrefix(branchName, "epic/") {
+		return fmt.Sprintf("feat(%s): %s", scope, issueTitle)
+	}
+	if strings.HasPrefix(branchName, "issue/") {
+		return fmt.Sprintf("fix(%s): %s", scope, issueTitle)
+	}
+
+	return fmt.Sprintf("%s: %s", scope, issueTitle)
 }

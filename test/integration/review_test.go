@@ -103,7 +103,7 @@ scm:
 				_ = json.NewDecoder(r.Body).Decode(&body)
 				assert.Equal(t, "issue/101", body["head"])
 				assert.Equal(t, "master", body["base"])
-				assert.Equal(t, "101: Authentication Refactor", body["title"])
+				assert.Equal(t, "fix(#101): Authentication Refactor", body["title"])
 				assert.Contains(t, body["body"], "Default (leave GitHub's pre-filled title)")
 
 				w.Header().Set("Content-Type", "application/json")

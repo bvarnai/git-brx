@@ -187,6 +187,105 @@ func TestComposeReviewDescription(t *testing.T) {
 	})
 }
 
+func TestComposePullRequestTitle(t *testing.T) {
+	tests := []struct {
+		name        string
+		customTitle string
+		branch      string
+		issueKey    string
+		issueTitle  string
+		expected    string
+	}{
+		{
+			name:        "custom title takes precedence",
+			customTitle: "Explicit PR Title",
+			branch:      "feature/12",
+			issueKey:    "12",
+			issueTitle:  "feat(review): something",
+			expected:    "Explicit PR Title",
+		},
+		{
+			name:        "empty issue title falls back to branch",
+			customTitle: "",
+			branch:      "feature/12",
+			issueKey:    "12",
+			issueTitle:  "",
+			expected:    "feature/12",
+		},
+		{
+			name:        "conventional commit title with numeric key replaces scope with #key",
+			customTitle: "",
+			branch:      "feature/12",
+			issueKey:    "12",
+			issueTitle:  "feat(review): align PR title",
+			expected:    "feat(#12): align PR title",
+		},
+		{
+			name:        "conventional commit title without scope injects #key",
+			customTitle: "",
+			branch:      "feature/12",
+			issueKey:    "12",
+			issueTitle:  "fix: button alignment",
+			expected:    "fix(#12): button alignment",
+		},
+		{
+			name:        "conventional commit title with Jira alphanumeric key injects key as scope",
+			customTitle: "",
+			branch:      "feature/VSB-101",
+			issueKey:    "VSB-101",
+			issueTitle:  "feat(auth): support OAuth2",
+			expected:    "feat(VSB-101): support OAuth2",
+		},
+		{
+			name:        "plain issue title on feature branch infers feat(#key)",
+			customTitle: "",
+			branch:      "feature/12",
+			issueKey:    "12",
+			issueTitle:  "Add new dashboard",
+			expected:    "feat(#12): Add new dashboard",
+		},
+		{
+			name:        "plain issue title on issue branch infers fix(#key)",
+			customTitle: "",
+			branch:      "issue/12",
+			issueKey:    "12",
+			issueTitle:  "Broken login redirect",
+			expected:    "fix(#12): Broken login redirect",
+		},
+		{
+			name:        "plain issue title on custom branch uses #key: title",
+			customTitle: "",
+			branch:      "custom/12",
+			issueKey:    "12",
+			issueTitle:  "Some custom work",
+			expected:    "#12: Some custom work",
+		},
+		{
+			name:        "unlinked branch with conventional title keeps title",
+			customTitle: "",
+			branch:      "feature/adhoc",
+			issueKey:    "",
+			issueTitle:  "docs: update readme",
+			expected:    "docs: update readme",
+		},
+		{
+			name:        "unlinked branch with plain title prefixes branch",
+			customTitle: "",
+			branch:      "feature/adhoc",
+			issueKey:    "",
+			issueTitle:  "update readme",
+			expected:    "feature/adhoc: update readme",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := cli.ComposePullRequestTitle(tt.customTitle, tt.branch, tt.issueKey, tt.issueTitle)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 type mockSCMProvider struct {
 	emptyClosing bool
 }
