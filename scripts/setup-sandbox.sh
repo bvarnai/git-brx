@@ -116,10 +116,30 @@ cat <<ENV_EOF > "${SANDBOX_BASE}/env.sh"
 
 export PATH="${GIT_BRX_ROOT}/bin:\${PATH}"
 
-# Enable bash completion for git-brx
+# 1. Enable direct 'git-brx' completion via Cobra
 if command -v git-brx >/dev/null 2>&1; then
-    source <("${GIT_BRX_ROOT}/bin/git-brx" completion bash)
+    source <("${GIT_BRX_ROOT}/bin/git-brx" completion bash 2>/dev/null)
 fi
+
+# 2. Ensure system git completion is loaded
+if ! declare -f _git >/dev/null 2>&1; then
+    if [ -f /usr/share/bash-completion/completions/git ]; then
+        source /usr/share/bash-completion/completions/git
+    elif [ -f /etc/bash_completion.d/git-prompt ]; then
+        source /etc/bash_completion.d/git-prompt
+    fi
+fi
+
+# 3. Enable Git subcommand completion for 'git brx <TAB>'
+_git_brx() {
+    local cur="\${words[cword]}"
+    local sub_args=("\${words[@]:2}")
+    local out
+    out=\$(git-brx __complete "\${sub_args[@]}" 2>/dev/null)
+    local completions
+    completions=\$(echo "\$out" | grep -v '^:' | awk '{print \$1}')
+    COMPREPLY=(\$(compgen -W "\$completions" -- "\$cur"))
+}
 
 echo "[git-brx-sandbox] Environment activated:"
 echo "  PATH prepended:  ${GIT_BRX_ROOT}/bin"
