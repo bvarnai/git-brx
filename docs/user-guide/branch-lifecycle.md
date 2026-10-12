@@ -24,6 +24,10 @@ To maintain an orderly, reproducible codebase, `git-brx` organizes work into a s
 > [!NOTE]
 > **Convention over configuration:** `git-brx` deliberately trades arbitrary branch naming freedom for automated safety and streamlined workflows. All tracked work must follow the `<type>/<id>` convention so `git-brx` can safely automate sync strategies, PR composition, and post-merge cleanup. For untracked local experiments, standard Git (`git checkout -b scratch-spike`) is always available.
 
+> [!TIP]
+> **Branch protection & force-pushes:** Base branches (`main`, `master`, `release/*`) should always be protected against direct pushes and deletions. Conversely, topic branches (`issue/*`, `feature/*`) must allow leased force-pushes (`--force-with-lease`) to support clean rebase workflows. For detailed setup advice, see [Branch protection rules & repository permissions](multi-platform.md#5-branch-protection-rules--repository-permissions).
+
+
 ---
 
 ## 2. Branch creation (`git brx create`)
