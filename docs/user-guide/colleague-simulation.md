@@ -11,8 +11,8 @@ Testing real-world collaborative Git workflows—such as rebasing over upstream 
 ```mermaid
 flowchart LR
     subgraph Host["Developer Machine"]
-        UserWorkspace["User Workspace<br/>~/workspace/sandbox-user<br/>Author: Balazs Varnai"]
-        ColleagueWorkspace["Colleague Workspace<br/>~/workspace/sandbox-colleague<br/>Author: Alex Developer"]
+        UserWorkspace["User Workspace<br/>~/workspace/sandbox/bvarnai<br/>Author: Balazs Varnai"]
+        ColleagueWorkspace["Colleague Workspace<br/>~/workspace/sandbox/colleague<br/>Author: Alex Developer"]
     end
 
     subgraph GitHub["GitHub Remote Server"]
@@ -25,8 +25,8 @@ flowchart LR
 
 ### Identity decoupling
 Both workspaces target the same GitHub repository (`git-brx-sandbox`), but use distinct local Git configurations:
-- **User Workspace (`sandbox-user`):** Configured with your real developer identity (`Balazs Varnai <bvarnai@gmail.com>`).
-- **Colleague Workspace (`sandbox-colleague`):** Configured with Alex's identity (`Alex Developer <alex.developer@example.com>`).
+- **User Workspace (`sandbox/bvarnai`):** Inherits your standard Git settings (`Balazs Varnai <bvarnai@gmail.com>`).
+- **Colleague Workspace (`sandbox/colleague`):** Configured with Alex's identity (`Alex Developer <alex.developer@example.com>`).
 
 This guarantees that Git commits, author history, and logs cleanly distinguish between both engineers.
 
@@ -42,8 +42,8 @@ GITHUB_TOKEN="<your_pat>" ./scripts/setup-sandbox.sh
 
 ### What the setup script does:
 1. Verifies that `bvarnai/git-brx-sandbox` exists on GitHub (or instructs you to create it).
-2. Clones the repository into `/home/bvarnai/workspace/sandbox-user`.
-3. Clones the repository into `/home/bvarnai/workspace/sandbox-colleague`.
+2. Clones the repository into `/home/bvarnai/workspace/sandbox/bvarnai`.
+3. Clones the repository into `/home/bvarnai/workspace/sandbox/colleague`.
 4. Sets local `git config user.name` and `user.email` in each clone.
 5. Symlinks the current `./bin/git-brx` binary into both workspaces under `./bin/git-brx`.
 6. Seeds initial starter files on `main` (`calc.go`, `config.json`, `README.md`) if newly created.
@@ -70,7 +70,7 @@ sequenceDiagram
     Chat-->>You: "[Alex]: Pushed commit a1b2c3d to origin/main. Now run 'git brx sync' in your workspace!"
 
     Note over You,Alex: Phase 2: You Execute in Your Workspace
-    You->>You: Run './bin/git-brx sync' in ~/workspace/sandbox-user
+    You->>You: Run './bin/git-brx sync' in ~/workspace/sandbox/bvarnai
     Note right of You: Observes Exit code 5 (ExitConflict) and diagnostic hints
     You->>You: Resolves conflict or runs './bin/git-brx reset'
 
@@ -86,14 +86,14 @@ sequenceDiagram
 ### Example Flow A: Simulating an upstream merge & rebase sync (`git brx sync`)
 
 #### Prompt to Antigravity:
-> *"Alex, I am starting work on `feature/user-profile` in `sandbox-user`. While I work on this, please implement a new function in `calc.go`, commit it, and merge it directly into `main` on origin."*
+> *"Alex, I am starting work on `feature/user-profile` in `sandbox/bvarnai`. While I work on this, please implement a new function in `calc.go`, commit it, and merge it directly into `main` on origin."*
 
 #### Alex's response in Chat:
 > `[Alex Developer]:`
-> I switched to `main` in `~/workspace/sandbox-colleague`, implemented `func Subtract(a, b int) int` in `calc.go`, and pushed commit `7f21a9c` directly to `origin/main`.
+> I switched to `main` in `~/workspace/sandbox/colleague`, implemented `func Subtract(a, b int) int` in `calc.go`, and pushed commit `7f21a9c` directly to `origin/main`.
 >
 > **Your Turn:**
-> Switch to `~/workspace/sandbox-user` and run:
+> Switch to `~/workspace/sandbox/bvarnai` and run:
 > ```bash
 > ./bin/git-brx sync
 > ```
@@ -108,10 +108,10 @@ sequenceDiagram
 
 #### Alex's response in Chat:
 > `[Alex Developer]:`
-> I've edited line 4 of `config.json` in `~/workspace/sandbox-colleague` to `"retries": 10`, committed as `Alex Developer`, and pushed to `origin/main` (commit `3b8d104`).
+> I've edited line 4 of `config.json` in `~/workspace/sandbox/colleague` to `"retries": 10`, committed as `Alex Developer`, and pushed to `origin/main` (commit `3b8d104`).
 >
 > **Your Turn:**
-> In `~/workspace/sandbox-user`, run:
+> In `~/workspace/sandbox/bvarnai`, run:
 > ```bash
 > ./bin/git-brx sync
 > ```
@@ -125,14 +125,14 @@ sequenceDiagram
 ### Example Flow C: Pair-programming on a shared topic branch (`git brx update`)
 
 #### Prompt to Antigravity:
-> *"Alex, I just published `feature/shared-pipeline` from `sandbox-user`. Please pull it down in your workspace, add a second step, and push it back to origin."*
+> *"Alex, I just published `feature/shared-pipeline` from `sandbox/bvarnai`. Please pull it down in your workspace, add a second step, and push it back to origin."*
 
 #### Alex's response in Chat:
 > `[Alex Developer]:`
-> I ran `./bin/git-brx select feature/shared-pipeline` in `~/workspace/sandbox-colleague`, added `Step 2: Validation` to the pipeline file, and pushed commit `8c91d2e` to `origin/feature/shared-pipeline`.
+> I ran `./bin/git-brx select feature/shared-pipeline` in `~/workspace/sandbox/colleague`, added `Step 2: Validation` to the pipeline file, and pushed commit `8c91d2e` to `origin/feature/shared-pipeline`.
 >
 > **Your Turn:**
-> In `~/workspace/sandbox-user`, run:
+> In `~/workspace/sandbox/bvarnai`, run:
 > ```bash
 > ./bin/git-brx update
 > ```
@@ -148,4 +148,4 @@ If you want to wipe local changes and start completely fresh from GitHub `origin
 ./scripts/setup-sandbox.sh --reset
 ```
 
-This cleans both `sandbox-user` and `sandbox-colleague` and re-clones a pristine copy from `origin/main`.
+This cleans both `sandbox/bvarnai` and `sandbox/colleague` and re-clones a pristine copy from `origin/main`.

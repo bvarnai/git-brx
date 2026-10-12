@@ -10,14 +10,13 @@ REMOTE_SSH="git@github.com:${REPO_OWNER}/${REPO_NAME}.git"
 REMOTE_HTTPS="https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
 
 BASE_WORKSPACE_DIR="/home/bvarnai/workspace"
-USER_DIR="${BASE_WORKSPACE_DIR}/sandbox-user"
-COLLEAGUE_DIR="${BASE_WORKSPACE_DIR}/sandbox-colleague"
+SANDBOX_BASE="${BASE_WORKSPACE_DIR}/sandbox"
+USER_DIR="${SANDBOX_BASE}/bvarnai"
+COLLEAGUE_DIR="${SANDBOX_BASE}/colleague"
 GIT_BRX_ROOT="/home/bvarnai/workspace/git-brx"
 
 GITHUB_TOKEN="${GITHUB_TOKEN:-${COWORKER_GITHUB_TOKEN:-}}"
 
-USER_NAME="Balazs Varnai"
-USER_EMAIL="bvarnai@gmail.com"
 COLLEAGUE_NAME="Alex Developer"
 COLLEAGUE_EMAIL="alex.developer@example.com"
 
@@ -27,7 +26,7 @@ Usage: $0 [OPTIONS]
 
 Options:
   --check    Verify token, remote sandbox repository, and local workspaces
-  --reset    Remove local sandbox-user and sandbox-colleague directories and re-clone
+  --reset    Remove local sandbox/bvarnai and sandbox/colleague directories and re-clone
   --help     Show this help message
 EOF
 }
@@ -120,19 +119,22 @@ if [[ "$RESET_MODE" == "true" ]]; then
     rm -rf "${USER_DIR}" "${COLLEAGUE_DIR}"
 fi
 
-# 5. Setup User Workspace
+mkdir -p "${SANDBOX_BASE}"
+
+# 5. Setup User Workspace (bvarnai)
 echo "==> Setting up User workspace at ${USER_DIR}..."
 if [[ ! -d "${USER_DIR}/.git" ]]; then
     git clone "${REMOTE_SSH}" "${USER_DIR}"
 fi
 (
     cd "${USER_DIR}"
-    git config user.name "${USER_NAME}"
-    git config user.email "${USER_EMAIL}"
+    # Inherit default user's git config without hardcoding overrides
     mkdir -p bin
     ln -sf "${GIT_BRX_ROOT}/bin/git-brx" "bin/git-brx"
 )
-echo "    User workspace configured (${USER_NAME} <${USER_EMAIL}>)"
+CURRENT_USER_NAME=$(git -C "${USER_DIR}" config user.name || echo "Default")
+CURRENT_USER_EMAIL=$(git -C "${USER_DIR}" config user.email || echo "Default")
+echo "    User workspace configured (${CURRENT_USER_NAME} <${CURRENT_USER_EMAIL}>)"
 
 # 6. Setup Colleague Workspace
 echo "==> Setting up Colleague workspace at ${COLLEAGUE_DIR}..."
