@@ -40,8 +40,8 @@
 | :--- | :--- | :--- | :--- |
 | `0` | History graph rendered cleanly. | None. | None. |
 | `2` | Unknown flags or unexpected positional arguments passed. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
-| `3` | Outside Git repository or empty repository without commits. | `[git-brx] Error: Awh! This is not a git repository` / `[git-brx] Error: Repository has no commits yet` | None. |
-| `1` | Subprocess execution or pager pipe failure. | `[git-brx] Error: Getting history failed (git log failed)` | None. |
+| `3` | Outside Git repository or empty repository without commits. | `[git-brx] Error: Not a git repository` / `[git-brx] Error: Repository has no commits yet` | None. |
+| `1` | Subprocess execution or pager pipe failure. | `[git-brx] Error: Failed to retrieve commit history` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Empty / Unborn Repositories:** Legacy `history.sh` blindly executed `git log`, which fails abruptly with `fatal: your current branch 'master' does not have any commits yet` if invoked on a newly initialized repository before the first commit. Modern Go implementation explicitly checks for valid commits before attempting to format the log.

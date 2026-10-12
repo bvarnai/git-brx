@@ -76,7 +76,7 @@
 | :--- | :--- | :--- | :--- |
 | `0` | Branch successfully created, or already exists locally/remotely with guidance. | `[git-brx] Creating branch '<branch>'` | None. |
 | `2` | Missing mandatory `<branch>` positional argument or unknown flag. | `[git-brx] Error: No branch name specified` | None. |
-| `3` | Outside Git repository. | `[git-brx] Error: Awh! This is not a git repository` | None. |
+| `3` | Outside Git repository. | `[git-brx] Error: Not a git repository` | None. |
 | `4` | Remote `origin` unreachable in online mode. | `[git-brx] Error: Unable to reach remote` | None. |
 | `6` | JIRA API authentication failure or issue not found. | `[git-brx] Error: Authorization failure` / `[git-brx] Error: Issue not found` | None. |
 | `7` | User aborted creation during interactive confirmation. | `[git-brx] Aborted` | None. |

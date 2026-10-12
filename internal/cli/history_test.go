@@ -35,7 +35,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			errSubstr:    "This is not a git repository",
+			errSubstr:    "Not a git repository",
 		},
 		{
 			name: "unborn repo without commits returns code 3",
@@ -209,7 +209,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				},
 			},
 			expectedCode: int(domain.ExitGeneralError),
-			errSubstr:    "Getting history failed (git log failed)",
+			errSubstr:    "Failed to retrieve commit history",
 		},
 		{
 			name: "passing branch name as path returns usage error",

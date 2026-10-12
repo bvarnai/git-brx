@@ -181,7 +181,7 @@ func TestHistoryIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), notRepo, []string{"history"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
-		assert.Contains(t, stderr.String(), "Awh! This is not a git repository")
+		assert.Contains(t, stderr.String(), "Not a git repository")
 	})
 
 	t.Run("DeepSubdirectoryInvariant", func(t *testing.T) {

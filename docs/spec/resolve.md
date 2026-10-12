@@ -74,7 +74,7 @@
 | :--- | :--- | :--- | :--- |
 | `0` | Conflicts resolved and merge/rebase continued successfully (or no conflict active). | `[git-brx] Merge completed` / `[git-brx] Rebase completed` | None. |
 | `2` | Unknown arguments or flags passed. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
-| `3` | Outside repository. | `[git-brx] Error: Awh! This is not a git repository` | None. |
+| `3` | Outside repository. | `[git-brx] Error: Not a git repository` | None. |
 | `5` | Mergetool crashed or user failed to resolve conflicts, leaving unmerged files. | `[git-brx] Error: Conflicts remain unresolved; cannot continue` | Preserves in-flight conflict state. |
 
 ## 5. Discrepancies & Edge Cases Discovered

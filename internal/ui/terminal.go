@@ -143,10 +143,10 @@ func (u *UI) Confirm(prompt string) (bool, error) {
 		case "n", "no":
 			return false, nil
 		default:
-			u.Log("Sorry I don't understand, please try again")
+			u.Log("Unrecognized response; please enter 'y' or 'n'")
 		}
 		if count == 5 {
-			u.Log("Aborting after 5 tries")
+			u.Log("Too many invalid attempts; aborting")
 			return false, nil
 		}
 	}

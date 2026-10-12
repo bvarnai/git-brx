@@ -34,7 +34,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "false", err: errors.New("not a git repo")},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			errSubstr:    "Awh! This is not a git repository",
+			errSubstr:    "Not a git repository",
 		},
 		{
 			name: "shallow repository returns code 3",

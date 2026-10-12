@@ -130,7 +130,7 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 			}
 
 			return domain.NewError(domain.ExitPreconditionRepo, "Branch must be deleted on remote first (e.g., after merging pull request)").
-				WithHint("Use '--force' to bypass remote check if you intend to delete an unpublished branch")
+				WithHint("Delete the remote branch on origin first, or use '--force' to delete the local branch anyway")
 		}
 	}
 
@@ -193,10 +193,10 @@ func (a *App) checkSCMPullRequestState(ctx context.Context, rootDir, branch stri
 			WithHint("Merge and close the pull request on %s before deleting the branch", scm.Name())
 	case domain.PRStateMerged:
 		return domain.NewError(domain.ExitPreconditionRepo, "Pull request #%d is MERGED, but remote branch '%s' has not been deleted yet", pr.Number, branch).
-			WithHint("Delete the branch on %s (%s) or use '--force' to clean up local branch now", scm.Name(), pr.URL)
+			WithHint("Delete the branch on %s (%s) or use '--force' to clean up the local branch now", scm.Name(), pr.URL)
 	case domain.PRStateClosed:
 		return domain.NewError(domain.ExitPreconditionRepo, "Pull request #%d was CLOSED without merging (%s)", pr.Number, pr.URL).
-			WithHint("Use '--force' to bypass remote check if you intend to delete this abandoned branch")
+			WithHint("Use '--force' to bypass the remote check if you intend to delete this abandoned branch")
 	}
 
 	return nil

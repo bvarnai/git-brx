@@ -64,7 +64,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			errSubstr:    "This is not a git repository",
+			errSubstr:    "Not a git repository",
 		},
 		{
 			name: "unborn repo without commits returns code 3",

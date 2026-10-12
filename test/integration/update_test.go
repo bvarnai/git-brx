@@ -103,7 +103,7 @@ func TestUpdateIntegration(t *testing.T) {
 
 		assert.Equal(t, int(domain.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Update failed due to conflicts")
-		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' to resolve conflicts or 'git-brx reset' to abort")
+		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 	})
 
 	t.Run("AutostashRebasesOverDirtyTree", func(t *testing.T) {

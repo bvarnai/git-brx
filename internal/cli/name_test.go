@@ -35,7 +35,7 @@ func TestNameCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			errSubstr:    "This is not a git repository",
+			errSubstr:    "Not a git repository",
 		},
 		{
 			name: "attached branch emits branch name to stdout",

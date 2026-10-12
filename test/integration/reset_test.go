@@ -60,7 +60,7 @@ func TestResetIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "You are in the middle of a merge, aborting")
+		assert.Contains(t, stderr.String(), "Aborting in-progress merge")
 		assert.Contains(t, stderr.String(), "Working tree successfully reset to 'origin/feature/merge-abort'")
 
 		// MERGE_HEAD should no longer exist
@@ -90,7 +90,7 @@ func TestResetIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "You are in the middle of a rebase, aborting")
+		assert.Contains(t, stderr.String(), "Aborting in-progress rebase")
 		assert.Contains(t, stderr.String(), "Working tree successfully reset to 'origin/issue/rebase-abort'")
 
 		// In-flight rebase should be aborted

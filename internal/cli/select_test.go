@@ -94,7 +94,7 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {err: errors.New("fatal: not a git repo")},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			expectStderr: "[git-brx] Error: Awh! This is not a git repository",
+			expectStderr: "[git-brx] Error: Not a git repository",
 		},
 		{
 			name: "branch not found locally or remotely returns code 3",

@@ -174,7 +174,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 	cw := &countingWriter{writer: a.UI.Stdout}
 	err = a.Runner.RunStream(ctx, workDir, cw, a.UI.Stderr, nil, logArgs...)
 	if err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "Getting history failed (git log failed)")
+		return domain.WrapError(domain.ExitGeneralError, err, "Failed to retrieve commit history")
 	}
 
 	if cw.bytesWritten == 0 {

@@ -85,7 +85,6 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 		return domain.WrapError(domain.ExitPreconditionRemote, err, "Unable to reach remote; are you offline?")
 	}
 	if !existsOnServer {
-		a.UI.Error("Branch '%s' has not been pushed to remote origin", currBranch.Name)
 		return domain.NewError(domain.ExitPreconditionRemote, "Branch '%s' has not been pushed to remote origin", currBranch.Name).
 			WithHint("Run 'git-brx publish' to push your branch before creating a review")
 	}

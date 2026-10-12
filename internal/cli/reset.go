@@ -57,14 +57,14 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 	op, active := a.Inspector.ActiveOperation(ctx, rootDir)
 	if active {
 		if op == "merge" {
-			a.UI.Log("You are in the middle of a merge, aborting")
+			a.UI.Log("Aborting in-progress merge")
 			if abortErr := a.Operations.AbortMerge(ctx, rootDir); abortErr != nil {
-				return domain.WrapError(domain.ExitConflict, abortErr, "Reset failed (git merge --abort failed)")
+				return domain.WrapError(domain.ExitConflict, abortErr, "Reset failed: unable to abort merge")
 			}
 		} else if op == "rebase" {
-			a.UI.Log("You are in the middle of a rebase, aborting")
+			a.UI.Log("Aborting in-progress rebase")
 			if abortErr := a.Operations.AbortRebase(ctx, rootDir); abortErr != nil {
-				return domain.WrapError(domain.ExitConflict, abortErr, "Reset failed (git rebase --abort failed)")
+				return domain.WrapError(domain.ExitConflict, abortErr, "Reset failed: unable to abort rebase")
 			}
 		}
 	}
@@ -93,13 +93,13 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 
 	// Hard reset to remote ref
 	if resetErr := a.Operations.ResetHard(ctx, rootDir, remoteRef); resetErr != nil {
-		return domain.WrapError(domain.ExitGeneralError, resetErr, "Reset failed (git reset --hard %s failed)", remoteRef)
+		return domain.WrapError(domain.ExitGeneralError, resetErr, "Reset failed: unable to reset working copy to '%s'", remoteRef)
 	}
 
 	// Clean untracked files if requested
 	if opts.Clean {
 		if cleanErr := a.Operations.Clean(ctx, rootDir); cleanErr != nil {
-			return domain.WrapError(domain.ExitGeneralError, cleanErr, "Reset failed (git clean -fd failed)")
+			return domain.WrapError(domain.ExitGeneralError, cleanErr, "Reset failed: unable to clean untracked files")
 		}
 	}
 

@@ -27,7 +27,7 @@ func TestCreateIntegration(t *testing.T) {
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Creating branch 'issue/42'")
-		assert.Contains(t, stderr.String(), "[git-brx] Hint: Use 'git-brx publish' to publish a new branch")
+		assert.Contains(t, stderr.String(), "[git-brx] Hint: Use 'git-brx publish' to publish your new branch")
 
 		currentBranch := strings.TrimSpace(h.Git("rev-parse", "--abbrev-ref", "HEAD"))
 		assert.Equal(t, "issue/42", currentBranch)
@@ -44,7 +44,7 @@ func TestCreateIntegration(t *testing.T) {
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Branch 'issue/existing' found (local)")
-		assert.Contains(t, stderr.String(), "[git-brx] Hint: To select that branch, use 'git-brx select issue/existing' instead")
+		assert.Contains(t, stderr.String(), "[git-brx] Hint: To select this branch, use 'git-brx select issue/existing' instead")
 
 		// Did not change branch
 		currentBranch := strings.TrimSpace(h.Git("rev-parse", "--abbrev-ref", "HEAD"))

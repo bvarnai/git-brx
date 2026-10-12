@@ -35,7 +35,7 @@ func TestResolveCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			errSubstr:    "This is not a git repository",
+			errSubstr:    "Not a git repository",
 		},
 		{
 			name: "no active operation logs notice and exits 0",

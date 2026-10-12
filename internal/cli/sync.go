@@ -24,7 +24,7 @@ func (a *App) newSyncCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "sync [flags] [<branch>]",
-		Short: "Synchronize active branch with target base branch (default: 'master')",
+		Short: "Synchronize active branch with target base branch (default: repository base branch)",
 		Long: `Synchronizes current branch with base branch using rebase (for issue branches)
 or merge (for feature/epic branches).`,
 		Args: cobra.ArbitraryArgs,
@@ -49,7 +49,8 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 
 	// Strategy flag validation
 	if opts.Merge && opts.Rebase {
-		return domain.NewError(domain.ExitUsageError, "Multiple override sync strategies specified")
+		return domain.NewError(domain.ExitUsageError, "Multiple override sync strategies specified").
+			WithHint("Choose either --merge or --rebase, not both")
 	}
 
 	workDir := "."
@@ -83,7 +84,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 
 	// Options 'autostash/interactive' are rebase only
 	if strategy == "merge" && (opts.Autostash || opts.Interactive) {
-		return domain.NewError(domain.ExitUsageError, "Options 'autostash/interactive' are rebase only")
+		return domain.NewError(domain.ExitUsageError, "Flags --autostash and --interactive are only supported with rebase strategy")
 	}
 
 	// Target base branch resolution
@@ -96,7 +97,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 		if defBranch != "" {
 			baseBranch = defBranch
 		}
-		a.UI.Log("Syncing '%s' branch by default", baseBranch)
+		a.UI.Log("Syncing with '%s' base branch by default", baseBranch)
 	}
 
 	if currBranch.Name == baseBranch {
@@ -113,7 +114,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 	hasOrigin, _, _ := a.Inspector.HasOrigin(ctx, rootDir)
 	if hasOrigin {
 		if fetchErr := a.Operations.Fetch(ctx, rootDir, "origin"); fetchErr != nil {
-			return domain.NewError(domain.ExitPreconditionRemote, "Sync failed (git fetch failed)")
+			return domain.NewError(domain.ExitPreconditionRemote, "Sync failed: unable to fetch from origin")
 		}
 
 		// Verify base branch is up-to-date with origin/<baseBranch>
@@ -122,8 +123,8 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 			delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, baseBranch, "origin/"+baseBranch)
 			if deltaErr == nil && delta != nil {
 				if delta.AheadCount != 0 || delta.BehindCount != 0 {
-					return domain.NewError(domain.ExitConflict, "Sync branch '%s' is not up-to-date", baseBranch).
-						WithHint("Switch to '%s' branch and use 'git-brx update' to update all changes", baseBranch)
+					return domain.NewError(domain.ExitConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
+						WithHint("Switch to '%s' and run 'git-brx update' first", baseBranch)
 				}
 			}
 		}
@@ -151,13 +152,13 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 	if strategy == "rebase" {
 		if rebaseErr := a.Operations.Rebase(ctx, rootDir, baseBranch, opts.Autostash, opts.Interactive); rebaseErr != nil {
 			return domain.NewError(domain.ExitConflict, "Sync failed due to merge conflicts").
-				WithHint("Use 'git-brx resolve' in case of merge conflicts or 'git-brx reset' to abort")
+				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 		}
 	} else {
 		mergeMsg := fmt.Sprintf("Merge branch '%s' into '%s'", baseBranch, currBranch.Name)
 		if mergeErr := a.Operations.Merge(ctx, rootDir, baseBranch, mergeMsg); mergeErr != nil {
 			return domain.NewError(domain.ExitConflict, "Sync failed due to merge conflicts").
-				WithHint("Use 'git-brx resolve' in case of merge conflicts or 'git-brx reset' to abort")
+				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 		}
 	}
 
@@ -178,6 +179,6 @@ func resolveSyncStrategy(bType domain.BranchType, opts SyncOptions) (string, err
 	case domain.BranchTypeFeature, domain.BranchTypeEpic:
 		return "merge", nil
 	default:
-		return "", domain.NewError(domain.ExitPreconditionRepo, "You must be on 'issue', 'feature' or 'epic' branch")
+		return "", domain.NewError(domain.ExitPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to sync")
 	}
 }

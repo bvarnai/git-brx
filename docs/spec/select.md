@@ -70,7 +70,7 @@
 | `0` | Switched successfully or already on target branch. | `[git-brx] Selecting '<default>' branch by default` / `[git-brx] Already on '<branch>'` | None. |
 | `2` | Excess positional arguments (>1) or unknown flags. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Outside repository or branch not found locally or remotely. | `[git-brx] Error: Branch '<branch>' not found` (with optional `Hint: Did you mean...?`) | None. |
-| `4` | Mandatory remote fetch failed and branch not found locally. | `[git-brx] Error: Select failed (git fetch failed)` | None. |
+| `4` | Mandatory remote fetch failed and branch not found locally. | `[git-brx] Error: Select failed: unable to fetch from origin` | None. |
 | `5` | Active operation in progress, detached HEAD commit loss risk, or uncommitted collision. | `[git-brx] Error: Cannot switch branches during an active <op>` / `! You are on a detached HEAD...` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
