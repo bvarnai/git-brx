@@ -62,49 +62,15 @@ if [[ -z "$GITHUB_TOKEN" ]]; then
     exit 1
 fi
 
-# 2. Check/Create Remote Repository on GitHub
-echo "==> Checking if GitHub repository ${REPO_OWNER}/${REPO_NAME} exists..."
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-    -H "Accept: application/vnd.github+json" \
-    "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}")
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [[ "$HTTP_STATUS" == "200" ]]; then
-    echo "    Repository ${REPO_OWNER}/${REPO_NAME} exists on GitHub."
-elif [[ "$HTTP_STATUS" == "404" ]]; then
-    if [[ "$CHECK_MODE" == "true" ]]; then
-        echo "    Repository ${REPO_OWNER}/${REPO_NAME} does not exist yet (check mode)."
-    else
-        echo "    Repository not found. Creating private repository ${REPO_OWNER}/${REPO_NAME}..."
-        CREATE_RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -X POST \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/user/repos" \
-            -d "{\"name\":\"${REPO_NAME}\",\"private\":true,\"description\":\"Dedicated sandbox for git-brx multi-developer collaboration testing\",\"auto_init\":true}")
-        
-        CREATE_CODE=$(echo "$CREATE_RESPONSE" | tail -n1)
-        if [[ "$CREATE_CODE" != "201" ]]; then
-            echo "Error: Failed to create repository (HTTP $CREATE_CODE):" >&2
-            echo "$CREATE_RESPONSE" | head -n -1 >&2
-            echo "" >&2
-            echo "Tip: If your fine-grained Personal Access Token is restricted to specific repositories," >&2
-            echo "please create 'git-brx-sandbox' manually at https://github.com/new and re-run this script." >&2
-            exit 1
-        fi
-        echo "    Repository ${REPO_OWNER}/${REPO_NAME} created successfully."
-        # Brief sleep to let GitHub initialize git backend
-        sleep 2
-    fi
-else
-    echo "Error: Unexpected response from GitHub API (HTTP $HTTP_STATUS)." >&2
-    exit 1
-fi
-
+# 2. Check/Create Remote Repository and Seed Issues on GitHub
+"${SCRIPT_DIR}/sandbox-github.sh" --init-repo
 if [[ "$CHECK_MODE" == "true" ]]; then
     echo "==> Check complete. Remote repository is ready."
     exit 0
 fi
+"${SCRIPT_DIR}/sandbox-github.sh" --seed-issues
 
 # 3. Ensure git-brx binary is compiled
 echo "==> Ensuring git-brx binary is compiled..."
