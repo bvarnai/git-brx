@@ -4,9 +4,29 @@
 # creating the repository, seeding test issues, and creating ad-hoc issues.
 set -euo pipefail
 
-REPO_OWNER="bvarnai"
-REPO_NAME="git-brx-sandbox"
 GITHUB_TOKEN="${GITHUB_TOKEN:-${COWORKER_GITHUB_TOKEN:-}}"
+
+resolve_owner() {
+    if [[ -n "${REPO_OWNER:-}" ]]; then
+        return 0
+    fi
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        local user_login
+        user_login=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user | jq -r '.login // empty' 2>/dev/null || true)
+        if [[ -n "$user_login" && "$user_login" != "null" ]]; then
+            REPO_OWNER="$user_login"
+            return 0
+        fi
+    fi
+    local origin_url
+    origin_url=$(git remote get-url origin 2>/dev/null || true)
+    REPO_OWNER=$(echo "$origin_url" | sed -E 's/.*[:/]([^/]+)\/[^/]+(\.git)?$/\1/' || true)
+    if [[ -z "$REPO_OWNER" ]]; then
+        REPO_OWNER="bvarnai"
+    fi
+}
+resolve_owner
+REPO_NAME="${REPO_NAME:-git-brx-sandbox}"
 
 usage() {
     cat <<EOF

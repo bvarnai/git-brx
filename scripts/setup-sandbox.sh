@@ -1,22 +1,45 @@
 #!/usr/bin/env bash
 # scripts/setup-sandbox.sh
-# Sets up a dedicated GitHub sandbox repository and dual local workspaces
-# for simulating multi-developer collaboration with git-brx.
+# Sets up an isolated git-brx-sandbox directory with dual workspaces:
+#   - git-brx-sandbox/me (primary developer, inheriting your usual git config)
+#   - git-brx-sandbox/colleague (Alex Developer)
+#   - git-brx-sandbox/env.sh (sourceable script for PATH and autocomplete)
 set -euo pipefail
 
-REPO_OWNER="bvarnai"
-REPO_NAME="git-brx-sandbox"
-REMOTE_SSH="git@github.com:${REPO_OWNER}/${REPO_NAME}.git"
-REMOTE_HTTPS="https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GIT_BRX_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BASE_WORKSPACE_DIR="$(cd "${GIT_BRX_ROOT}/.." && pwd)"
 
-BASE_WORKSPACE_DIR="/home/bvarnai/workspace"
-SANDBOX_BASE="${BASE_WORKSPACE_DIR}/sandbox"
-USER_DIR="${SANDBOX_BASE}/bvarnai"
+SANDBOX_BASE="${BASE_WORKSPACE_DIR}/git-brx-sandbox"
+USER_DIR="${SANDBOX_BASE}/me"
 COLLEAGUE_DIR="${SANDBOX_BASE}/colleague"
-GIT_BRX_ROOT="/home/bvarnai/workspace/git-brx"
 
+REPO_NAME="${REPO_NAME:-git-brx-sandbox}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-${COWORKER_GITHUB_TOKEN:-}}"
 
+# Resolve authenticated GitHub user dynamically
+resolve_owner() {
+    if [[ -n "${REPO_OWNER:-}" ]]; then
+        return 0
+    fi
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        local user_login
+        user_login=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user | jq -r '.login // empty' 2>/dev/null || true)
+        if [[ -n "$user_login" && "$user_login" != "null" ]]; then
+            REPO_OWNER="$user_login"
+            return 0
+        fi
+    fi
+    local origin_url
+    origin_url=$(git -C "${GIT_BRX_ROOT}" remote get-url origin 2>/dev/null || true)
+    REPO_OWNER=$(echo "$origin_url" | sed -E 's/.*[:/]([^/]+)\/[^/]+(\.git)?$/\1/' || true)
+    if [[ -z "$REPO_OWNER" ]]; then
+        REPO_OWNER="bvarnai"
+    fi
+}
+resolve_owner
+
+REMOTE_SSH="git@github.com:${REPO_OWNER}/${REPO_NAME}.git"
 COLLEAGUE_NAME="Alex Developer"
 COLLEAGUE_EMAIL="alex.developer@example.com"
 
@@ -26,7 +49,7 @@ Usage: $0 [OPTIONS]
 
 Options:
   --check    Verify token, remote sandbox repository, and local workspaces
-  --reset    Remove local sandbox/bvarnai and sandbox/colleague directories and re-clone
+  --reset    Remove local git-brx-sandbox/me and git-brx-sandbox/colleague directories and re-clone
   --help     Show this help message
 EOF
 }
@@ -62,8 +85,6 @@ if [[ -z "$GITHUB_TOKEN" ]]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # 2. Check/Create Remote Repository and Seed Issues on GitHub
 "${SCRIPT_DIR}/sandbox-github.sh" --init-repo
 if [[ "$CHECK_MODE" == "true" ]]; then
@@ -87,22 +108,45 @@ fi
 
 mkdir -p "${SANDBOX_BASE}"
 
-# 5. Setup User Workspace (bvarnai)
+# 5. Generate sourceable environment script (env.sh)
+echo "==> Generating shell activation script at ${SANDBOX_BASE}/env.sh..."
+cat <<ENV_EOF > "${SANDBOX_BASE}/env.sh"
+# Environment activation script for git-brx simulation sandbox
+# Usage: source ${SANDBOX_BASE}/env.sh
+
+export PATH="${GIT_BRX_ROOT}/bin:\${PATH}"
+
+# Enable bash completion for git-brx
+if command -v git-brx >/dev/null 2>&1; then
+    source <("${GIT_BRX_ROOT}/bin/git-brx" completion bash)
+fi
+
+echo "[git-brx-sandbox] Environment activated:"
+echo "  PATH prepended:  ${GIT_BRX_ROOT}/bin"
+echo "  Autocomplete:    Enabled for 'git-brx' and 'git brx'"
+echo "  Workspaces:"
+echo "    Me:            ${USER_DIR}"
+echo "    Colleague:     ${COLLEAGUE_DIR}"
+ENV_EOF
+chmod +x "${SANDBOX_BASE}/env.sh"
+echo "    env.sh generated."
+
+# 6. Setup User Workspace (me)
 echo "==> Setting up User workspace at ${USER_DIR}..."
 if [[ ! -d "${USER_DIR}/.git" ]]; then
     git clone "${REMOTE_SSH}" "${USER_DIR}"
 fi
 (
     cd "${USER_DIR}"
-    # Inherit default user's git config without hardcoding overrides
+    # Inherits user's standard global git config without hardcoded overrides
     mkdir -p bin
     ln -sf "${GIT_BRX_ROOT}/bin/git-brx" "bin/git-brx"
 )
-CURRENT_USER_NAME=$(git -C "${USER_DIR}" config user.name || echo "Default")
-CURRENT_USER_EMAIL=$(git -C "${USER_DIR}" config user.email || echo "Default")
+CURRENT_USER_NAME=$(git -C "${USER_DIR}" config user.name || echo "Default User")
+CURRENT_USER_EMAIL=$(git -C "${USER_DIR}" config user.email || echo "default@example.com")
 echo "    User workspace configured (${CURRENT_USER_NAME} <${CURRENT_USER_EMAIL}>)"
 
-# 6. Setup Colleague Workspace
+# 7. Setup Colleague Workspace (colleague)
 echo "==> Setting up Colleague workspace at ${COLLEAGUE_DIR}..."
 if [[ ! -d "${COLLEAGUE_DIR}/.git" ]]; then
     git clone "${REMOTE_SSH}" "${COLLEAGUE_DIR}"
@@ -116,7 +160,7 @@ fi
 )
 echo "    Colleague workspace configured (${COLLEAGUE_NAME} <${COLLEAGUE_EMAIL}>)"
 
-# 7. Seed Initial Sample Project on main if empty
+# 8. Seed Initial Sample Project on main if empty
 (
     cd "${USER_DIR}"
     if [[ ! -f "calc.go" ]]; then
@@ -155,9 +199,9 @@ CFG_EOF
 This repository is dedicated to simulating multi-developer collaborative workflows,
 friction points, and edge cases using `git-brx`.
 
-## Collaborators
-- **Primary Developer:** Balazs Varnai (`sandbox-user`)
-- **Colleague Developer:** Alex Developer (`sandbox-colleague`)
+## Workspaces
+- **Primary Developer:** `git-brx-sandbox/me`
+- **Colleague Developer:** `git-brx-sandbox/colleague` (Alex Developer)
 MD_EOF
 
         git add calc.go config.json README.md
@@ -174,8 +218,10 @@ echo ""
 echo "================================================================="
 echo " Sandbox Environment Ready!"
 echo "================================================================="
+echo " Base Directory:      ${SANDBOX_BASE}"
+echo " Source in Shell:     source ${SANDBOX_BASE}/env.sh"
 echo " User Workspace:      ${USER_DIR}"
 echo " Colleague Workspace: ${COLLEAGUE_DIR}"
 echo " GitHub Remote:       https://github.com/${REPO_OWNER}/${REPO_NAME}"
-echo " git-brx binary:      Accessible in both workspace ./bin/ directories"
+echo " git-brx binary:      ${GIT_BRX_ROOT}/bin/git-brx"
 echo "================================================================="
