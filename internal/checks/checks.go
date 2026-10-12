@@ -11,7 +11,7 @@ import (
 func InsideWorkTree(ctx context.Context, inspector *git.Inspector, dir string) (string, error) {
 	root, err := inspector.RepoRoot(ctx, dir)
 	if err != nil {
-		return "", domain.NewError(domain.ExitPreconditionRepo, "Awh! This is not a git repository")
+		return "", domain.NewError(domain.ExitPreconditionRepo, "Not a git repository")
 	}
 	return root, nil
 }

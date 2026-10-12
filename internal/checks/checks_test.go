@@ -82,7 +82,7 @@ func TestInsideWorkTree(t *testing.T) {
 		var appErr *domain.AppError
 		require.True(t, errors.As(err, &appErr))
 		assert.Equal(t, domain.ExitPreconditionRepo, appErr.Code)
-		assert.Contains(t, appErr.Message, "Awh! This is not a git repository")
+		assert.Contains(t, appErr.Message, "Not a git repository")
 	})
 }
 

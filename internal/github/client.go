@@ -385,8 +385,13 @@ func (c *Client) handleErrorResponse(resp *http.Response, actionFormat string, a
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return domain.NewError(domain.ExitAPIError, "GitHub authorization failed (%d): %s", resp.StatusCode, msg).
-			WithHint("Ensure GITHUB_TOKEN or GH_TOKEN is set in your environment with 'pull_requests: write' scope")
+		err := domain.NewError(domain.ExitAPIError, "GitHub authorization failed (%d): %s", resp.StatusCode, msg)
+		if strings.Contains(strings.ToLower(action), "issue") {
+			err.WithHint("Ensure GITHUB_TOKEN or GH_TOKEN is set in your environment with 'issues: read' scope")
+		} else {
+			err.WithHint("Ensure GITHUB_TOKEN or GH_TOKEN is set in your environment with 'pull_requests: write' scope")
+		}
+		return err
 	case http.StatusNotFound:
 		err := domain.NewError(domain.ExitAPIError, "GitHub resource not found during %s: %s", action, msg)
 		if c.Token == "" {

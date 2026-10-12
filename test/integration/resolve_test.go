@@ -22,7 +22,7 @@ func TestResolveIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"resolve"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "No merge/rebase is ongoing")
+		assert.Contains(t, stderr.String(), "No merge or rebase operation is currently in progress")
 	})
 
 	t.Run("MergeConflictResolvedAndTargetedStaging", func(t *testing.T) {

@@ -44,7 +44,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
 			expectedCode: int(domain.ExitUsageError),
-			errSubstr:    "Options 'autostash/interactive' are rebase only",
+			errSubstr:    "Flags --autostash and --interactive are only supported with rebase strategy",
 		},
 		{
 			name: "interactive on merge strategy returns usage error",
@@ -58,7 +58,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
 			expectedCode: int(domain.ExitUsageError),
-			errSubstr:    "Options 'autostash/interactive' are rebase only",
+			errSubstr:    "Flags --autostash and --interactive are only supported with rebase strategy",
 		},
 		{
 			name: "outside worktree returns code 3",
@@ -67,7 +67,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			errSubstr:    "This is not a git repository",
+			errSubstr:    "Not a git repository",
 		},
 		{
 			name: "shallow repository returns code 3",
@@ -107,7 +107,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
 			expectedCode: int(domain.ExitPreconditionRepo),
-			errSubstr:    "You must be on 'issue', 'feature' or 'epic' branch",
+			errSubstr:    "You must be on an 'issue', 'feature', or 'epic' branch to sync",
 		},
 		{
 			name: "syncing current branch onto itself returns code 3",
@@ -156,7 +156,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-list --left-right --count master...origin/master": {out: "0\t2"},
 			},
 			expectedCode: int(domain.ExitConflict),
-			errSubstr:    "Sync branch 'master' is not up-to-date",
+			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
 		},
 		{
 			name: "dry-run on issue branch logs planned rebase command",

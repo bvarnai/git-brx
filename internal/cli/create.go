@@ -69,7 +69,7 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 	localExists, _, _ := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
 	if localExists {
 		a.UI.Log("Branch '%s' found (local)", targetBranch)
-		a.UI.Log("Hint: To select that branch, use 'git-brx select %s' instead", targetBranch)
+		a.UI.Hint("To select this branch, use 'git-brx select %s' instead", targetBranch)
 		return nil
 	}
 
@@ -79,13 +79,12 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 		a.UI.Log("Checking for existing branches (remote)")
 		remoteExists, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, targetBranch)
 		if err != nil {
-			a.UI.Error("Unable to reach remote")
-			a.UI.Log("Hint: Try --offline if working without network access")
-			return domain.NewError(domain.ExitPreconditionRemote, "Unable to reach remote; try --offline if working without network access")
+			return domain.NewError(domain.ExitPreconditionRemote, "Unable to reach remote").
+				WithHint("Try --offline if working without network access")
 		}
 		if remoteExists {
 			a.UI.Log("Branch '%s' found (remote)", targetBranch)
-			a.UI.Log("Hint: To select this branch, use 'git-brx select %s' instead", targetBranch)
+			a.UI.Hint("To select this branch, use 'git-brx select %s' instead", targetBranch)
 			return nil
 		}
 		a.UI.Log("No branch '%s' found (remote)", targetBranch)
@@ -133,15 +132,13 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 			if len(cfg.Branch.Mapping) > 0 {
 				if mappedBranchPath, ok := cfg.Branch.Mapping[issue.Type]; ok {
 					if mappedBranchPath != branchPath {
-						a.UI.Error("Issue type '%s' is not allowed on '%s' branch", issue.Type, branchPath)
-						a.UI.Log("Hint: use '%s' branch or check mapping rules", mappedBranchPath)
-						return domain.NewError(domain.ExitConfigError, "Issue type '%s' is not allowed on '%s' branch", issue.Type, branchPath)
+						return domain.NewError(domain.ExitConfigError, "Issue type '%s' is not allowed on '%s' branch", issue.Type, branchPath).
+							WithHint("Use '%s' branch or check mapping rules", mappedBranchPath)
 					}
 				} else if branchPath != "issue" {
 					// Unmapped custom issue type is allowed on generic 'issue/' branch, but restricted from specialized branches
-					a.UI.Error("Issue type '%s' has no mapping defined for '%s' branch", issue.Type, branchPath)
-					a.UI.Log("Hint: use 'issue/' branch or configure branch.mapping in .git-brx.yaml")
-					return domain.NewError(domain.ExitConfigError, "No branch mapping defined for issue type '%s'", issue.Type)
+					return domain.NewError(domain.ExitConfigError, "Issue type '%s' has no mapping defined for '%s' branch", issue.Type, branchPath).
+						WithHint("Use 'issue/' branch or configure branch.mapping in .git-brx.yaml")
 				}
 			}
 
@@ -205,7 +202,7 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 		return domain.WrapError(domain.ExitGeneralError, err, "Failed to create branch '%s'", targetBranch)
 	}
 
-	a.UI.Log("Hint: Use 'git-brx publish' to publish a new branch")
+	a.UI.Hint("Use 'git-brx publish' to publish your new branch")
 	return nil
 }
 

@@ -37,10 +37,10 @@
      - Any other branch type without explicit `--merge`: Fail with Exit Code `3`.
    - Apply CLI overrides:
      - If both `--merge` and `--rebase` are supplied, fail with Exit Code `2` (`Multiple override sync strategies specified`).
-     - If resolved strategy is `merge` and either `--autostash` or `--interactive` is set, fail with Exit Code `2` (`Options 'autostash/interactive' are rebase only`).
+     - If resolved strategy is `merge` and either `--autostash` or `--interactive` is set, fail with Exit Code `2` (`Flags --autostash and --interactive are only supported with rebase strategy`).
 3. **Target Base Branch Resolution:**
-   - If positional argument `<branch>` is omitted, default to `master` and log:
-     `[git-brx] Syncing 'master' branch by default`.
+   - If positional argument `<branch>` is omitted, default to repository base branch (e.g. `master`) and log:
+     `[git-brx] Syncing with '<base>' base branch by default`.
 4. **Remote Fetch & Upstream Delta Verification:**
    - Execute `git fetch origin`.
    - Calculate ahead/behind count for the base branch against its upstream tracking ref via:
@@ -48,8 +48,8 @@
      git rev-list --left-right --count <with_branch>...origin/<with_branch>
      ```
    - If either `<ahead> != 0` or `<behind> != 0`:
-     - Log: `[git-brx] Error: Sync branch '<with_branch>' is not up-to-date`
-     - Log: `[git-brx] Hint: Switch to '<with_branch>' branch and use 'git-brx update' to update all changes`
+     - Log: `[git-brx] Error: Base branch '<with_branch>' is not up-to-date with 'origin/<with_branch>'`
+     - Log: `[git-brx] Hint: Switch to '<with_branch>' and run 'git-brx update' first`
      - Fail with Exit Code `5`.
 5. **Dry-Run Check:**
    - If `--dry-run` is active: Emit planned rebase or merge command string and exit with Exit Code `0`.

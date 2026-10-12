@@ -104,7 +104,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "nonexistent-branch"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitPreconditionRemote), code)
-		assert.Contains(t, stderr.String(), "[git-brx] Error: Select failed (git fetch failed)")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Select failed: unable to fetch from origin")
 	})
 
 	t.Run("BranchNotFound", func(t *testing.T) {
@@ -271,7 +271,7 @@ func TestSelectIntegration(t *testing.T) {
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Already on 'master'")
-		assert.Contains(t, stderr.String(), "[git-brx] Hint: Your branch is behind 'origin/master' by 1 commit(s). Run 'git-brx sync' to update.")
+		assert.Contains(t, stderr.String(), "[git-brx] Hint: Your branch is behind 'origin/master' by 1 commit(s). Run 'git-brx update' to update.")
 	})
 
 	t.Run("DirtyChangesCarriedOverWarning", func(t *testing.T) {

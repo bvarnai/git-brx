@@ -50,7 +50,7 @@ func (a *App) runResolve(ctx context.Context, opts ResolveOptions, args []string
 
 	op, active := a.Inspector.ActiveOperation(ctx, rootDir)
 	if !active || (op != "merge" && op != "rebase") {
-		a.UI.Log("No merge/rebase is ongoing")
+		a.UI.Log("No merge or rebase operation is currently in progress")
 		return nil
 	}
 
@@ -135,7 +135,8 @@ func (a *App) runMergeToolAndStage(ctx context.Context, rootDir, tool string) er
 			return domain.WrapError(domain.ExitGeneralError, err, "Failed to check unmerged files")
 		}
 		if len(remaining) > 0 {
-			return domain.NewError(domain.ExitConflict, "Conflicts remain unresolved; cannot continue")
+			return domain.NewError(domain.ExitConflict, "Conflicts remain unresolved; cannot continue").
+				WithHint("Resolve all conflict markers in your files, or use 'git-brx reset' to abort")
 		}
 
 		// Explicitly stage only the resolved unmerged paths (never git add .)

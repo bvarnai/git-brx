@@ -65,7 +65,8 @@ func Load(workDir, originURL string) (*domain.ProjectConfig, error) {
 	// If no config file was found and no platform was set
 	if configFile == "" {
 		if detected == nil {
-			return nil, domain.NewError(domain.ExitConfigError, "No configuration file found and unable to detect platform from remote origin")
+			return nil, domain.NewError(domain.ExitConfigError, "No configuration file found and unable to detect platform from remote origin").
+				WithHint("Create a .git-brx.yaml configuration file or configure a valid GitHub remote origin")
 		}
 		cfg.Platform = detected.Platform
 	}

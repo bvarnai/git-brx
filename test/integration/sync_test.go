@@ -36,7 +36,7 @@ func TestSyncIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Syncing 'master' branch by default")
+		assert.Contains(t, stderr.String(), "Syncing with 'master' base branch by default")
 
 		// Verify rebase happened: issue branch should contain both master.txt and issue.txt
 		log := h.Git("log", "--oneline")
@@ -66,7 +66,7 @@ func TestSyncIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Syncing 'master' branch by default")
+		assert.Contains(t, stderr.String(), "Syncing with 'master' base branch by default")
 
 		// Verify merge commit exists
 		log := h.Git("log", "--oneline")
@@ -143,8 +143,8 @@ func TestSyncIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "Sync branch 'master' is not up-to-date")
-		assert.Contains(t, stderr.String(), "Switch to 'master' branch and use 'git-brx update'")
+		assert.Contains(t, stderr.String(), "Base branch 'master' is not up-to-date with 'origin/master'")
+		assert.Contains(t, stderr.String(), "Switch to 'master' and run 'git-brx update' first")
 	})
 
 	t.Run("MergeConflictReturnsExit5AndResolveHint", func(t *testing.T) {
@@ -167,7 +167,7 @@ func TestSyncIntegration(t *testing.T) {
 
 		assert.Equal(t, int(domain.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Sync failed due to merge conflicts")
-		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' in case of merge conflicts or 'git-brx reset' to abort")
+		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 	})
 
 	t.Run("DryRunModeDoesNotModifyRefs", func(t *testing.T) {

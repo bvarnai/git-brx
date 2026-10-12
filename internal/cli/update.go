@@ -85,17 +85,16 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 
 	// Fetch remote reference
 	if fetchErr := a.Operations.FetchRef(ctx, rootDir, "origin", currBranch.Name); fetchErr != nil {
-		return domain.NewError(domain.ExitPreconditionRemote, "Update failed (git fetch origin %s failed)", currBranch.Name)
+		return domain.NewError(domain.ExitPreconditionRemote, "Update failed: unable to fetch 'origin/%s'", currBranch.Name)
 	}
 
 	// Rebase onto remote tracking ref
 	if rebaseErr := a.Operations.Rebase(ctx, rootDir, remoteRef, opts.Autostash, false); rebaseErr != nil {
 		if strings.Contains(rebaseErr.Error(), "conflict") || isRebaseConflict(ctx, a.Inspector, rootDir) {
 			return domain.NewError(domain.ExitConflict, "Update failed due to conflicts").
-				WithHint("Use 'git-brx resolve' to resolve conflicts or 'git-brx reset' to abort")
+				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 		}
-		return domain.NewError(domain.ExitConflict, "Update failed due to conflicts").
-			WithHint("Use 'git-brx resolve' to resolve conflicts or 'git-brx reset' to abort")
+		return domain.WrapError(domain.ExitConflict, rebaseErr, "Update failed: could not rebase onto '%s'", remoteRef)
 	}
 
 	a.UI.Log("Current branch '%s' is up to date", currBranch.Name)

@@ -21,7 +21,7 @@ func (a *App) newSelectCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "select [flags] [<branch>]",
-		Short: "Select and switch to an existing branch ('master' by default)",
+		Short: "Select and switch to an existing branch (default: repository base branch)",
 		Long: `Select and switch to an existing branch. In online mode, fetches updates
 from origin before switching.`,
 		Args: cobra.ArbitraryArgs,
@@ -97,7 +97,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 				if localExists {
 					a.UI.Warn("Unable to reach remote; falling back to local references")
 				} else {
-					return domain.NewError(domain.ExitPreconditionRemote, "Select failed (git fetch failed)")
+					return domain.NewError(domain.ExitPreconditionRemote, "Select failed: unable to fetch from origin")
 				}
 			}
 		}
@@ -124,7 +124,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 			return domain.NewError(domain.ExitConflict, "Select failed: local modifications would be overwritten by checkout").
 				WithHint("Commit or stash your changes before switching branches")
 		}
-		return domain.WrapError(domain.ExitGeneralError, checkoutErr, "Select failed (git checkout %s failed)", targetBranch)
+		return domain.WrapError(domain.ExitGeneralError, checkoutErr, "Select failed: could not checkout branch '%s'", targetBranch)
 	}
 
 	// Postflight feedback: warn if uncommitted changes were carried over to the new branch
@@ -148,7 +148,12 @@ func (a *App) hintUpstreamSync(ctx context.Context, rootDir, branch string) {
 
 	delta, err := a.Inspector.ComputeDelta(ctx, rootDir, branch, "origin/"+branch)
 	if err == nil && delta != nil && delta.BehindCount > 0 {
-		a.UI.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx sync' to update.", branch, delta.BehindCount)
+		isBase := branch == "main" || branch == "master" || branch == a.Inspector.DefaultBranch(ctx, rootDir)
+		if isBase {
+			a.UI.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx update' to update.", branch, delta.BehindCount)
+		} else {
+			a.UI.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx sync' to update.", branch, delta.BehindCount)
+		}
 	}
 }
 
