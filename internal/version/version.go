@@ -28,6 +28,7 @@ func Get() Info {
 	v := Version
 	c := Commit
 	d := Date
+	injectedCommit := Commit != "none" && Commit != ""
 
 	if bi, ok := debug.ReadBuildInfo(); ok {
 		if (v == "dev" || v == "") && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
@@ -48,7 +49,7 @@ func Get() Info {
 					d = s.Value
 				}
 			case "vcs.modified":
-				if s.Value == "true" && c != "none" && c != "" {
+				if !injectedCommit && s.Value == "true" && c != "none" && c != "" {
 					c += "-dirty"
 				}
 			}

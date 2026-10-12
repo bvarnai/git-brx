@@ -57,7 +57,7 @@ jobs:
             STAGE_DIR="build_${GOOS}_${GOARCH}"
             mkdir -p "$STAGE_DIR"
 
-            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build -ldflags "$LDFLAGS" -trimpath -o "${STAGE_DIR}/${BIN_NAME}" ./cmd/git-brx
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build -buildvcs=false -ldflags "$LDFLAGS" -trimpath -o "${STAGE_DIR}/${BIN_NAME}" ./cmd/git-brx
 
             # Copy docs and license to package staging
             cp LICENSE README.md "$STAGE_DIR/"
