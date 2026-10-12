@@ -60,7 +60,7 @@
 8. **Pull Request Submission:**
    - Submit PR via the configured `SCMProvider` (GitHub Pull Requests API, Bitbucket Server REST API, etc.).
    - Standard payload fields:
-     - `title`: `<branch>` (or custom `--title`)
+     - `title`: `<issueKey>: <summary>` (or `<branch>` if unlinked, or custom `--title`)
      - `description`: `<reviewDescription>`
      - `sourceBranch`: `<branch>`
      - `targetBranch`: `<targetBranch>`

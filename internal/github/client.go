@@ -303,7 +303,10 @@ func (c *Client) ResolveReviewers(components []string) []string {
 
 // FormatMergeInstructions renders standard GitHub-aligned merge instructions.
 func (c *Client) FormatMergeInstructions(opts domain.MergeInstructionOptions) string {
-	return domain.FormatDefaultMergeInstructions(opts)
+	return "# Merge instructions\n" +
+		"- **Strategy:** Squash & Merge (recommended)\n" +
+		"  - **Commit Title:** Default (leave GitHub's pre-filled title)\n" +
+		"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 }
 
 // FormatClosingIssue renders GitHub's closing keyword syntax for linking issues to PRs.
