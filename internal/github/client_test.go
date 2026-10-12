@@ -222,3 +222,22 @@ func TestClient_WithBaseURL_NormalizesGithubCom(t *testing.T) {
 	c3 := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL("https://ghe.company.com/api/v3"))
 	assert.Equal(t, "https://ghe.company.com/api/v3", c3.BaseURL)
 }
+
+func TestClient_AddIssueComment(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/repos/my-org/my-repo/issues/42/comments", r.URL.Path)
+		assert.Equal(t, http.MethodPost, r.Method)
+		var body map[string]string
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		assert.Equal(t, "Working branch: feature/foo", body["body"])
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"id": 12345}`))
+	}))
+	defer server.Close()
+
+	client := github.NewClient("my-org", "my-repo", "test-token", github.WithBaseURL(server.URL))
+	err := client.AddIssueComment(context.Background(), "42", "Working branch: feature/foo")
+	require.NoError(t, err)
+}

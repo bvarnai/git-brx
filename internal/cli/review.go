@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
@@ -170,7 +171,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	if issue != nil {
 		summaryText = issue.Title
 	}
-	prBody := a.composeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch)
+	prBody := a.ComposeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch)
 
 	// 7. Dry-Run Check
 	if a.Opts.DryRun {
@@ -207,7 +208,8 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	return nil
 }
 
-func (a *App) composeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string) string {
+// ComposeReviewDescription constructs the PR description text.
+func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string) string {
 	template := ""
 	if cfg.Review.Template != "" {
 		if content, err := os.ReadFile(cfg.Review.Template); err == nil {
@@ -217,14 +219,31 @@ func (a *App) composeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 		}
 	}
 
+	closingKeyword := ""
+	cleanKey := strings.TrimPrefix(issueKey, "#")
+	if cleanKey != "" {
+		if _, err := strconv.Atoi(cleanKey); err == nil {
+			closingKeyword = fmt.Sprintf("Closes #%s", cleanKey)
+		} else {
+			closingKeyword = fmt.Sprintf("Resolves %s", issueKey)
+		}
+	}
+
 	var sb strings.Builder
 	if template != "" {
 		sb.WriteString(template)
 		sb.WriteString("\n\n")
+		if closingKeyword != "" && !hasClosingKeyword(template, cleanKey, issueKey) {
+			sb.WriteString(closingKeyword)
+			sb.WriteString("\n\n")
+		}
 	} else {
 		sb.WriteString("### Description\n")
 		if summary != "" {
 			sb.WriteString(fmt.Sprintf("%s\n\n", summary))
+		}
+		if closingKeyword != "" {
+			sb.WriteString(fmt.Sprintf("%s\n\n", closingKeyword))
 		}
 		sb.WriteString("### Verification & Testing\n- [ ] Automated tests pass\n- [ ] Manual verification completed\n\n")
 	}
@@ -245,4 +264,18 @@ func (a *App) composeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 	}
 
 	return sb.String()
+}
+
+func hasClosingKeyword(text, cleanKey, issueKey string) bool {
+	lower := strings.ToLower(text)
+	keywords := []string{"closes", "close", "closed", "fixes", "fix", "fixed", "resolves", "resolve", "resolved"}
+	for _, kw := range keywords {
+		if cleanKey != "" && strings.Contains(lower, kw+" #"+strings.ToLower(cleanKey)) {
+			return true
+		}
+		if issueKey != "" && strings.Contains(lower, kw+" "+strings.ToLower(issueKey)) {
+			return true
+		}
+	}
+	return false
 }

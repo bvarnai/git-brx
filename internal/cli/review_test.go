@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
@@ -147,4 +148,49 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestComposeReviewDescription(t *testing.T) {
+	app := cli.NewApp(nil, nil, nil)
+
+	t.Run("numeric issue key generates Closes #key", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, nil, "8", "Feature summary", "feature/8", "main")
+		assert.Contains(t, desc, "Closes #8")
+		assert.Contains(t, desc, "Feature summary")
+	})
+
+	t.Run("hash numeric issue key generates Closes #key", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, nil, "#42", "Fix bug", "feature/42", "main")
+		assert.Contains(t, desc, "Closes #42")
+	})
+
+	t.Run("alphanumeric issue key generates Resolves KEY", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, nil, "PROJ-123", "Jira task", "feature/PROJ-123", "main")
+		assert.Contains(t, desc, "Resolves PROJ-123")
+	})
+
+	t.Run("template without closing keyword gets closing keyword appended", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{
+			Review: domain.ReviewConfig{
+				Template: "## Custom Template\nSome details here.",
+			},
+		}
+		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main")
+		assert.Contains(t, desc, "## Custom Template")
+		assert.Contains(t, desc, "Closes #12")
+	})
+
+	t.Run("template with existing closing keyword does not duplicate", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{
+			Review: domain.ReviewConfig{
+				Template: "## Custom Template\nFixes #12 directly in body.",
+			},
+		}
+		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main")
+		assert.Contains(t, desc, "Fixes #12 directly in body.")
+		assert.False(t, strings.Contains(desc, "Closes #12"), "should not duplicate closing keyword")
+	})
 }

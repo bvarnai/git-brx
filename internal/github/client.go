@@ -172,6 +172,44 @@ func (c *Client) GetIssue(ctx context.Context, key string) (*domain.Issue, error
 	}, nil
 }
 
+// AddIssueComment posts a comment to a GitHub issue.
+func (c *Client) AddIssueComment(ctx context.Context, key, comment string) error {
+	cleanKey := strings.TrimPrefix(key, "#")
+	cleanKey = strings.TrimPrefix(cleanKey, "issue/")
+	cleanKey = strings.TrimPrefix(cleanKey, "feature/")
+
+	issueNum, err := strconv.Atoi(cleanKey)
+	if err != nil {
+		return domain.NewError(domain.ExitUsageError, "Invalid GitHub issue number: %s", key)
+	}
+
+	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d/comments", c.BaseURL, c.Owner, c.Repo, issueNum)
+	payload := map[string]string{"body": comment}
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return domain.WrapError(domain.ExitGeneralError, err, "failed to serialize issue comment payload")
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return domain.WrapError(domain.ExitGeneralError, err, "failed to create HTTP request")
+	}
+
+	c.setHeaders(httpReq)
+
+	resp, err := c.HTTPClient.Do(httpReq)
+	if err != nil {
+		return domain.WrapError(domain.ExitPreconditionRemote, err, "GitHub API request failed")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return c.handleErrorResponse(resp, "add comment to issue #%d", issueNum)
+	}
+
+	return nil
+}
+
 // --- domain.SCMProvider Implementation ---
 
 type rawCreatePRRequest struct {

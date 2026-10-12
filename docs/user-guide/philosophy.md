@@ -11,6 +11,7 @@ Git is undeniably the industry standard for source control, but its command-line
 ### The `git-brx` solution: guardrails and brakes
 `git-brx` was engineered with a clear design goal: **hide low-level Git complexities behind sensible, guardrailed automation so that developers can ship changes quickly with confidence.**
 
+---
 
 ## 2. Issue-driven development: the single source of truth
 
