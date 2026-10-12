@@ -241,3 +241,17 @@ func TestClient_FormatClosingIssue(t *testing.T) {
 		assert.Equal(t, tt.expected, client.FormatClosingIssue(tt.input))
 	}
 }
+
+func TestClient_FormatMergeInstructions(t *testing.T) {
+	client := github.NewClient("my-org", "my-repo", "token")
+	opts := domain.MergeInstructionOptions{
+		IssueKey:     "10",
+		Summary:      "My summary",
+		Branch:       "issue/10",
+		TargetBranch: "main",
+	}
+
+	instructions := client.FormatMergeInstructions(opts)
+	assert.Contains(t, instructions, "Default (leave GitHub's pre-filled title)")
+	assert.Contains(t, instructions, "Delete source branch `issue/10` after merging")
+}

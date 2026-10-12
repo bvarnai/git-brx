@@ -160,7 +160,11 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	prTitle := opts.Title
 	if prTitle == "" {
 		if issue != nil && issue.Title != "" {
-			prTitle = fmt.Sprintf("%s: %s", currBranch.Name, issue.Title)
+			if issueKey != "" {
+				prTitle = fmt.Sprintf("%s: %s", issueKey, issue.Title)
+			} else {
+				prTitle = fmt.Sprintf("%s: %s", currBranch.Name, issue.Title)
+			}
 		} else {
 			prTitle = currBranch.Name
 		}
