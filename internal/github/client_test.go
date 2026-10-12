@@ -222,3 +222,22 @@ func TestClient_WithBaseURL_NormalizesGithubCom(t *testing.T) {
 	c3 := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL("https://ghe.company.com/api/v3"))
 	assert.Equal(t, "https://ghe.company.com/api/v3", c3.BaseURL)
 }
+
+func TestClient_FormatClosingIssue(t *testing.T) {
+	client := github.NewClient("my-org", "my-repo", "token")
+
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"8", "Closes #8"},
+		{"#42", "Closes #42"},
+		{"issue/99", "Closes #99"},
+		{"feature/100", "Closes #100"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		assert.Equal(t, tt.expected, client.FormatClosingIssue(tt.input))
+	}
+}

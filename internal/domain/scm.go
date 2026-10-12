@@ -50,6 +50,7 @@ type SCMProvider interface {
 	GetPullRequestForBranch(ctx context.Context, branch string) (*PullRequestDetail, error)
 	ResolveReviewers(components []string) []string
 	FormatMergeInstructions(opts MergeInstructionOptions) string
+	FormatClosingIssue(issueKey string) string
 }
 
 // FormatDefaultMergeInstructions formats generic, UI-agnostic merge instructions.

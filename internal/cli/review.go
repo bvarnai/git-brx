@@ -170,7 +170,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	if issue != nil {
 		summaryText = issue.Title
 	}
-	prBody := a.composeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch)
+	prBody := a.ComposeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch)
 
 	// 7. Dry-Run Check
 	if a.Opts.DryRun {
@@ -207,7 +207,8 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	return nil
 }
 
-func (a *App) composeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string) string {
+// ComposeReviewDescription constructs the PR description text.
+func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string) string {
 	template := ""
 	if cfg.Review.Template != "" {
 		if content, err := os.ReadFile(cfg.Review.Template); err == nil {
@@ -217,14 +218,26 @@ func (a *App) composeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 		}
 	}
 
+	closingRef := ""
+	if issueKey != "" && scm != nil {
+		closingRef = scm.FormatClosingIssue(issueKey)
+	}
+
 	var sb strings.Builder
 	if template != "" {
 		sb.WriteString(template)
 		sb.WriteString("\n\n")
+		if closingRef != "" {
+			sb.WriteString(closingRef)
+			sb.WriteString("\n\n")
+		}
 	} else {
 		sb.WriteString("### Description\n")
 		if summary != "" {
 			sb.WriteString(fmt.Sprintf("%s\n\n", summary))
+		}
+		if closingRef != "" {
+			sb.WriteString(fmt.Sprintf("%s\n\n", closingRef))
 		}
 		sb.WriteString("### Verification & Testing\n- [ ] Automated tests pass\n- [ ] Manual verification completed\n\n")
 	}
