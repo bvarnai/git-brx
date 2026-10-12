@@ -11,21 +11,6 @@ Git is undeniably the industry standard for source control, but its command-line
 ### The `git-brx` solution: guardrails and brakes
 `git-brx` was engineered with a clear design goal: **hide low-level Git complexities behind sensible, guardrailed automation so that developers can ship changes quickly with confidence.**
 
-#### Why the name "brx"?
-Originally a concise abbreviation for **branch**, `brx` also sounds like **brakes**—and that analogy illuminates the tool's engineering purpose:
-
-> *"The purpose of brakes on a car isn't just to make you stop; it's to give you the confidence and control to drive fast."*
-
-If you drive a car with spongy, unpredictable brakes, you crawl cautiously at 10 mph because every curve is terrifying. That is precisely how many developers interact with Git: paralyzed by the fear of corrupting repository history or losing their work.
-
-`git-brx` provides the automotive brakes and stability control your team needs to move at top speed:
-- **Anti-lock pushes:** Pushes always use **lease protection** (`--force-with-lease`), preventing high-speed overwrites of teammates' commits.
-- **Lane keep & drift detection:** Branch switches (`git brx select`) warn if uncommitted changes would be carried across branches, preventing cross-contamination.
-- **Targeted conflict management:** Conflict resolution (`git brx resolve`) isolates and stages **only** conflicted files—never blind whole-repo staging.
-- **Merge-gated branch cleanup:** Branch deletion (`git brx delete`) validates that your PR was safely merged on the remote SCM before discarding local refs.
-- **Emergency handbrake:** When an experiment or rebase goes awry, `git brx reset` acts as an immediate, clean stop, restoring your worktree safely from remote truth.
-
----
 
 ## 2. Issue-driven development: the single source of truth
 

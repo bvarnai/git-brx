@@ -17,6 +17,7 @@
   <a href="#why-git-brx">Why git-brx?</a> •
   <a href="#the-git-brx-philosophy">Core philosophy</a> •
   <a href="#quick-start">Quick start</a> •
+  <a href="#platform-support">Platform support</a> •
   <a href="#installation">Installation</a> •
   <a href="#configuration">Configuration</a> •
   <a href="#documentation-wiki">User guide wiki</a>
@@ -118,6 +119,22 @@ When installed in your `PATH`, `git-brx` is automatically available as a native 
 | [`git brx name`](docs/user-guide/command-reference.md#git-brx-name) | Prints the active branch name (plumbing-safe for scripts). |
 
 All commands support `--help`, `-h`, and `--dry-run` (`-n`) for safe previewing.
+
+---
+
+## Platform support
+
+`git-brx` interacts with issue trackers and code review systems. Current platform support status:
+
+| Platform / Backend | Issue Tracker | Code Review (PR / MR) | Status | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **GitHub** | GitHub Issues | GitHub Pull Requests | **Done** | Tested and verified in real-world usage. |
+| **Atlassian (Bitbucket + Jira)** | Jira Server / DC | Bitbucket Server / DC | **Implemented (untested)** | Client code and unit tests present; not yet tested on live instances. |
+| **Hybrid (Jira + GitHub)** | Jira Server / DC | GitHub Pull Requests | **Implemented (untested)** | Client code present; needs real-world testing. |
+| **GitLab** | GitLab Issues | GitLab Merge Requests | **Not yet implemented** | Planned for future release. |
+| **Bitbucket Cloud** | Jira Cloud / Bitbucket | Bitbucket Cloud PRs | **Not yet implemented** | Planned for future release. |
+
+See the [Multi-platform setup guide](docs/user-guide/multi-platform.md) for configuration details.
 
 ---
 
