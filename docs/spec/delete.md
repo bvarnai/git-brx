@@ -1,8 +1,9 @@
 # Spec: git-brx delete
 
 ## 1. Command Signature
-- **Usage:** `git-brx delete [flags]`
-- **Arguments:** None. (Target branch is always the current active branch).
+- **Usage:** `git-brx delete [flags] [<branch>]`
+- **Arguments:**
+  - `[<branch>]` (optional): Name of the topic branch to delete. Defaults to the current active branch if omitted.
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
   - Override flag: `--force` (`-f`): Skip verification that the remote branch has already been deleted on origin.
@@ -14,31 +15,40 @@
 - **Git state assertions (e.g., dirty working tree check):**
   - Must be inside a Git working tree (`git rev-parse --is-inside-work-tree` == `true`).
   - Remote `origin` must be configured (`git remote get-url origin`).
-  - Must NOT be in a detached HEAD state (`git symbolic-ref -q HEAD`).
-  - Active branch MUST be a deletable topic branch (`issue/*`, `feature/*`, or `epic/*`). Deletion of `master` or `release/*` is strictly forbidden.
-  - Working tree must be clean enough to permit switching back to `master`.
+  - If deleting current branch (no argument): Must NOT be in a detached HEAD state (`git symbolic-ref -q HEAD`).
+  - Target branch MUST be a deletable topic branch (`issue/*`, `feature/*`, or `epic/*`). Deletion of `master`, `main`, or `release/*` is strictly forbidden.
+  - If checked out on target branch: Working tree must be clean enough to permit switching back to default branch (`master`/`main`).
 
 ## 3. Core Execution Flow
-1. **Repository & Branch Assertions:**
+1. **Repository & Working Tree Assertions:**
    - Verify worktree: `git rev-parse --is-inside-work-tree`.
    - Assert origin exists: `git remote get-url origin`.
-   - Assert attached branch: `git symbolic-ref --short -q HEAD`. Store current branch name `<current_branch>`.
-   - Validate branch type: Extract prefix before the first slash `/`.
-     - Permitted prefixes: `issue`, `feature`, `epic`.
-     - If `<current_branch>` is `master` or unrecognized:
-       Log `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch to delete it` and fail with Exit Code `3`.
-2. **Remote Deletion Assertion (Safe Deletion Gate):**
+   - Assert repository has commits: `git rev-parse --verify -q HEAD`.
+2. **Resolve Target Branch:**
+   - If argument provided:
+     - Verify no excess arguments (`len(args) <= 1`).
+     - Assert target branch exists locally: `git show-ref --verify --quiet refs/heads/<branch>`.
+       If not found: Log `[git-brx] Error: Branch '<branch>' does not exist locally` and fail with Exit Code `3`.
+     - Validate target branch prefix: `issue/*`, `feature/*`, or `epic/*`.
+       If invalid: Log `[git-brx] Error: You can only delete an 'issue', 'feature', or 'epic' branch` and fail with Exit Code `3`.
+   - If no argument provided:
+     - Assert attached branch: `git symbolic-ref --short -q HEAD`.
+       If detached: Log `[git-brx] Error: Cannot delete branch in detached HEAD state` and fail with Exit Code `3`.
+     - Validate active branch prefix: `issue/*`, `feature/*`, or `epic/*`.
+       If invalid: Log `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch to delete it` and fail with Exit Code `3`.
+     - Set target branch to current branch.
+3. **Remote Deletion Assertion (Safe Deletion Gate):**
    - Unless `--force` is active:
-     - Check whether `<current_branch>` still exists on the remote:
+     - Check whether target branch still exists on the remote:
        ```bash
-       git ls-remote --heads origin <current_branch>
+       git ls-remote --heads origin <target_branch>
        ```
      - If command fails due to network outage:
        Log `[git-brx] Error: Unable to reach remote; are you offline?` and fail with Exit Code `4`.
      - If ref output is non-empty (branch still exists on remote):
-       - Log: `[git-brx] Branch '<current_branch>' found on remote origin`
+       - Log: `[git-brx] Branch '<target_branch>' found on remote origin`
        - **SCM-Aware Pull Request Diagnostic:**
-         - Query configured SCM provider (`scm.GetPullRequestForBranch(ctx, branch)`).
+         - Query configured SCM provider (`scm.GetPullRequestForBranch(ctx, target_branch)`).
          - If an active or merged pull request is discovered, provide tailored status context:
            - **Merged:** `[git-brx] Pull request is merged (<url>), but the remote branch has not been deleted yet.`
            - **Open:** `[git-brx] Error: Pull request is still open (<url>). Merge or close it before deleting.`
@@ -46,29 +56,36 @@
        - Log: `[git-brx] Error: Branch must be deleted on remote first (e.g., after merging pull request)`
        - Log: `[git-brx] Hint: Use '--force' to bypass remote check if you intend to delete an unpublished branch`
        - Fail with Exit Code `3`.
-3. **Dry-Run Check:**
-   - If `--dry-run` is active: Log intended checkout of `master`, deletion of `<current_branch>`, and pruning of origin, then exit with Exit Code `0`.
-4. **Switch to Base Branch (`master`):**
-   - Execute:
-     ```bash
-     git checkout master
-     ```
-   - If checkout fails (e.g., uncommitted local edits collide with `master`):
-     - Log: `[git-brx] Error: Unable to switch to 'master' branch`
-     - Fail with Exit Code `5`.
-5. **Delete Local Branch:**
+4. **Dry-Run Check:**
+   - Resolve base branch (`master` or `main`).
+   - Determine if branch switch is required (true if currently on target branch).
+   - If `--dry-run` is active:
+     - If switch required: Log `[git-brx] Would checkout branch '<base_branch>'`.
+     - Log `[git-brx] Would delete local branch '<target_branch>'`.
+     - Log `[git-brx] Would prune stale tracking references from origin`.
+     - Exit with Exit Code `0`.
+5. **Switch to Base Branch (if currently on target branch):**
+   - If currently checked out on target branch:
+     - Execute:
+       ```bash
+       git checkout <base_branch>
+       ```
+     - If checkout fails (e.g., uncommitted local edits collide with base branch):
+       - Log: `[git-brx] Error: Unable to switch to '<base_branch>' branch`
+       - Fail with Exit Code `5`.
+6. **Delete Local Branch:**
    - Force delete the local branch reference:
      ```bash
-     git branch -D <current_branch>
+     git branch -D <target_branch>
      ```
-6. **Remote Tracking Reference Pruning:**
+7. **Remote Tracking Reference Pruning:**
    - Prune stale remote tracking refs:
      ```bash
      git remote prune origin
      ```
-7. **Completion & Advice:**
-   - Log: `[git-brx] Deleted local branch '<current_branch>' and pruned origin`.
-   - Log: `[git-brx] Hint: Your local 'master' may not be up-to-date. Use 'git-brx update' to update changes`.
+8. **Completion & Advice:**
+   - Log: `[git-brx] Deleted local branch '<target_branch>' and pruned origin`.
+   - Log: `[git-brx] Hint: Your local '<base_branch>' may not be up-to-date. Use 'git-brx update' to update changes`.
    - Exit with Exit Code `0`.
 
 ## 4. Error Handling & Exit Codes
