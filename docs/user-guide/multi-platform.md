@@ -59,6 +59,19 @@ review:
 
 ![GitHub Allow squash merging dropdown set to Pull request title](../../assets/github-squash-merge-setting.png)
 
+### Branch prefix & label mapping on GitHub:
+When creating a branch via `git brx create <branch>`, `git-brx` validates the target issue's labels to ensure branch prefixes match the nature of the change:
+* **Labels `bug` or `defect` $\to$ `issue/`:** Restricted to bugfixes and patches.
+* **Labels `enhancement`, `feature`, or `story` $\to$ `feature/`:** Reserved for backlog features and stories.
+* **Label `epic` $\to$ `epic/`:** Reserved for large initiatives.
+* **Unlabeled issues $\to$ `issue/`:** Default fallback if no category label is attached.
+
+If you attempt to create `feature/10` for an issue labeled `bug` (or unlabeled), `git-brx` guards against mismatched categorization:
+```text
+[git-brx] Error: Issue type 'Bug' is not allowed on 'feature' branch
+[git-brx] Hint: use 'issue' branch or check mapping rules
+```
+
 ---
 
 ## 3. Atlassian Bitbucket Server & Jira configuration (Implemented, untested)
