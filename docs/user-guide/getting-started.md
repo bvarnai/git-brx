@@ -163,6 +163,9 @@ export GH_TOKEN="ghp_xxxxxxxxxxxx"
 ```
 Or allow `git-brx` to consult your Git credential helper automatically (`git credential fill`).
 
+> [!TIP]
+> For step-by-step instructions on generating a fine-grained personal access token with the exact permissions required by `git-brx`, see the [GitHub token configuration & permissions guide](multi-platform.md#authentication--personal-access-token-pat-setup).
+
 ### Bitbucket server & Jira authentication
 For Atlassian enterprise servers, define:
 ```bash

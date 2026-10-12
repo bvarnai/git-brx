@@ -43,11 +43,64 @@ review:
     default: [team-lead]            # Fallback reviewer
 ```
 
-### Authentication:
-`git-brx` will read your personal access token (PAT) from:
+### Authentication & Personal Access Token (PAT) setup:
+`git-brx` communicates with GitHub's REST API during `git brx create` (to inspect issues and labels), `git brx review` (to open Pull Requests), and `git brx delete` (to verify remote PR status).
+
+`git-brx` resolves your token from the following sources in order:
 1. `GITHUB_TOKEN` environment variable.
 2. `GH_TOKEN` environment variable.
 3. System Git credential helper (`git credential fill`).
+
+#### Step 1: Navigate to Token Settings
+1. In GitHub, click your profile icon in the top right and select **Settings**.
+2. In the left navigation sidebar under **Access**, click **Credentials** (or **Developer settings** $\to$ **Personal access tokens** depending on your GitHub layout).
+3. Select **Fine-grained personal access tokens** (or **Fine-grained tokens**).
+4. Click **Generate new token**.
+
+![GitHub Credentials Navigation](../../assets/github-token-credentials-nav.png)
+
+#### Step 2: Configure Repository Access
+In the **Repository access** section:
+- Select **Only select repositories** and choose your repository (e.g. `owner/repo`), or select **All repositories** if you use `git-brx` across all your projects.
+
+#### Step 3: Required Permissions for `git-brx`
+`git-brx` operates under the principle of least privilege. You only need to grant the following minimal repository permissions:
+
+| Permission Category | Scope | Access Level | Why `git-brx` needs it |
+| :--- | :--- | :--- | :--- |
+| **Repository permissions** | **Issues** | **Read-only** | Fetches issue title, status, and labels when running `git brx create <branch>` to validate branch prefixes (`issue/`, `feature/`, `epic/`). |
+| **Repository permissions** | **Metadata** *(Required)* | **Read-only** | Enforced by GitHub for repository discovery and collaborator checks. |
+| **Repository permissions** | **Pull requests** | **Read and write** | Opens automated pull requests during `git brx review` and verifies PR merge status during `git brx delete`. |
+| **User / Account permissions** | *(None)* | *None* | `git-brx` does **not** require any user or account-level permissions. |
+
+![GitHub Fine-grained token repository permissions](../../assets/github-token-permissions.png)
+
+Once configured, verify your token overview matches the required scopes:
+
+![GitHub Fine-grained token overview](../../assets/github-token-overview.png)
+
+#### Step 4: Export the Token
+Generate and copy your token (starting with `github_pat_...`), then export it in your shell environment (`~/.bashrc`, `~/.zshrc`, or Git Bash):
+```bash
+export GITHUB_TOKEN="github_pat_xxxxxxxxxxxxxxxxxxxx"
+# or
+export GH_TOKEN="github_pat_xxxxxxxxxxxxxxxxxxxx"
+```
+
+### Git-native authentication (SSH vs. HTTPS) vs. API tokens
+
+A common question is how Git-native authentication (SSH keys or HTTPS credentials) interacts with GitHub Personal Access Tokens:
+
+| Layer | Transport / Client | Authentication Credential | Responsibilities in `git-brx` |
+| :--- | :--- | :--- | :--- |
+| **Git Wire Transport** | Git protocol via SSH (`git@github.com:...`) or HTTPS (`https://github.com/...`) | SSH Key (`~/.ssh/id_*` / ssh-agent) or Git Credential Manager | Transferring commits, pushing branches (`git brx publish`), fetching remotes (`git fetch`), and branch rebasing. |
+| **Platform REST API** | HTTPS REST requests to `api.github.com` | Personal Access Token (`GITHUB_TOKEN` / `GH_TOKEN`) | Issue metadata validation (`git brx create`), Pull Request creation (`git brx review`), and PR status inspection (`git brx delete`). |
+
+> [!NOTE]
+> **Can using SSH be a problem?** Not at all. Using an SSH key for Git operations while using a Personal Access Token for GitHub REST API calls is the standard, secure configuration. When `git-brx publish` pushes a branch, it invokes standard Git, which seamlessly uses your SSH key.
+
+
+
 
 ### Recommended GitHub Repository Settings for Squash Merges:
 > [!TIP]
@@ -153,8 +206,36 @@ When you run:
 
 ---
 
-## 5. Other platforms (Not yet implemented)
+## 5. Branch protection rules & repository permissions
+
+To maintain an orderly and reproducible codebase, remote Git hosting platforms (GitHub, Bitbucket Server, GitLab) enforce access control through **repository permissions** and **branch protection rules**.
+
+### Developer Git permissions
+`git-brx` assumes standard developer permissions:
+* **Read / Clone access:** Required to fetch remotes, inspect commits, and discover branches.
+* **Write / Push access:** Required to publish topic branches (`issue/*`, `feature/*`, `epic/*`) to the remote repository (`git brx publish`).
+
+> [!NOTE]
+> External contributors working on public forks who lack direct push access can still run `git-brx` locally, but `git brx publish` will be rejected by the upstream remote if push access is restricted.
+
+### Branch protection rules (Base branches vs. Topic branches)
+
+`git-brx` workflows are designed around branch protection and isolation:
+
+| Branch Category | Target Branches | Recommended Protection Rules | Why |
+| :--- | :--- | :--- | :--- |
+| **Base Branches** | `main`, `master`, `release/*` | • Require pull requests before merging<br>• Prevent direct pushes<br>• Prevent branch deletion<br>• Prevent force pushes (history rewriting) | `git-brx` treats base branches as the production single source of truth. Developers never commit or push directly to `main`; all changes integrate via automated pull requests (`git brx review`). |
+| **Topic Branches** | `issue/*`, `feature/*`, `epic/*` | • Allow force-pushes with lease (`--force-with-lease`)<br>• Allow branch deletion after merge<br>• Full control by developers | `git-brx` uses rebase workflows (`git brx update`, `git brx sync`) to keep history clean and linear. Rebasing changes commit hashes, requiring leased force-pushes during `git brx publish`. |
+
+> [!WARNING]
+> **Avoid wildcard branch protection on topic branches:**
+> If your repository administrator configures a blanket branch protection rule or ruleset matching all branches (`*`) that disables force-pushes or requires pull requests to update branches, `git brx publish` will fail when pushing rebased topic branches. Always scope branch protection rules strictly to `main`, `master`, and `release/*`.
+
+---
+
+## 6. Other platforms (Not yet implemented)
 
 Support for the following platforms is not yet implemented:
 - **GitLab:** Native support for GitLab Issues and Merge Requests.
 - **Bitbucket Cloud:** Atlassian Cloud 2.0 REST API support.
+
