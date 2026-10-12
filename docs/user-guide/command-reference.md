@@ -126,9 +126,9 @@ git brx review --dry-run
 ---
 
 ## 7. `git-brx delete`
-**Usage:** `git-brx delete [flags]`
+**Usage:** `git-brx delete [flags] [<branch>]`
 
-Validates that the current topic branch was merged on the remote SCM, switches to `master`, deletes the local branch, and prunes stale remote references.
+Safely deletes a topic branch (`issue/*`, `feature/*`, or `epic/*`) after remote merge and prunes stale tracking references. If `<branch>` is omitted, defaults to the current active branch. If currently on the target branch, automatically switches to `master` (or default branch) first.
 
 ### Flags:
 - `-f`, `--force`: Bypass remote deletion verification (useful for discarding unpublished local branches).
@@ -136,6 +136,7 @@ Validates that the current topic branch was merged on the remote SCM, switches t
 ### Examples:
 ```bash
 git brx delete
+git brx delete issue/101
 git brx delete --force
 ```
 

@@ -7,6 +7,7 @@ import (
 	"github.com/bvarnai/git-brx/internal/checks"
 	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/git"
 	"github.com/bvarnai/git-brx/internal/github"
 	"github.com/spf13/cobra"
 )
@@ -21,19 +22,20 @@ func (a *App) newDeleteCmd() *cobra.Command {
 	opts := DeleteOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "delete [flags]",
-		Short: "Delete current topic branch after remote merge and prune origin",
-		Long: `Safely deletes the current topic branch (issue/*, feature/*, or epic/*)
+		Use:   "delete [flags] [<branch>]",
+		Short: "Delete a topic branch after remote merge and prune origin",
+		Long: `Safely deletes a topic branch (issue/*, feature/*, or epic/*)
 after it has been merged and removed on origin.
 
-Checks that the remote branch has already been deleted on origin before
-switching to the base branch ('master' or default), deleting the local branch,
-and pruning stale remote tracking references. Use --force to override remote
-verification if deleting an abandoned branch.`,
+If no branch is specified, the current active branch is deleted. Checks that
+the remote branch has already been deleted on origin before deleting the local
+branch and pruning stale remote tracking references. Use --force to override
+remote verification if deleting an abandoned branch.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runDelete(cmd.Context(), opts, args)
 		},
+		ValidArgsFunction: a.completeBranchNames,
 	}
 
 	cmd.Flags().BoolVarP(&opts.Force, "force", "f", false, "Skip verification that the remote branch has already been deleted on origin")
@@ -42,8 +44,8 @@ verification if deleting an abandoned branch.`,
 }
 
 func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) error {
-	if len(args) > 0 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[0])
+	if len(args) > 1 {
+		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[1])
 	}
 
 	workDir := "."
@@ -66,27 +68,64 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 	}
 
 	currBranch, err := a.Inspector.CurrentBranch(ctx, rootDir)
-	if err != nil || currBranch.IsDetached {
-		return domain.NewError(domain.ExitPreconditionRepo, "Cannot delete branch in detached HEAD state")
+	if err != nil {
+		return domain.WrapError(domain.ExitGeneralError, err, "Failed to determine current branch")
 	}
 
-	switch currBranch.Type {
-	case domain.BranchTypeIssue, domain.BranchTypeFeature, domain.BranchTypeEpic:
-		// Allowed topic branch types
-	default:
-		return domain.NewError(domain.ExitPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to delete it")
+	var targetBranch string
+	var shouldSwitch bool
+
+	if len(args) == 1 {
+		targetBranch = strings.TrimSpace(args[0])
+		if targetBranch == "" {
+			return domain.NewError(domain.ExitUsageError, "Branch name cannot be empty")
+		}
+
+		localExists, _, err := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
+		if err != nil {
+			return domain.WrapError(domain.ExitGeneralError, err, "Failed to verify local branch existence")
+		}
+		if !localExists {
+			return domain.NewError(domain.ExitPreconditionRepo, "Branch '%s' does not exist locally", targetBranch)
+		}
+
+		targetType := git.ClassifyBranch(targetBranch)
+		switch targetType {
+		case domain.BranchTypeIssue, domain.BranchTypeFeature, domain.BranchTypeEpic:
+			// Allowed topic branch types
+		default:
+			return domain.NewError(domain.ExitPreconditionRepo, "You can only delete an 'issue', 'feature', or 'epic' branch")
+		}
+
+		if !currBranch.IsDetached && currBranch.Name == targetBranch {
+			shouldSwitch = true
+		}
+	} else {
+		if currBranch.IsDetached {
+			return domain.NewError(domain.ExitPreconditionRepo, "Cannot delete branch in detached HEAD state")
+		}
+
+		switch currBranch.Type {
+		case domain.BranchTypeIssue, domain.BranchTypeFeature, domain.BranchTypeEpic:
+			// Allowed topic branch types
+		default:
+			return domain.NewError(domain.ExitPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to delete it")
+		}
+
+		targetBranch = currBranch.Name
+		shouldSwitch = true
 	}
 
 	if !opts.Force {
-		existsOnServer, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, currBranch.Name)
+		existsOnServer, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, targetBranch)
 		if err != nil {
 			return domain.WrapError(domain.ExitPreconditionRemote, err, "Unable to reach remote; are you offline?")
 		}
 		if existsOnServer {
-			a.UI.Log("Branch '%s' found on remote origin", currBranch.Name)
+			a.UI.Log("Branch '%s' found on remote origin", targetBranch)
 
 			// Try SCM diagnostic lookup if configured
-			if scmErr := a.checkSCMPullRequestState(ctx, rootDir, currBranch.Name); scmErr != nil {
+			if scmErr := a.checkSCMPullRequestState(ctx, rootDir, targetBranch); scmErr != nil {
 				return scmErr
 			}
 
@@ -101,26 +140,32 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 	}
 
 	if a.Opts.DryRun {
-		a.UI.Log("Would checkout branch '%s'", baseBranch)
-		a.UI.Log("Would delete local branch '%s'", currBranch.Name)
+		if shouldSwitch {
+			a.UI.Log("Would checkout branch '%s'", baseBranch)
+		}
+		a.UI.Log("Would delete local branch '%s'", targetBranch)
 		a.UI.Log("Would prune stale tracking references from origin")
 		return nil
 	}
 
-	checkoutErr := a.Operations.Checkout(ctx, rootDir, baseBranch)
-	if checkoutErr != nil {
-		return domain.WrapError(domain.ExitConflict, checkoutErr, "Unable to switch to '%s' branch", baseBranch)
+	if shouldSwitch {
+		checkoutErr := a.Operations.Checkout(ctx, rootDir, baseBranch)
+		if checkoutErr != nil {
+			return domain.WrapError(domain.ExitConflict, checkoutErr, "Unable to switch to '%s' branch", baseBranch)
+		}
 	}
 
-	_, branchDelErr := a.Runner.Run(ctx, rootDir, "branch", "-D", currBranch.Name)
+	_, branchDelErr := a.Runner.Run(ctx, rootDir, "branch", "-D", targetBranch)
 	if branchDelErr != nil {
-		return domain.WrapError(domain.ExitConflict, branchDelErr, "Failed to delete local branch '%s'", currBranch.Name)
+		return domain.WrapError(domain.ExitConflict, branchDelErr, "Failed to delete local branch '%s'", targetBranch)
 	}
 
 	_, _ = a.Runner.Run(ctx, rootDir, "remote", "prune", "origin")
 
-	a.UI.Log("Deleted local branch '%s' and pruned origin", currBranch.Name)
-	a.UI.Hint("Your local '%s' may not be up-to-date. Use 'git-brx update' to update changes", baseBranch)
+	a.UI.Log("Deleted local branch '%s' and pruned origin", targetBranch)
+	if shouldSwitch {
+		a.UI.Hint("Your local '%s' may not be up-to-date. Use 'git-brx update' to update changes", baseBranch)
+	}
 
 	return nil
 }

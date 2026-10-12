@@ -151,4 +151,65 @@ func TestDeleteIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "Unable to switch to 'master' branch")
 		assert.Equal(t, "issue/conflict", h.CurrentBranch())
 	})
+
+	t.Run("CleanDeletionOfNamedBranchWhileOnMaster", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+
+		originDir := t.TempDir()
+		h.Git("init", "--bare", originDir)
+		h.Git("remote", "add", "origin", originDir)
+		h.Git("push", "-u", "origin", "master")
+
+		// Create local topic branch without publishing
+		h.CreateBranch("issue/VSB-200")
+		h.CommitFile("topic.txt", "work", "Topic commit")
+
+		// Switch back to master
+		h.Git("checkout", "master")
+		assert.Equal(t, "master", h.CurrentBranch())
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "issue/VSB-200", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Deleted local branch 'issue/VSB-200' and pruned origin")
+
+		// Verify current branch is still master and issue/VSB-200 is gone
+		assert.Equal(t, "master", h.CurrentBranch())
+		_, err := h.GitAllowError("show-ref", "--verify", "--quiet", "refs/heads/issue/VSB-200")
+		assert.Error(t, err, "deleted branch should no longer exist locally")
+	})
+
+	t.Run("RejectsDeletionOfNonExistentNamedBranch", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+
+		originDir := t.TempDir()
+		h.Git("init", "--bare", originDir)
+		h.Git("remote", "add", "origin", originDir)
+		h.Git("push", "-u", "origin", "master")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "issue/does-not-exist", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
+		assert.Contains(t, stderr.String(), "Branch 'issue/does-not-exist' does not exist locally")
+	})
+
+	t.Run("RejectsDeletionOfProtectedBranchByArgument", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+
+		originDir := t.TempDir()
+		h.Git("init", "--bare", originDir)
+		h.Git("remote", "add", "origin", originDir)
+		h.Git("push", "-u", "origin", "master")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "master", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
+		assert.Contains(t, stderr.String(), "You can only delete an 'issue', 'feature', or 'epic' branch")
+	})
 }
