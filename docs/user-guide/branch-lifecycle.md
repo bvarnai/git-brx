@@ -4,7 +4,29 @@ This guide walks you through the complete lifecycle of a development branch in `
 
 ---
 
-## 1. Branch creation (`git brx create`)
+## 1. Branch taxonomy & lifecycle strategies
+
+To maintain an orderly, reproducible codebase, `git-brx` organizes work into a strict **branch taxonomy**. Each branch type serves a specific lifecycle purpose, dictates how changes synchronize with the mainline, and guides code review merge strategies:
+
+| Branch Type | Target Scope & Purpose | Lifespan | Default `sync` Strategy | Recommended PR Merge Strategy |
+| :--- | :--- | :--- | :--- | :--- |
+| **`issue/<id>`** | Bug fixes, minor tasks, tech debt | Short-lived | **Rebase** (`git rebase`) | **Squash & Merge** |
+| **`feature/<id>`** | Backlog stories, new capabilities | Short-to-medium | **Merge** (`git merge`) | **Squash & Merge** *(or Merge commit)* |
+| **`epic/<id>`** | Multi-sprint, architectural initiatives | Long-lived parent | **Merge** (`git merge`) | **Merge commit (`--no-ff`)** |
+| **`release/<milestone>`** | Version stabilization & code freeze | Maintained / temporary | N/A | Tagged & archived |
+| **`main` / `master`** | Production single source of truth | Permanent | N/A | Protected base branch |
+
+### Why sync strategies diverge by branch type:
+* **`issue/*` branches $\to$ Rebase:** Bugfixes and small tasks are typically developed by a single engineer. Rebasing on top of `main` keeps commit history strictly linear, eliminates unnecessary merge bubbles, and prepares the change for clean squash merging.
+* **`feature/*` and `epic/*` branches $\to$ Merge:** Features and epics frequently involve multiple contributors or long-running work. Running a 3-way merge from `main` into your feature branch preserves team collaboration commits and avoids disruptive history rewrites (`force-push`) for teammates sharing the branch.
+* *Need to override?* You can always use `git brx sync --rebase` (`-r`) or `git brx sync --merge` (`-m`).
+
+> [!NOTE]
+> **Convention over configuration:** `git-brx` deliberately trades arbitrary branch naming freedom for automated safety and streamlined workflows. All tracked work must follow the `<type>/<id>` convention so `git-brx` can safely automate sync strategies, PR composition, and post-merge cleanup. For untracked local experiments, standard Git (`git checkout -b scratch-spike`) is always available.
+
+---
+
+## 2. Branch creation (`git brx create`)
 
 Every change in your codebase begins with a validated topic branch:
 
@@ -33,7 +55,7 @@ This skips the remote Git check and tracker API lookup, provisioning the branch 
 
 ---
 
-## 2. Branch switching & exploration (`git brx select`, `name`, `history`)
+## 3. Branch switching & exploration (`git brx select`, `name`, `history`)
 
 ### Safe branch switching (`git brx select`)
 Switching branches with raw `git checkout` can lead to lost work, detached HEAD states, or dirty collisions. `git brx select` provides safe switching with intelligent defaults:
@@ -86,7 +108,7 @@ git brx history --stat
 
 ---
 
-## 3. Leased publishing (`git brx publish`)
+## 4. Leased publishing (`git brx publish`)
 
 When you are ready to push your branch to the remote origin or trigger CI builds:
 
@@ -107,7 +129,7 @@ In raw Git, developers often alternate dangerously between `git push` (which fai
 
 ---
 
-## 4. Code review submission (`git brx review`)
+## 5. Code review submission (`git brx review`)
 
 Once your branch is published, tested, and ready for peer review, create your pull request directly from the terminal:
 
@@ -115,7 +137,7 @@ Once your branch is published, tested, and ready for peer review, create your pu
 git brx review
 ```
 
-### Automated PR sssembly:
+### Automated PR assembly:
 1. **Publication check:** Verifies that your local branch has actually been pushed to `origin`. If not, it halts and directs you to run `git brx publish`.
 2. **Issue metadata extraction:** Parses the issue key from your branch name and retrieves the issue summary, description, and component tags from Jira/GitHub.
 3. **Reviewer routing:** Evaluates modified files or issue components against `.git-brx.yaml`'s `review.mapping`. If multiple reviewers are configured for a component, it automatically balances the load.
@@ -136,7 +158,7 @@ git brx review --dry-run
 
 ---
 
-## 5. Safe post-merge deletion (`git brx delete`)
+## 6. Safe post-merge deletion (`git brx delete`)
 
 Once your pull request is approved and merged on GitHub or Bitbucket, you need to clean up your local and remote workspace:
 

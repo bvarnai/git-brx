@@ -54,7 +54,25 @@ When a developer runs `git brx create issue/TASK-101`, `git-brx` reaches out to 
 
 ---
 
-## 3. The 4-Stage workflow cycle
+## 3. Opinionated by design: convention over configuration
+
+A core pillar of `git-brx` is **opinionated convention over configuration**.
+
+Rather than allowing every engineer to invent ad-hoc branch names (`my-fix`, `test-123`, `temp/work`), `git-brx` requires standard prefix-based topic branches (`issue/<id>`, `feature/<id>`, `epic/<id>`):
+
+> [!IMPORTANT]
+> **Why the strict prefix convention matters:**
+> * **Zero decision fatigue:** Developers never spend mental energy inventing branch names or debating naming schemes in code reviews.
+> * **Powers intelligent automation:** The prefix informs `git-brx` how to handle the branch:
+>   - An `issue/` prefix signals single-author bugfixes and tells `git brx sync` to perform a **linear rebase**.
+>   - A `feature/` or `epic/` prefix signals collaborative work and tells `git brx sync` to perform a **merge commit**.
+>   - The prefix tells `git brx review` how to inject the issue key as the Conventional Commit scope (`feat(#12): ...`).
+>   - The prefix tells `git brx delete` to verify remote merge state before pruning.
+> * **Local scratch work is still supported:** For throwaway experiments, local prototypes, or scratch spikes without an issue, standard Git (`git checkout -b scratch-test`) remains fully available alongside `git-brx`.
+
+---
+
+## 4. The 4-Stage workflow cycle
 
 ```mermaid
 flowchart TD

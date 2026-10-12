@@ -61,7 +61,13 @@ You don't need to be a Git wizard to work safely:
 - Conflict resolution (`git brx resolve`) interactively launches your GUI merge tool and stages **only** the conflicting files—never indiscriminate directory staging.
 - Deleting a branch (`git brx delete`) verifies that your PR has been merged on the remote platform first.
 
-### 3. The 4-Step branch lifecycle
+### 3. Convention over configuration
+Rather than letting every developer invent ad-hoc branch names, `git-brx` standardizes on clean, issue-linked prefixes (`issue/*`, `feature/*`, `epic/*`):
+- **Zero decision fatigue:** Standardized naming means onboarding is instant and team history stays consistent.
+- **Powers intelligent automation:** The branch prefix tells `git-brx` whether to rebase or merge on `sync`, how to format PR titles, and when a branch is safe to delete.
+- **Scratch work friendly:** For local spikes, prototypes, or throwaway experiments without an issue, raw Git (`git checkout -b my-experiment`) remains 100% available alongside `git-brx`.
+
+### 4. The branch lifecycle
 
 ```mermaid
 flowchart LR
