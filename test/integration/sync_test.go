@@ -121,7 +121,7 @@ func TestSyncIntegration(t *testing.T) {
 		assert.NotContains(t, log, "Merge branch")
 	})
 
-	t.Run("DivergedBaseBranchFailsWithExit5AndHint", func(t *testing.T) {
+	t.Run("AutoFastForwardCleanBaseBranchOnIssueBranch", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")
 		h.SetupRemoteBare()
@@ -138,6 +138,99 @@ func TestSyncIntegration(t *testing.T) {
 
 		// Now local master is behind origin/master by 1 commit
 		h.Git("checkout", "issue/VSB-103")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Fast-forwarded local 'master' to match 'origin/master' (1 commit behind)")
+
+		// Verify local master ref matches origin/master
+		masterSha := strings.TrimSpace(h.Git("rev-parse", "master"))
+		originMasterSha := strings.TrimSpace(h.Git("rev-parse", "origin/master"))
+		assert.Equal(t, originMasterSha, masterSha)
+
+		// Verify issue branch contains upstream.txt
+		log := h.Git("log", "--oneline")
+		assert.Contains(t, log, "Upstream commit")
+		assert.Contains(t, log, "Work commit")
+	})
+
+	t.Run("AutoFastForwardCleanBaseBranchOnFeatureBranchMerge", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("feature/VSB-103")
+		h.CommitFile("feature3.txt", "work", "Feature commit")
+
+		// Push a commit to origin/master without pulling locally into master
+		h.Git("checkout", "master")
+		h.CommitFile("upstream.txt", "upstream", "Upstream commit")
+		h.Git("push", "origin", "master")
+		h.Git("reset", "--hard", "HEAD~1") // roll local master back 1 commit
+
+		h.Git("checkout", "feature/VSB-103")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Fast-forwarded local 'master' to match 'origin/master' (1 commit behind)")
+
+		// Verify local master ref matches origin/master
+		masterSha := strings.TrimSpace(h.Git("rev-parse", "master"))
+		originMasterSha := strings.TrimSpace(h.Git("rev-parse", "origin/master"))
+		assert.Equal(t, originMasterSha, masterSha)
+
+		// Verify merge commit exists
+		log := h.Git("log", "--oneline")
+		assert.Contains(t, log, "Merge branch 'master' into 'feature/VSB-103'")
+	})
+
+	t.Run("NoAutoUpdateBaseFlagPreservesManualGuard", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/VSB-104")
+		h.CommitFile("issue4.txt", "work", "Work commit")
+
+		h.Git("checkout", "master")
+		h.CommitFile("upstream.txt", "upstream", "Upstream commit")
+		h.Git("push", "origin", "master")
+		h.Git("reset", "--hard", "HEAD~1")
+
+		h.Git("checkout", "issue/VSB-104")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "--no-auto-update-base"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitConflict), code)
+		assert.Contains(t, stderr.String(), "Base branch 'master' is not up-to-date with 'origin/master'")
+		assert.Contains(t, stderr.String(), "Switch to 'master' and run 'git-brx update' first")
+	})
+
+	t.Run("DivergedBaseBranchFailsWithExit5AndHint", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/VSB-105")
+		h.CommitFile("issue5.txt", "work", "Work commit")
+
+		// Push a commit to origin/master
+		h.Git("checkout", "master")
+		h.CommitFile("upstream.txt", "upstream", "Upstream commit")
+		h.Git("push", "origin", "master")
+		h.Git("reset", "--hard", "HEAD~1")                                      // roll local master back 1 commit
+		h.CommitFile("local_diverged.txt", "diverged", "Local diverged commit") // local commit making master diverged
+
+		// Now local master is diverged from origin/master (ahead 1, behind 1)
+		h.Git("checkout", "issue/VSB-105")
 
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)

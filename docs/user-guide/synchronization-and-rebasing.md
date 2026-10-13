@@ -33,11 +33,24 @@ git brx sync -m
 git brx sync -r
 ```
 
-### Precondition checks
-Before running a rebase or merge, `git brx sync` verifies that your local `master` is not diverged from `origin/master`. If your base branch is out-of-date, it halts immediately with guidance:
+### Automatic base branch fast-forwarding
+When collaborating with teammates, new commits are frequently merged into `master` (or `main`) on the remote repository. If your local base branch is purely behind `origin` (`ahead: 0, behind > 0`), `git brx sync` automatically fast-forwards your local base branch in-place without checking it out or requiring manual branch switching:
+
 ```text
-[git-brx] Error: Sync branch 'master' is not up-to-date
-[git-brx] Hint: Switch to 'master' branch and use 'git-brx update' to update all changes
+[git-brx] Syncing with 'main' base branch by default
+[git-brx] Fast-forwarded local 'main' to match 'origin/main' (2 commits behind)
+```
+
+If you prefer strict manual verification, you can disable automatic fast-forwarding using `--no-auto-update-base`:
+```bash
+git brx sync --no-auto-update-base
+```
+
+### Safety guard against diverged base branches
+If your local base branch contains unpushed commits or has diverged from upstream (`ahead > 0`), `git brx sync` strictly halts with Exit Code 5 to prevent overwriting or orphaning local commits:
+```text
+[git-brx] Error: Base branch 'main' is not up-to-date with 'origin/main'
+[git-brx] Hint: Switch to 'main' and run 'git-brx update' first
 ```
 
 ---

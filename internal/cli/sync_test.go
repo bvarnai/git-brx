@@ -19,6 +19,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 		mockResponses map[string]mockGitResponse
 		expectedCode  int
 		errSubstr     string
+		expectStderr  string
 	}{
 		{
 			name:         "excess arguments returns usage error",
@@ -153,10 +154,88 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"remote get-url origin":                                {out: "https://remote.example.com/repo.git"},
 				"fetch origin":                                         {out: ""},
 				"show-ref --verify --quiet refs/remotes/origin/master": {out: ""},
+				"rev-list --left-right --count master...origin/master": {out: "1\t1"},
+			},
+			expectedCode: int(domain.ExitConflict),
+			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
+		},
+		{
+			name: "base branch with unpushed commits returns code 5",
+			args: []string{"sync", "master"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                      {out: "true"},
+				"rev-parse --show-toplevel":                            {out: "/repo"},
+				"rev-parse --git-dir":                                  {out: "/repo/.git"},
+				"rev-parse --is-shallow-repository":                    {out: "false"},
+				"symbolic-ref --short -q HEAD":                         {out: "issue/VSB-100"},
+				"rev-parse --short HEAD":                               {out: "abc1234"},
+				"show-ref --verify --quiet refs/heads/master":          {out: ""},
+				"remote get-url origin":                                {out: "https://remote.example.com/repo.git"},
+				"fetch origin":                                         {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/master": {out: ""},
+				"rev-list --left-right --count master...origin/master": {out: "2\t0"},
+			},
+			expectedCode: int(domain.ExitConflict),
+			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
+		},
+		{
+			name: "clean base branch behind origin with --no-auto-update-base returns code 5",
+			args: []string{"sync", "--no-auto-update-base", "master"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                      {out: "true"},
+				"rev-parse --show-toplevel":                            {out: "/repo"},
+				"rev-parse --git-dir":                                  {out: "/repo/.git"},
+				"rev-parse --is-shallow-repository":                    {out: "false"},
+				"symbolic-ref --short -q HEAD":                         {out: "issue/VSB-100"},
+				"rev-parse --short HEAD":                               {out: "abc1234"},
+				"show-ref --verify --quiet refs/heads/master":          {out: ""},
+				"remote get-url origin":                                {out: "https://remote.example.com/repo.git"},
+				"fetch origin":                                         {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/master": {out: ""},
 				"rev-list --left-right --count master...origin/master": {out: "0\t2"},
 			},
 			expectedCode: int(domain.ExitConflict),
 			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
+		},
+		{
+			name: "clean base branch behind origin automatically fast-forwards and rebases",
+			args: []string{"sync", "master"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                      {out: "true"},
+				"rev-parse --show-toplevel":                            {out: "/repo"},
+				"rev-parse --git-dir":                                  {out: "/repo/.git"},
+				"rev-parse --is-shallow-repository":                    {out: "false"},
+				"symbolic-ref --short -q HEAD":                         {out: "issue/VSB-100"},
+				"rev-parse --short HEAD":                               {out: "abc1234"},
+				"show-ref --verify --quiet refs/heads/master":          {out: ""},
+				"remote get-url origin":                                {out: "https://remote.example.com/repo.git"},
+				"fetch origin":                                         {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/master": {out: ""},
+				"rev-list --left-right --count master...origin/master": {out: "0\t2"},
+				"fetch origin master:master":                           {out: ""},
+				"rebase master":                                        {out: ""},
+			},
+			expectedCode: int(domain.ExitSuccess),
+			expectStderr: "Fast-forwarded local 'master' to match 'origin/master' (2 commits behind)",
+		},
+		{
+			name: "clean base branch behind origin in dry-run mode logs planned fast-forward",
+			args: []string{"sync", "--dry-run", "master"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                      {out: "true"},
+				"rev-parse --show-toplevel":                            {out: "/repo"},
+				"rev-parse --git-dir":                                  {out: "/repo/.git"},
+				"rev-parse --is-shallow-repository":                    {out: "false"},
+				"symbolic-ref --short -q HEAD":                         {out: "issue/VSB-100"},
+				"rev-parse --short HEAD":                               {out: "abc1234"},
+				"show-ref --verify --quiet refs/heads/master":          {out: ""},
+				"remote get-url origin":                                {out: "https://remote.example.com/repo.git"},
+				"fetch origin":                                         {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/master": {out: ""},
+				"rev-list --left-right --count master...origin/master": {out: "0\t1"},
+			},
+			expectedCode: int(domain.ExitSuccess),
+			expectStderr: "Would fast-forward local 'master' to match 'origin/master' (1 commit behind)",
 		},
 		{
 			name: "dry-run on issue branch logs planned rebase command",
@@ -196,6 +275,9 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}
+			}
+			if tt.expectStderr != "" {
+				assert.Contains(t, stderr.String(), tt.expectStderr)
 			}
 		})
 	}

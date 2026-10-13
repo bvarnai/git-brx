@@ -12,10 +12,11 @@ import (
 
 // SyncOptions stores flags for the sync command.
 type SyncOptions struct {
-	Merge       bool
-	Rebase      bool
-	Autostash   bool
-	Interactive bool
+	Merge            bool
+	Rebase           bool
+	Autostash        bool
+	Interactive      bool
+	NoAutoUpdateBase bool
 }
 
 // newSyncCmd constructs the 'sync' subcommand.
@@ -38,6 +39,7 @@ or merge (for feature/epic branches).`,
 	cmd.Flags().BoolVarP(&opts.Rebase, "rebase", "r", false, "Force rebase strategy regardless of branch type default")
 	cmd.Flags().BoolVarP(&opts.Autostash, "autostash", "a", false, "Enable automatic stashing of uncommitted changes (rebase only)")
 	cmd.Flags().BoolVarP(&opts.Interactive, "interactive", "i", false, "Launch interactive rebase (rebase only)")
+	cmd.Flags().BoolVar(&opts.NoAutoUpdateBase, "no-auto-update-base", false, "Disable automatic fast-forwarding of clean base branch")
 
 	return cmd
 }
@@ -122,9 +124,29 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 		if remoteBaseExists {
 			delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, baseBranch, "origin/"+baseBranch)
 			if deltaErr == nil && delta != nil {
-				if delta.AheadCount != 0 || delta.BehindCount != 0 {
+				if delta.AheadCount > 0 {
 					return domain.NewError(domain.ExitConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
 						WithHint("Switch to '%s' and run 'git-brx update' first", baseBranch)
+				}
+				if delta.BehindCount > 0 {
+					if opts.NoAutoUpdateBase {
+						return domain.NewError(domain.ExitConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
+							WithHint("Switch to '%s' and run 'git-brx update' first", baseBranch)
+					}
+
+					commitUnit := "commits"
+					if delta.BehindCount == 1 {
+						commitUnit = "commit"
+					}
+
+					if a.Opts.DryRun {
+						a.UI.Log("Would fast-forward local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
+					} else {
+						if err := a.Operations.FetchRef(ctx, rootDir, "origin", fmt.Sprintf("%s:%s", baseBranch, baseBranch)); err != nil {
+							return domain.WrapError(domain.ExitConflict, err, "Failed to fast-forward local base branch '%s'", baseBranch)
+						}
+						a.UI.Log("Fast-forwarded local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
+					}
 				}
 			}
 		}
