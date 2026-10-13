@@ -20,6 +20,7 @@ type ReviewOptions struct {
 	Title               string
 	MergeInstructions   bool
 	NoMergeInstructions bool
+	Strategy            string
 }
 
 // newReviewCmd constructs the 'review' subcommand.
@@ -36,6 +37,12 @@ the pull request on the configured SCM platform (e.g. GitHub or Bitbucket).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Flags().Changed("merge-instructions") && cmd.Flags().Changed("no-merge-instructions") {
 				return domain.NewError(domain.ExitUsageError, "Cannot specify both --merge-instructions and --no-merge-instructions")
+			}
+			if opts.Strategy != "" {
+				s := strings.ToLower(strings.TrimSpace(opts.Strategy))
+				if s != "squash" && s != "merge" && s != "rebase" {
+					return domain.NewError(domain.ExitUsageError, "Unsupported merge strategy: %s (must be squash, merge, or rebase)", opts.Strategy)
+				}
 			}
 			var mergeInstrOverride *bool
 			if cmd.Flags().Changed("merge-instructions") {
@@ -54,6 +61,7 @@ the pull request on the configured SCM platform (e.g. GitHub or Bitbucket).`,
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "Override default pull request title")
 	cmd.Flags().BoolVar(&opts.MergeInstructions, "merge-instructions", false, "Append merge instructions to the pull request description")
 	cmd.Flags().BoolVar(&opts.NoMergeInstructions, "no-merge-instructions", false, "Do not append merge instructions to the pull request description")
+	cmd.Flags().StringVarP(&opts.Strategy, "strategy", "s", "", "Merge strategy override (squash, merge, rebase)")
 
 	return cmd
 }
@@ -123,7 +131,9 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 	}
 
 	if mergeInstrOverride != nil {
+		cfg.Review.Merge.Instructions = mergeInstrOverride
 		cfg.Review.MergeInstructions = mergeInstrOverride
+		cfg.Review.Instructions = mergeInstrOverride
 	}
 
 	scm, err := a.resolveSCM(cfg)
@@ -186,7 +196,13 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 	if issue != nil {
 		summaryText = issue.Title
 	}
-	prBody := a.ComposeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch)
+
+	mergeStrategy, err := config.ResolveMergeStrategy(&cfg.Review.Merge, currBranch.Name, targetBranch, opts.Strategy)
+	if err != nil {
+		return err
+	}
+
+	prBody := a.ComposeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch, mergeStrategy)
 
 	// 7. Dry-Run Check
 	if a.Opts.DryRun {
@@ -224,7 +240,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 }
 
 // ComposeReviewDescription constructs the PR description text.
-func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string) string {
+func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string, strategy ...string) string {
 	template := ""
 	if cfg.Review.Template != "" {
 		if content, err := os.ReadFile(cfg.Review.Template); err == nil {
@@ -258,20 +274,30 @@ func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 		sb.WriteString("### Verification & Testing\n- [ ] Automated tests pass\n- [ ] Manual verification completed\n\n")
 	}
 
-	// Append merge instructions unless explicitly disabled via review.merge_instructions: false (or legacy review.instructions: false)
+	// Append merge instructions unless explicitly disabled via review.merge.instructions: false
 	appendInstructions := true
-	if cfg.Review.MergeInstructions != nil {
+	if cfg.Review.Merge.Instructions != nil {
+		appendInstructions = *cfg.Review.Merge.Instructions
+	} else if cfg.Review.MergeInstructions != nil {
 		appendInstructions = *cfg.Review.MergeInstructions
 	} else if cfg.Review.Instructions != nil {
 		appendInstructions = *cfg.Review.Instructions
 	}
 
 	if appendInstructions {
+		resolvedStrategy := ""
+		if len(strategy) > 0 && strategy[0] != "" {
+			resolvedStrategy = strategy[0]
+		} else {
+			resolvedStrategy, _ = config.ResolveMergeStrategy(&cfg.Review.Merge, branch, targetBranch, "")
+		}
+
 		opts := domain.MergeInstructionOptions{
 			IssueKey:     issueKey,
 			Summary:      summary,
 			Branch:       branch,
 			TargetBranch: targetBranch,
+			Strategy:     resolvedStrategy,
 		}
 		if scm != nil {
 			sb.WriteString(scm.FormatMergeInstructions(opts))

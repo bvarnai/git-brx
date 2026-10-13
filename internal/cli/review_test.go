@@ -35,6 +35,12 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 			errSubstr:    "Cannot specify both --merge-instructions and --no-merge-instructions",
 		},
 		{
+			name:         "invalid strategy flag returns usage error",
+			args:         []string{"review", "--strategy", "invalid-strat"},
+			expectedCode: int(domain.ExitUsageError),
+			errSubstr:    "Unsupported merge strategy: invalid-strat",
+		},
+		{
 			name: "outside worktree returns code 3",
 			args: []string{"review"},
 			mockResponses: map[string]mockGitResponse{
@@ -214,6 +220,24 @@ func TestComposeReviewDescription(t *testing.T) {
 		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
 		assert.Contains(t, desc, "Details")
 		assert.False(t, strings.Contains(desc, "# Merge instructions"))
+	})
+
+	t.Run("epic branch produces merge commit instructions by convention", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, scm, "1", "Major Epic", "epic/1", "main")
+		assert.Contains(t, desc, "Create a merge commit (`--no-ff`)")
+	})
+
+	t.Run("targeting epic branch produces merge commit instructions by convention", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, scm, "10", "Sub task", "feature/10", "epic/1")
+		assert.Contains(t, desc, "Create a merge commit (`--no-ff`)")
+	})
+
+	t.Run("explicit strategy override produces rebase instructions", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, scm, "10", "Sub task", "feature/10", "main", "rebase")
+		assert.Contains(t, desc, "Rebase & Merge")
 	})
 }
 

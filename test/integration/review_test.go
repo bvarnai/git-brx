@@ -263,4 +263,120 @@ scm:
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.Contains(t, capturedBody, "# Merge instructions")
 	})
+
+	t.Run("ReviewEpicBranchDefaultsToMergeCommitInstructions", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+
+		originDir := t.TempDir()
+		h.Git("init", "--bare", originDir)
+		h.Git("remote", "add", "origin", originDir)
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/201")
+		h.CommitFile("epic.go", "package epic", "Epic architecture")
+		h.Git("push", "-u", "origin", "epic/201")
+
+		var capturedBody string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{"number": 201, "title": "Big Epic Initiative", "state": "open", "labels": [{"name": "epic"}]}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]string
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedBody = body["body"]
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 20, "html_url": "https://github.com/test-org/test-repo/pull/20"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte(`
+platform: github
+tracker:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+scm:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+`)
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644)
+		require.NoError(t, err)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Contains(t, capturedBody, "Create a merge commit (`--no-ff`)")
+	})
+
+	t.Run("ReviewFlagStrategyRebaseOverridesConvention", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+
+		originDir := t.TempDir()
+		h.Git("init", "--bare", originDir)
+		h.Git("remote", "add", "origin", originDir)
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/202")
+		h.CommitFile("epic.go", "package epic", "Epic architecture")
+		h.Git("push", "-u", "origin", "epic/202")
+
+		var capturedBody string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{"number": 202, "title": "Big Epic Initiative", "state": "open", "labels": [{"name": "epic"}]}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]string
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedBody = body["body"]
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 21, "html_url": "https://github.com/test-org/test-repo/pull/21"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte(`
+platform: github
+tracker:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+scm:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+`)
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644)
+		require.NoError(t, err)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--strategy=rebase"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Contains(t, capturedBody, "Rebase & Merge")
+	})
 }

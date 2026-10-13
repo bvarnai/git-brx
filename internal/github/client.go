@@ -303,10 +303,32 @@ func (c *Client) ResolveReviewers(components []string) []string {
 
 // FormatMergeInstructions renders standard GitHub-aligned merge instructions.
 func (c *Client) FormatMergeInstructions(opts domain.MergeInstructionOptions) string {
-	return "# Merge instructions\n" +
-		"- **Strategy:** Squash & Merge (recommended)\n" +
-		"  - **Commit Title:** Default (leave GitHub's pre-filled title)\n" +
-		"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+	strategy := opts.Strategy
+	if strategy == "" {
+		strategy = "squash"
+	}
+
+	switch strategy {
+	case "merge":
+		return "# Merge instructions\n" +
+			"- **Strategy:** Create a merge commit (`--no-ff`)\n" +
+			"  - **Reason:** Multi-commit integration / release branch; preserve constituent commit history\n" +
+			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging (or follow team retention policy)\n"
+	case "rebase":
+		target := opts.TargetBranch
+		if target == "" {
+			target = "main"
+		}
+		return "# Merge instructions\n" +
+			"- **Strategy:** Rebase & Merge\n" +
+			"  - **Commit History:** Ensure individual commits are rebased linearly onto `" + target + "`\n" +
+			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+	default:
+		return "# Merge instructions\n" +
+			"- **Strategy:** Squash & Merge (recommended)\n" +
+			"  - **Commit Title:** Default (leave GitHub's pre-filled title)\n" +
+			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+	}
 }
 
 // FormatClosingIssue renders GitHub's closing keyword syntax for linking issues to PRs.

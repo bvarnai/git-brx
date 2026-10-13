@@ -145,13 +145,19 @@ git brx review
 1. **Publication check:** Verifies that your local branch has actually been pushed to `origin`. If not, it halts and directs you to run `git brx publish`.
 2. **Issue metadata extraction:** Parses the issue key from your branch name and retrieves the issue summary, description, and component tags from Jira/GitHub.
 3. **Reviewer routing:** Evaluates modified files or issue components against `.git-brx.yaml`'s `review.mapping`. If multiple reviewers are configured for a component, it automatically balances the load.
-4. **PR description & checklist:** Loads your team's review template (e.g. `.github/pull_request_template.md`) and appends standardized **Merge Instructions**:
+4. **PR description & checklist:** Loads your team's review template (e.g. `.github/pull_request_template.md`) and appends standardized **Merge Instructions** resolved according to branch conventions:
    ```markdown
    # Merge instructions
    - **Strategy:** Squash & Merge (recommended)
      - **Commit Title:** `TASK-101: Add user authentication API`
    - **Branch Cleanup:** Delete source branch `issue/TASK-101` after merging
    ```
+   - Standard branches (`issue/*`, `feature/*` targeting `main`) default to **Squash & Merge**.
+   - Multi-commit branches (`epic/*` or `release/*` as source or target) automatically resolve to **Merge commit (`--no-ff`)** to preserve granular commit history.
+   - Override the resolved strategy on demand using `-s, --strategy`:
+     ```bash
+     git brx review -s merge
+     ```
 5. **PR submission:** Calls the GitHub or Bitbucket Server REST API, prints the clickable PR URL to `stdout`, and logs confirmation to `stderr`.
 
 **Dry-run mode:**
