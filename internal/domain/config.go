@@ -35,7 +35,8 @@ type BranchConfig struct {
 
 // ReviewConfig defines code review reviewer routing and description template.
 type ReviewConfig struct {
-	Mapping      map[string]any `yaml:"mapping,omitempty" json:"mapping,omitempty"`
-	Template     string         `yaml:"template,omitempty" json:"template,omitempty"`
-	Instructions *bool          `yaml:"instructions,omitempty" json:"instructions,omitempty"`
+	Mapping           map[string]any `yaml:"mapping,omitempty" json:"mapping,omitempty"`
+	Template          string         `yaml:"template,omitempty" json:"template,omitempty"`
+	MergeInstructions *bool          `yaml:"merge_instructions,omitempty" json:"merge_instructions,omitempty"`
+	Instructions      *bool          `yaml:"instructions,omitempty" json:"instructions,omitempty"` // Legacy alias for MergeInstructions
 }

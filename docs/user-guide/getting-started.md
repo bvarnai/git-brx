@@ -139,7 +139,7 @@ branch:
 
 # Code review & pull request automation
 review:
-  instructions: true       # Injects standard merge instructions into PR description
+  merge_instructions: true # Injects standard merge instructions into PR description
   template: .github/pull_request_template.md
   mapping:
     backend: [alice, bob]
