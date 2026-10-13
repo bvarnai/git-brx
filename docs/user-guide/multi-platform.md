@@ -119,7 +119,25 @@ When creating a branch via `git brx create <branch>`, `git-brx` validates the ta
 * **Label `epic` $\to$ `epic/`:** Reserved for large initiatives.
 * **Unlabeled issues $\to$ `issue/`:** Default fallback if no category label is attached.
 
-If you attempt to create `feature/10` for an issue labeled `bug` (or unlabeled), `git-brx` guards against mismatched categorization:
+#### Custom GitHub label mapping
+If your team uses custom label taxonomies (e.g. `kind/feature`, `type:bug`) or if you want to override default label behaviors, configure `branch.mapping` directly in `.git-brx.yaml`:
+
+```yaml
+branch:
+  mapping:
+    # Direct raw GitHub labels (case-insensitive):
+    "kind/feature": "feature"
+    "kind/bug": "issue"
+    "enhancement": "issue"   # map enhancement to issue/ instead of feature/
+
+    # Jira / domain types:
+    Bug: "issue"
+    Story: "feature"
+```
+
+Direct raw label matches take precedence over inferred domain types (`Story`, `Bug`, `Epic`). Matching is case-insensitive.
+
+If you attempt to create `feature/10` for an issue labeled `bug` (or unlabeled without a mapping), `git-brx` guards against mismatched categorization:
 ```text
 [git-brx] Error: Issue type 'Bug' is not allowed on 'feature' branch
 [git-brx] Hint: use 'issue' branch or check mapping rules

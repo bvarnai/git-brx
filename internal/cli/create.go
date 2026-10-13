@@ -128,11 +128,52 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 				return err
 			}
 
-			// Validate issue type mapping
+			// Validate issue type and direct label mapping
 			if len(cfg.Branch.Mapping) > 0 {
-				if mappedBranchPath, ok := cfg.Branch.Mapping[issue.Type]; ok {
+				var mappedBranchPath string
+				var matchedKey string
+				matched := false
+
+				// 1. Direct label/component match (takes precedence over issue.Type)
+				for _, comp := range issue.Components {
+					compLower := strings.ToLower(comp)
+					for mapKey, bp := range cfg.Branch.Mapping {
+						if strings.ToLower(mapKey) == compLower {
+							if bp == branchPath {
+								mappedBranchPath = bp
+								matchedKey = comp
+								matched = true
+								break
+							} else if mappedBranchPath == "" {
+								mappedBranchPath = bp
+								matchedKey = comp
+							}
+						}
+					}
+					if matched {
+						break
+					}
+				}
+
+				// 2. Fall back to domain issue.Type match if no direct label matched the branchPath
+				if !matched {
+					for mapKey, bp := range cfg.Branch.Mapping {
+						if strings.ToLower(mapKey) == strings.ToLower(issue.Type) {
+							if bp == branchPath || mappedBranchPath == "" {
+								mappedBranchPath = bp
+								matchedKey = issue.Type
+								if bp == branchPath {
+									matched = true
+								}
+								break
+							}
+						}
+					}
+				}
+
+				if mappedBranchPath != "" {
 					if mappedBranchPath != branchPath {
-						return domain.NewError(domain.ExitConfigError, "Issue type '%s' is not allowed on '%s' branch", issue.Type, branchPath).
+						return domain.NewError(domain.ExitConfigError, "Issue type '%s' is not allowed on '%s' branch", matchedKey, branchPath).
 							WithHint("Use '%s' branch or check mapping rules", mappedBranchPath)
 					}
 				} else if branchPath != "issue" {

@@ -242,6 +242,9 @@ func TestSyncIntegration(t *testing.T) {
 
 	t.Run("MergeConflictReturnsExit5AndResolveHint", func(t *testing.T) {
 		h := NewHarness(t)
+		t.Cleanup(func() {
+			h.GitAllowError("merge", "--abort")
+		})
 		h.CommitFile("shared.txt", "line 1\nline 2\n", "Initial commit")
 		h.SetupRemoteBare()
 		h.Git("push", "-u", "origin", "master")

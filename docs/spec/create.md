@@ -55,8 +55,11 @@
      - Fetch issue details using the configured `IssueTracker` adapter (Jira REST, GitHub Issues, etc.).
      - If authorization fails: Fail with Exit Code `6` (`Authorization failure`).
      - If issue not found: Fail with Exit Code `6` (`Issue not found in issue tracker`).
-     - Check issue type mapping: If `config.branch.mapping` has an entry for `issue.Type`, verify `mapping[issue.Type] == branchPath`.
+     - Check issue type & direct label mapping:
+       - Inspect issue labels (`issue.Components`) against `config.branch.mapping` (case-insensitively). Direct label matches take precedence over domain types.
+       - If no direct label matches, check domain type mapping `config.branch.mapping[issue.Type]` (case-insensitively).
        - If mismatch: Log `[git-brx] Error: Issue type '<type>' is not allowed on '<branchPath>' branch` with hint and fail with Exit Code `8`.
+       - If unmapped: Unmapped issue types are allowed on generic `issue/` branch, but restricted from specialized branches with Exit Code `8`.
      - If issue status is closed/resolved, display warning:
        `[git-brx] Warning: Issue '<issueKey>' is currently marked as '<status>'`
      - Confirmation prompt (unless `--yes` is specified):

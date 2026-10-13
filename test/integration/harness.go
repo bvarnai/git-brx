@@ -31,6 +31,7 @@ func NewHarness(t *testing.T) *Harness {
 	h.Git("config", "user.name", "Test User")
 	h.Git("config", "user.email", "test@example.com")
 	h.Git("config", "commit.gpgsign", "false")
+	h.Git("config", "gc.auto", "0")
 
 	return h
 }
@@ -40,7 +41,7 @@ func (h *Harness) Git(args ...string) string {
 	h.T.Helper()
 	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = h.RepoDir
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0", "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=gc.auto", "GIT_CONFIG_VALUE_0=0")
 
 	out, err := cmd.CombinedOutput()
 	require.NoError(h.T, err, "git %v failed: %s", args, string(out))
@@ -52,7 +53,7 @@ func (h *Harness) GitAllowError(args ...string) (string, error) {
 	h.T.Helper()
 	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = h.RepoDir
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0", "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=gc.auto", "GIT_CONFIG_VALUE_0=0")
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
@@ -115,5 +116,6 @@ func CloneHarness(t *testing.T, remoteURL string) *Harness {
 	h.Git("config", "user.name", "Test User 2")
 	h.Git("config", "user.email", "test2@example.com")
 	h.Git("config", "commit.gpgsign", "false")
+	h.Git("config", "gc.auto", "0")
 	return h
 }

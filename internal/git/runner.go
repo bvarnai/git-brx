@@ -62,9 +62,9 @@ func (r *ExecRunner) RunWithEnv(ctx context.Context, dir string, extraEnv []stri
 		cmd.Dir = dir
 	}
 
-	// Guarantee LC_ALL=C and avoid hanging on interactive credential prompts
+	// Guarantee LC_ALL=C, avoid hanging on interactive credential prompts, and disable background gc
 	env := os.Environ()
-	env = append(env, "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
+	env = append(env, "LC_ALL=C", "GIT_TERMINAL_PROMPT=0", "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=gc.auto", "GIT_CONFIG_VALUE_0=0")
 	if len(extraEnv) > 0 {
 		env = append(env, extraEnv...)
 	}
@@ -100,7 +100,7 @@ func (r *ExecRunner) RunStream(ctx context.Context, dir string, stdout, stderr i
 	}
 
 	env := os.Environ()
-	env = append(env, "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
+	env = append(env, "LC_ALL=C", "GIT_TERMINAL_PROMPT=0", "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=gc.auto", "GIT_CONFIG_VALUE_0=0")
 	if len(extraEnv) > 0 {
 		env = append(env, extraEnv...)
 	}

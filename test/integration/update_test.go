@@ -80,6 +80,9 @@ func TestUpdateIntegration(t *testing.T) {
 
 	t.Run("RebaseConflictReturnsExit5AndResolveHint", func(t *testing.T) {
 		h := NewHarness(t)
+		t.Cleanup(func() {
+			h.GitAllowError("rebase", "--abort")
+		})
 		h.CommitFile("file.txt", "initial line\n", "Initial commit")
 		remoteBare := h.SetupRemoteBare()
 		h.Git("push", "-u", "origin", "master")
