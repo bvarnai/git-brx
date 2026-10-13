@@ -53,9 +53,18 @@ To customize GitHub integration, place `.git-brx.yaml` in your repository root:
 ```yaml
 platform: github
 
-# Reviewer Routing Configuration
+# Reviewer Routing & Merge Configuration
 review:
-  merge_instructions: true          # Injects Squash & Merge guidance and cleanup steps into PR
+  merge:
+    instructions: true              # Injects merge strategy guidance and branch cleanup into PR
+    strategy: squash                 # Global fallback strategy (squash | merge | rebase)
+    strategies:
+      sources:                       # Match against PR source branch (HEAD)
+        "epic/*": merge
+        "release/*": merge
+      targets:                       # Match against PR target branch (BASE)
+        "epic/*": merge
+        "release/*": merge
   template: .github/pull_request_template.md
   mapping:
     backend: [alice, bob]
@@ -196,7 +205,8 @@ branch:
     Epic: epic
 
 review:
-  merge_instructions: true
+  merge:
+    instructions: true
   template: etc/review-template.md
   mapping:
     UI: [jsmith, mjones]
@@ -231,7 +241,8 @@ scm:
   repo: backend-service
 
 review:
-  merge_instructions: true
+  merge:
+    instructions: true
   template: .github/pull_request_template.md
   mapping:
     core: [alice]

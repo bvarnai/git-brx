@@ -186,38 +186,28 @@ branch:
 	assert.Equal(t, "^(issue|feature)/[0-9]+$", cfg.Branch.Template)
 }
 
-func TestLoader_ReviewMergeInstructionsConfig(t *testing.T) {
+func TestLoader_ReviewMergeConfig(t *testing.T) {
 	tempDir := t.TempDir()
 	content := `
 platform: github
 review:
-  merge_instructions: false
+  merge:
+    instructions: false
+    strategy: rebase
+    strategies:
+      sources:
+        "epic/*": merge
+      targets:
+        "release/*": merge
 `
 	err := os.WriteFile(filepath.Join(tempDir, ".git-brx.yaml"), []byte(content), 0644)
 	require.NoError(t, err)
 
 	cfg, err := config.Load(tempDir, "git@github.com:my-org/web.git")
 	require.NoError(t, err)
-	require.NotNil(t, cfg.Review.MergeInstructions)
-	assert.False(t, *cfg.Review.MergeInstructions)
-	require.NotNil(t, cfg.Review.Instructions)
-	assert.False(t, *cfg.Review.Instructions)
-}
-
-func TestLoader_ReviewLegacyInstructionsFallback(t *testing.T) {
-	tempDir := t.TempDir()
-	content := `
-platform: github
-review:
-  instructions: false
-`
-	err := os.WriteFile(filepath.Join(tempDir, ".git-brx.yaml"), []byte(content), 0644)
-	require.NoError(t, err)
-
-	cfg, err := config.Load(tempDir, "git@github.com:my-org/web.git")
-	require.NoError(t, err)
-	require.NotNil(t, cfg.Review.MergeInstructions)
-	assert.False(t, *cfg.Review.MergeInstructions)
-	require.NotNil(t, cfg.Review.Instructions)
-	assert.False(t, *cfg.Review.Instructions)
+	require.NotNil(t, cfg.Review.Merge.Instructions)
+	assert.False(t, *cfg.Review.Merge.Instructions)
+	assert.Equal(t, "rebase", cfg.Review.Merge.Strategy)
+	assert.Equal(t, "merge", cfg.Review.Merge.Strategies.Sources["epic/*"])
+	assert.Equal(t, "merge", cfg.Review.Merge.Strategies.Targets["release/*"])
 }

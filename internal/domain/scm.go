@@ -41,6 +41,7 @@ type MergeInstructionOptions struct {
 	Summary      string
 	Branch       string
 	TargetBranch string
+	Strategy     string // "squash", "merge", "rebase"
 }
 
 // SCMProvider defines the abstract interface for source control platforms (Bitbucket, GitHub, GitLab).
@@ -55,15 +56,38 @@ type SCMProvider interface {
 
 // FormatDefaultMergeInstructions formats generic, UI-agnostic merge instructions.
 func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
-	squashTitle := opts.Branch
-	if opts.IssueKey != "" && opts.Summary != "" {
-		squashTitle = opts.IssueKey + ": " + opts.Summary
-	} else if opts.Summary != "" {
-		squashTitle = opts.Summary
+	strategy := opts.Strategy
+	if strategy == "" {
+		strategy = "squash"
 	}
 
-	return "# Merge instructions\n" +
-		"- **Strategy:** Squash & Merge (recommended)\n" +
-		"  - **Commit Title:** `" + squashTitle + "`\n" +
-		"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+	target := opts.TargetBranch
+	if target == "" {
+		target = "main"
+	}
+
+	switch strategy {
+	case "merge":
+		return "### Merge instructions\n" +
+			"- **Strategy:** Create a merge commit\n" +
+			"  - **Commit:** `Merge branch '" + opts.Branch + "' into " + target + "` (merge commit preserving all constituent commits)\n" +
+			"- **Branch cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+	case "rebase":
+		return "### Merge instructions\n" +
+			"- **Strategy:** Rebase and merge\n" +
+			"  - **Commit:** Linear rebase onto `" + target + "` (all constituent commits preserved, no merge commit)\n" +
+			"- **Branch cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+	default:
+		squashTitle := opts.Branch
+		if opts.IssueKey != "" && opts.Summary != "" {
+			squashTitle = opts.IssueKey + ": " + opts.Summary
+		} else if opts.Summary != "" {
+			squashTitle = opts.Summary
+		}
+
+		return "### Merge instructions\n" +
+			"- **Strategy:** Squash and merge (recommended)\n" +
+			"  - **Commit:** `" + squashTitle + "` (all commits squashed into a single commit)\n" +
+			"- **Branch cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+	}
 }

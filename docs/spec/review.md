@@ -9,6 +9,9 @@
   - Feature flags:
     - `--reviewer` (`-r` `<username>`): Explicitly assign a designated reviewer instead of automated component mapping.
     - `--title` (`-t` `<title>`): Override default pull request title.
+    - `--strategy` (`-s` `<strategy>`): Override merge strategy (`squash`, `merge`, or `rebase`).
+    - `--merge-instructions`: Explicitly enable merge instructions in PR body.
+    - `--no-merge-instructions`: Explicitly disable merge instructions in PR body.
 
 ## 2. Prerequisites & Environment
 - **Required host binaries:** `git` (>= 2.20.0).
@@ -51,10 +54,32 @@
 6. **Description Composition:**
    - Assemble review body from template:
      - Load markdown checklist from `config.review.template` (or fallback template).
-     - Append `# Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge_instructions: false` or `--no-merge-instructions` flag; overridden by `--merge-instructions`; legacy alias `config.review.instructions` also supported):
-       - **Squash & Merge (recommended):** Commit title formatted as `<issueKey>: <summary>` (or `<branch>` if issue is unlinked).
-       - **Branch Cleanup:** Instructs deletion of source branch after merge.
-       - Timeless, platform-agnostic format focusing on Git intent rather than volatile web UI button labels.
+     - Append `### Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge.instructions: false` or `--no-merge-instructions` flag; overridden by `--merge-instructions`):
+       - **Merge Strategy Resolution Hierarchy:**
+         1. CLI override (`-s, --strategy <squash|merge|rebase>`).
+         2. Target branch pattern match (`review.merge.strategies.targets`).
+         3. Source branch pattern match (`review.merge.strategies.sources`).
+         4. Built-in convention: Source or target branch starts with `epic/` or `release/` -> `merge` (`Create a merge commit`).
+         5. Global configuration fallback: `review.merge.strategy` (defaults to `squash`).
+       - **Supported Strategies:**
+         - **`squash` (`Squash and merge (recommended)`):** Commit: `<issueKey>: <summary>` (all commits squashed into a single commit).
+         - **`merge` (`Create a merge commit`):** Commit: `Merge branch '<branch>' into <target>` (merge commit preserving all constituent commits).
+         - **`rebase` (`Rebase and merge`):** Commit: Linear rebase onto `<target>` (all constituent commits preserved, no merge commit).
+       - **Branch cleanup:** Instructs deletion of source branch after merge.
+       - **Built-in Convention as Configuration Snippet:**
+         ```yaml
+         review:
+           merge:
+             instructions: true           # Enable/disable merge instructions block
+             strategy: squash             # Global fallback (squash | merge | rebase)
+             strategies:
+               sources:                   # Match against PR source branch (HEAD)
+                 "epic/*": merge
+                 "release/*": merge
+               targets:                   # Match against PR target branch (BASE)
+                 "epic/*": merge
+                 "release/*": merge
+         ```
 7. **Dry-Run Check:**
    - If `--dry-run` is active: Format and print the pull request request payload and reviewer assignment without making API calls, then exit with Exit Code `0`.
 8. **Pull Request Submission:**

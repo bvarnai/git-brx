@@ -117,13 +117,6 @@ func Load(workDir, originURL string) (*domain.ProjectConfig, error) {
 		}
 	}
 
-	// Synchronize Review.MergeInstructions and legacy Review.Instructions
-	if cfg.Review.MergeInstructions == nil && cfg.Review.Instructions != nil {
-		cfg.Review.MergeInstructions = cfg.Review.Instructions
-	} else if cfg.Review.Instructions == nil && cfg.Review.MergeInstructions != nil {
-		cfg.Review.Instructions = cfg.Review.MergeInstructions
-	}
-
 	return cfg, nil
 }
 
