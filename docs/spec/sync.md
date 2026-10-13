@@ -11,6 +11,7 @@
     - `-r`, `--rebase`: Force rebase strategy regardless of branch type default.
     - `-a`, `--autostash`: Enable automatic stashing of uncommitted changes (rebase only).
     - `-i`, `--interactive`: Launch interactive rebase (rebase only).
+    - `--no-auto-update-base`: Disable automatic fast-forwarding of clean base branch.
 
 ## 2. Prerequisites & Environment
 - **Required host binaries:** `git` (>= 2.20.0).
@@ -47,10 +48,24 @@
      ```bash
      git rev-list --left-right --count <with_branch>...origin/<with_branch>
      ```
-   - If either `<ahead> != 0` or `<behind> != 0`:
+   - **Diverged or Unpushed Commits (`<ahead> > 0`):**
      - Log: `[git-brx] Error: Base branch '<with_branch>' is not up-to-date with 'origin/<with_branch>'`
      - Log: `[git-brx] Hint: Switch to '<with_branch>' and run 'git-brx update' first`
      - Fail with Exit Code `5`.
+   - **Clean Base Behind Origin (`<ahead> == 0 && <behind> > 0`):**
+     - If `--no-auto-update-base` is specified:
+       - Log: `[git-brx] Error: Base branch '<with_branch>' is not up-to-date with 'origin/<with_branch>'`
+       - Log: `[git-brx] Hint: Switch to '<with_branch>' and run 'git-brx update' first`
+       - Fail with Exit Code `5`.
+     - In `--dry-run` mode:
+       - Log: `[git-brx] Would fast-forward local '<with_branch>' to match 'origin/<with_branch>' (<behind> commit(s) behind)`.
+     - Otherwise:
+       - Fast-forward local base ref without checking it out:
+         ```bash
+         git fetch origin <with_branch>:<with_branch>
+         ```
+       - Log: `[git-brx] Fast-forwarded local '<with_branch>' to match 'origin/<with_branch>' (<behind> commit(s) behind)`.
+       - Proceed with synchronization.
 5. **Dry-Run Check:**
    - If `--dry-run` is active: Emit planned rebase or merge command string and exit with Exit Code `0`.
 6. **Execution (Rebase vs Merge):**
