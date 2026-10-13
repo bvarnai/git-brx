@@ -107,6 +107,7 @@ In the **Repository access** section:
 | **Repository permissions** | **Issues** | **Read-only** | Fetches issue title, status, and labels when running `git brx create <branch>` to validate branch prefixes (`issue/`, `feature/`, `epic/`). |
 | **Repository permissions** | **Metadata** *(Required)* | **Read-only** | Enforced by GitHub for repository discovery and collaborator checks. |
 | **Repository permissions** | **Pull requests** | **Read and write** | Opens automated pull requests during `git brx review` and verifies PR merge status during `git brx delete`. |
+| **Repository permissions** | **Contents** *(Private repos)* | **Read-only** | Required on **private** repositories during `git brx review` so GitHub's git engine can read branch refs and commits between `head` and `base` (preventing `422: not all refs are readable`). Not needed on public repositories. |
 | **User / Account permissions** | *(None)* | *None* | `git-brx` does **not** require any user or account-level permissions. |
 
 ![GitHub Fine-grained token repository permissions](../../assets/github-token-permissions.png)

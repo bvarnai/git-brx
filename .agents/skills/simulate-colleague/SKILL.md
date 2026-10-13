@@ -1,11 +1,11 @@
 ---
 name: simulate-colleague
-description: Runbook and playbooks for simulating realistic multi-developer collaboration, merge friction, and pair-programming workflows between the user and colleague agent 'Alex Developer' using git-brx.
+description: Runbook and playbooks for simulating realistic multi-developer collaboration, merge friction, pair programming, and reviewer mapping workflows between the user and colleague agent 'Alex Varnai' using git-brx.
 ---
 
 # Multi-Developer Collaboration Playbooks with `git-brx`
 
-This skill defines turn-based collaboration scenarios between **You** (Primary Developer in `~/workspace/sandbox-user`) and **Alex Developer** (Colleague Agent in `~/workspace/sandbox-colleague`).
+This skill defines turn-based collaboration scenarios between **You** (Primary Developer in `~/workspace/git-brx-sandbox/me`) and **Alex Varnai** (Colleague Agent in `~/workspace/git-brx-sandbox/colleague`).
 
 ---
 
@@ -13,15 +13,20 @@ This skill defines turn-based collaboration scenarios between **You** (Primary D
 
 - **Remote:** Dedicated GitHub sandbox repository (`git-brx-sandbox`).
 - **User Workspace:** `/home/bvarnai/workspace/git-brx-sandbox/me` (Inherits your standard Git identity)
-- **Colleague Workspace:** `/home/bvarnai/workspace/git-brx-sandbox/colleague` (Identity: `Alex Developer <alex.developer@example.com>`)
-- **Shell Activation:** `source ~/workspace/git-brx-sandbox/env.sh`
+- **Colleague Workspace:** `/home/bvarnai/workspace/git-brx-sandbox/colleague` (Identity: `Alex Varnai <alexvarnai@users.noreply.github.com>`, GitHub: `alexvarnai`)
+- **Credentials:**
+  - Primary Developer: Inherited `GITHUB_TOKEN`
+  - Colleague Alex Varnai: Own personal access token `ALEX_GITHUB_TOKEN` (collaborator on sandbox repo)
+- **Shell Activation:**
+  - Primary Developer: `source ~/workspace/git-brx-sandbox/env.sh`
+  - Colleague Alex Varnai: `source ~/workspace/git-brx-sandbox/env-colleague.sh`
 - **CLI Tool:** `git brx` or `./bin/git-brx`
 
 ---
 
 ## Turn-Based Interaction Pattern
 
-When interacting with Alex Developer:
+When interacting with Alex Varnai:
 1. **Activate Your Terminal:** Run `source ~/workspace/git-brx-sandbox/env.sh && cd ~/workspace/git-brx-sandbox/me`.
 2. **Request an Action:** In chat, specify what Alex should do (e.g. *"Alex, checkout main, add a function in calc.go, and push to origin/main"*).
 3. **Alex Executes & Reports:** Alex performs the action strictly within `git-brx-sandbox/colleague` and reports back the commit hash / branch name and the exact command for you to run.
@@ -113,3 +118,77 @@ Verify that `git brx delete` protects unmerged remote branches and cleanly prune
    git brx delete <branch-name>
    ```
 3. Verify that `git-brx` deletes the local branch, prunes the stale remote tracking ref, and switches back to the default branch.
+
+---
+
+## Playbook 5: Cross-Developer Reviewer Routing & Author Exclusion (`git brx review`)
+
+### Objective
+Verify that `git brx review` accurately assigns `alexvarnai` for documentation changes (`docs/**`), routes all other changes (or author fallback) to the lead (`bvarnai`), and prevents self-assignment via author exclusion.
+
+### Setup (.git-brx.yaml in sandbox):
+```yaml
+scm:
+  provider: github
+  owner: bvarnai
+  repo: git-brx-sandbox
+
+review:
+  merge:
+    instructions: true
+  mapping:
+    paths:
+      "docs/**": [alexvarnai]
+    default: [bvarnai]
+```
+
+### Steps:
+
+#### Scenario A: Primary Developer touches docs (routes to Alex Varnai)
+1. **[User]** In `git-brx-sandbox/me`, create a branch, add/edit a doc file, commit, and publish:
+   ```bash
+   git brx create feature/1 -y
+   mkdir -p docs && echo "# Architecture" > docs/architecture.md
+   git add docs/architecture.md
+   git commit -m "docs(#1): add architecture documentation"
+   git brx publish
+   ```
+2. **[User]** Submit for review:
+   ```bash
+   git brx review
+   ```
+3. **Verification:**
+   - `git-brx review` matches `docs/architecture.md` against `mapping.paths` (`docs/**`) $\to$ resolves `alexvarnai`.
+   - Your author handle (`bvarnai`) is retained/checked.
+   - GitHub PR is opened with `alexvarnai` requested as reviewer.
+   - Inspect PR on GitHub to confirm `alexvarnai` appears in the "Reviewers" list.
+
+#### Scenario B: Colleague Alex touches code (cascades to Lead bvarnai)
+1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
+   - Checks out a branch, modifies code (`calc.go`), commits as `Alex Varnai`, and publishes:
+     ```bash
+     source ~/workspace/git-brx-sandbox/env-colleague.sh
+     git brx create feature/2 -y
+     # Edit calc.go
+     git commit -am "feat(#2): add divide calculation"
+     git brx publish
+     ```
+   - Submits the review using Alex's own PAT:
+     ```bash
+     GITHUB_TOKEN="$ALEX_GITHUB_TOKEN" git brx review
+     ```
+2. **Verification:**
+   - `git-brx review` inspects `calc.go`, finds no match under `mapping.paths`, and falls back to `mapping.default` (`bvarnai`).
+   - PR is opened on GitHub requesting `bvarnai` (Lead) as reviewer.
+   - Alex reports: *"Opened PR for feature/2 on GitHub. Review requested from lead bvarnai!"*
+
+#### Scenario C: Author Exclusion (Alex touches docs)
+1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
+   - Modifies `docs/architecture.md`, commits, publishes, and submits review.
+2. **Verification:**
+   - `mapping.paths` matches `docs/**` $\to$ candidate `alexvarnai`.
+   - **Author Exclusion:** `alexvarnai` is detected as the PR author and is excluded.
+   - Cascades to `mapping.default` (`bvarnai`).
+   - PR is opened with lead `bvarnai` requested as reviewer, avoiding self-assignment.
+
+

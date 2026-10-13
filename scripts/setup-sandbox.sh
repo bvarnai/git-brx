@@ -14,17 +14,19 @@ SANDBOX_BASE="${BASE_WORKSPACE_DIR}/git-brx-sandbox"
 USER_DIR="${SANDBOX_BASE}/me"
 COLLEAGUE_DIR="${SANDBOX_BASE}/colleague"
 
-REPO_NAME="${REPO_NAME:-git-brx-sandbox}"
-GITHUB_TOKEN="${GITHUB_TOKEN:-${COWORKER_GITHUB_TOKEN:-}}"
+ADMIN_GITHUB_TOKEN="${ADMIN_GITHUB_TOKEN:-${GITHUB_ADMIN_TOKEN:-${GITHUB_TOKEN:-}}}"
+ME_GITHUB_TOKEN="${ME_GITHUB_TOKEN:-${USER_GITHUB_TOKEN:-${GITHUB_TOKEN:-}}}"
+ALEX_GITHUB_TOKEN="${ALEX_GITHUB_TOKEN:-${COWORKER_GITHUB_TOKEN:-}}"
 
 # Resolve authenticated GitHub user dynamically
 resolve_owner() {
     if [[ -n "${REPO_OWNER:-}" ]]; then
         return 0
     fi
-    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    local probe_token="${ADMIN_GITHUB_TOKEN:-${ME_GITHUB_TOKEN:-}}"
+    if [[ -n "$probe_token" ]]; then
         local user_login
-        user_login=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user | jq -r '.login // empty' 2>/dev/null || true)
+        user_login=$(curl -s -H "Authorization: Bearer ${probe_token}" https://api.github.com/user | jq -r '.login // empty' 2>/dev/null || true)
         if [[ -n "$user_login" && "$user_login" != "null" ]]; then
             REPO_OWNER="$user_login"
             return 0
@@ -39,38 +41,59 @@ resolve_owner() {
 }
 resolve_owner
 
+REPO_NAME="${REPO_NAME:-git-brx-sandbox}"
 REMOTE_SSH="git@github.com:${REPO_OWNER}/${REPO_NAME}.git"
-COLLEAGUE_NAME="Alex Developer"
-COLLEAGUE_EMAIL="alex.developer@example.com"
+COLLEAGUE_NAME="Alex Varnai"
+COLLEAGUE_EMAIL="alexvarnai@users.noreply.github.com"
+COLLEAGUE_GITHUB_USER="alexvarnai"
 
 usage() {
     cat <<EOF
 Usage: $0 [OPTIONS]
 
+Tokens (can also be passed via environment variables):
+  --admin-token <pat>  Admin PAT for creating repo & inviting collaborators (ADMIN_GITHUB_TOKEN)
+  --me-token <pat>     Fine-grained PAT for Primary Developer 'me' (ME_GITHUB_TOKEN)
+  --alex-token <pat>   Fine-grained PAT for Colleague 'Alex Varnai' (ALEX_GITHUB_TOKEN)
+
 Options:
-  --check    Verify token, remote sandbox repository, and local workspaces
-  --reset    Remove local git-brx-sandbox/me and git-brx-sandbox/colleague directories and re-clone
-  --help     Show this help message
+  --check              Verify tokens, remote sandbox repository, and local workspaces
+  --reset              Remove local git-brx-sandbox/me and colleague directories and re-clone
+  --help               Show this help message
 EOF
 }
 
 CHECK_MODE=false
 RESET_MODE=false
 
-for arg in "$@"; do
-    case "$arg" in
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --admin-token)
+            ADMIN_GITHUB_TOKEN="$2"
+            shift 2
+            ;;
+        --me-token)
+            ME_GITHUB_TOKEN="$2"
+            shift 2
+            ;;
+        --alex-token)
+            ALEX_GITHUB_TOKEN="$2"
+            shift 2
+            ;;
         --check)
             CHECK_MODE=true
+            shift
             ;;
         --reset)
             RESET_MODE=true
+            shift
             ;;
         --help|-h)
             usage
             exit 0
             ;;
         *)
-            echo "Unknown option: $arg" >&2
+            echo "Unknown option: $1" >&2
             usage >&2
             exit 1
             ;;
@@ -79,18 +102,24 @@ done
 
 echo "==> [Simulation Setup] Initializing Sandbox Environment..."
 
-# 1. Verify GITHUB_TOKEN
-if [[ -z "$GITHUB_TOKEN" ]]; then
-    echo "Error: GITHUB_TOKEN is not set. Please export GITHUB_TOKEN with repo permissions." >&2
+# 1. Verify Tokens
+if [[ -z "$ADMIN_GITHUB_TOKEN" && -z "$ME_GITHUB_TOKEN" ]]; then
+    echo "Error: At least ADMIN_GITHUB_TOKEN or ME_GITHUB_TOKEN must be set." >&2
+    echo "Run '$0 --help' for options." >&2
     exit 1
 fi
 
-# 2. Check/Create Remote Repository and Seed Issues on GitHub
+export ADMIN_GITHUB_TOKEN ME_GITHUB_TOKEN ALEX_GITHUB_TOKEN
+
+# 2. Check/Create Remote Repository, Add Collaborator, and Seed Issues
 "${SCRIPT_DIR}/sandbox-github.sh" --init-repo
 if [[ "$CHECK_MODE" == "true" ]]; then
     echo "==> Check complete. Remote repository is ready."
     exit 0
 fi
+
+# Add Alex as collaborator and auto-accept if ALEX_GITHUB_TOKEN is provided
+"${SCRIPT_DIR}/sandbox-github.sh" --invite-collaborator "${COLLEAGUE_GITHUB_USER}"
 "${SCRIPT_DIR}/sandbox-github.sh" --seed-issues
 
 # 3. Ensure git-brx binary is compiled
@@ -111,10 +140,11 @@ mkdir -p "${SANDBOX_BASE}"
 # 5. Generate sourceable environment script (env.sh)
 echo "==> Generating shell activation script at ${SANDBOX_BASE}/env.sh..."
 cat <<ENV_EOF > "${SANDBOX_BASE}/env.sh"
-# Environment activation script for git-brx simulation sandbox
+# Environment activation script for git-brx simulation sandbox (Primary Developer: me)
 # Usage: source ${SANDBOX_BASE}/env.sh
 
 export PATH="${GIT_BRX_ROOT}/bin:\${PATH}"
+$([[ -n "${ME_GITHUB_TOKEN}" ]] && echo "export GITHUB_TOKEN=\"${ME_GITHUB_TOKEN}\"")
 
 # 1. Enable direct 'git-brx' completion via Cobra
 if command -v git-brx >/dev/null 2>&1; then
@@ -141,15 +171,36 @@ _git_brx() {
     COMPREPLY=(\$(compgen -W "\$completions" -- "\$cur"))
 }
 
-echo "[git-brx-sandbox] Environment activated:"
+cd "${USER_DIR}"
+echo "[git-brx-sandbox] Environment activated (Primary Developer):"
 echo "  PATH prepended:  ${GIT_BRX_ROOT}/bin"
 echo "  Autocomplete:    Enabled for 'git-brx' and 'git brx'"
-echo "  Workspaces:"
-echo "    Me:            ${USER_DIR}"
-echo "    Colleague:     ${COLLEAGUE_DIR}"
+echo "  Workspace:       ${USER_DIR}"
 ENV_EOF
-chmod +x "${SANDBOX_BASE}/env.sh"
+chmod 700 "${SANDBOX_BASE}/env.sh"
 echo "    env.sh generated."
+
+# Generate Colleague environment script (env-colleague.sh)
+cat <<COLLEAGUE_ENV_EOF > "${SANDBOX_BASE}/env-colleague.sh"
+# Environment activation script for Colleague Alex Varnai
+# Usage: source ${SANDBOX_BASE}/env-colleague.sh
+
+export PATH="${GIT_BRX_ROOT}/bin:\${PATH}"
+$([[ -n "${ALEX_GITHUB_TOKEN}" ]] && echo "export GITHUB_TOKEN=\"${ALEX_GITHUB_TOKEN}\"")
+
+# Enable direct 'git-brx' completion via Cobra
+if command -v git-brx >/dev/null 2>&1; then
+    source <("${GIT_BRX_ROOT}/bin/git-brx" completion bash 2>/dev/null)
+fi
+
+cd "${COLLEAGUE_DIR}"
+echo "[git-brx-sandbox] Colleague workspace activated:"
+echo "  Engineer:        ${COLLEAGUE_NAME} <${COLLEAGUE_EMAIL}>"
+echo "  GitHub user:     ${COLLEAGUE_GITHUB_USER}"
+echo "  Workspace:       ${COLLEAGUE_DIR}"
+COLLEAGUE_ENV_EOF
+chmod 700 "${SANDBOX_BASE}/env-colleague.sh"
+echo "    env-colleague.sh generated."
 
 # 6. Setup User Workspace (me)
 echo "==> Setting up User workspace at ${USER_DIR}..."
@@ -221,10 +272,26 @@ friction points, and edge cases using `git-brx`.
 
 ## Workspaces
 - **Primary Developer:** `git-brx-sandbox/me`
-- **Colleague Developer:** `git-brx-sandbox/colleague` (Alex Developer)
+- **Colleague Developer:** `git-brx-sandbox/colleague` (Alex Varnai)
 MD_EOF
 
-        git add calc.go config.json README.md
+        cat <<'YAML_EOF' > .git-brx.yaml
+branch:
+  mapping:
+    enhancement: "issue"
+
+review:
+  merge:
+    instructions: true
+  mapping:
+    paths:
+      "docs/**": [alexvarnai]
+    default: [bvarnai]
+YAML_EOF
+
+        echo "bin/" > .gitignore
+
+        git add calc.go config.json README.md .git-brx.yaml .gitignore
         if git commit -m "chore: seed initial sandbox project files"; then
             git push origin main
             echo "    Sample files pushed to origin/main."
