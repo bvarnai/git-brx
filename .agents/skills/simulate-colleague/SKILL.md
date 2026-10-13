@@ -1,0 +1,115 @@
+---
+name: simulate-colleague
+description: Runbook and playbooks for simulating realistic multi-developer collaboration, merge friction, and pair-programming workflows between the user and colleague agent 'Alex Developer' using git-brx.
+---
+
+# Multi-Developer Collaboration Playbooks with `git-brx`
+
+This skill defines turn-based collaboration scenarios between **You** (Primary Developer in `~/workspace/sandbox-user`) and **Alex Developer** (Colleague Agent in `~/workspace/sandbox-colleague`).
+
+---
+
+## Workspace Setup
+
+- **Remote:** Dedicated GitHub sandbox repository (`git-brx-sandbox`).
+- **User Workspace:** `/home/bvarnai/workspace/git-brx-sandbox/me` (Inherits your standard Git identity)
+- **Colleague Workspace:** `/home/bvarnai/workspace/git-brx-sandbox/colleague` (Identity: `Alex Developer <alex.developer@example.com>`)
+- **Shell Activation:** `source ~/workspace/git-brx-sandbox/env.sh`
+- **CLI Tool:** `git brx` or `./bin/git-brx`
+
+---
+
+## Turn-Based Interaction Pattern
+
+When interacting with Alex Developer:
+1. **Activate Your Terminal:** Run `source ~/workspace/git-brx-sandbox/env.sh && cd ~/workspace/git-brx-sandbox/me`.
+2. **Request an Action:** In chat, specify what Alex should do (e.g. *"Alex, checkout main, add a function in calc.go, and push to origin/main"*).
+3. **Alex Executes & Reports:** Alex performs the action strictly within `git-brx-sandbox/colleague` and reports back the commit hash / branch name and the exact command for you to run.
+4. **You Execute & Confirm:** You run your command in `git-brx-sandbox/me` and reply with your results.
+
+For full architectural details and message flows, see [Colleague Simulation Guide](../../../docs/user-guide/colleague-simulation.md).
+
+---
+
+## Playbook 1: Concurrent Feature Merge & Upstream Sync (`git brx sync`)
+
+### Objective
+Verify that a developer working on a topic branch can smoothly rebase over a colleague's newly merged commits using `git brx sync`.
+
+### Steps:
+1. **[User]** In `git-brx-sandbox/me`, create a topic branch using seeded Issue #2:
+   ```bash
+   git brx create feature/2 -y
+   ```
+   Add a `Divide` function to `calc.go` and commit.
+2. **[Colleague (Alex)]** Concurrently in `git-brx-sandbox/colleague`:
+   - Checks out `feature/1` using `git brx create feature/1 -y`.
+   - Adds a `Subtract` function to `calc.go`, commits, publishes (`git brx publish`), and merges into `main` on origin.
+   - Alex reports: *"Merged feature/1 into origin/main. Now run 'git brx sync' in your workspace!"*
+3. **[User]** In `git-brx-sandbox/me`, run:
+   ```bash
+   git brx sync
+   ```
+   Verify that `git-brx sync` fetches `origin/main`, detects that `main` is ahead, and rebases `feature/2` on top of Alex's merged changes without conflicts.
+
+---
+
+## Playbook 2: Conflict Injection & Resolution (`git brx resolve` / `git brx reset`)
+
+### Objective
+Simulate a merge conflict between concurrent edits on the same lines, and verify diagnostic exit codes (Exit 5) and resolution workflows.
+
+### Steps:
+1. **[User]** On `feature/3` in `git-brx-sandbox/me`, modify line 4 of `config.json` to `"retries": 5`. Commit the change.
+2. **[Colleague (Alex)]** On `main` in `git-brx-sandbox/colleague`, modify line 4 of `config.json` to `"retries": 10`, commit, and push directly to `origin/main`.
+   - Alex reports: *"Pushed conflicting config change to origin/main. Run 'git brx sync' to observe the conflict!"*
+3. **[User]** In `git-brx-sandbox/me`, run:
+   ```bash
+   git brx sync
+   ```
+   - Verify `git-brx sync` stops with Exit code 5 (`ExitConflict`).
+   - Verify diagnostic hint: `"Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort"`.
+4. **[Resolution Verification]**:
+   - Option A: Resolve the conflict in `config.json`, then run `git brx resolve`. Verify rebase completes cleanly.
+   - Option B: Abort using `git brx reset`. Verify working directory is restored to pre-sync state.
+
+---
+
+## Playbook 3: Pair Programming on a Shared Published Branch (`git brx update`)
+
+### Objective
+Simulate two developers collaborating on the same published topic branch.
+
+### Steps:
+1. **[User]** Create and publish a shared topic branch using seeded Issue #4:
+   ```bash
+   git brx create feature/4 -y
+   git brx publish
+   ```
+2. **[Colleague (Alex)]** In `git-brx-sandbox/colleague`:
+   - Runs `git fetch origin` and selects the branch:
+     ```bash
+     git brx select feature/4
+     ```
+   - Adds a commit and pushes to origin.
+   - Alex reports: *"Added step 2 to the pipeline on origin/feature/4. Run 'git brx update' to pull my changes!"*
+3. **[User]** In `git-brx-sandbox/me`, run:
+   ```bash
+   git brx update
+   ```
+   Verify that `git-brx update` rebases cleanly over Alex's remote commit with `--autostash`.
+
+---
+
+## Playbook 4: Topic Branch Deletion After Merge (`git brx delete`)
+
+### Objective
+Verify that `git brx delete` protects unmerged remote branches and cleanly prunes merged branches.
+
+### Steps:
+1. After merging a PR on GitHub, delete the remote branch on origin.
+2. In `git-brx-sandbox/me`, run:
+   ```bash
+   git brx delete <branch-name>
+   ```
+3. Verify that `git-brx` deletes the local branch, prunes the stale remote tracking ref, and switches back to the default branch.

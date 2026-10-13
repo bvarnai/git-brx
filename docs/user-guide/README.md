@@ -15,6 +15,7 @@ Welcome to the **`git-brx` user guide**. This documentation provides comprehensi
 | **05** | [Multi-platform setup](multi-platform.md) | Configuring GitHub, Bitbucket Server, Jira, and hybrid enterprise setups. |
 | **06** | [Complete command reference](command-reference.md) | Exhaustive reference of all 10 subcommands, accepted flags, exit codes, and output formats. |
 | **07** | [Troubleshooting & FAQ](troubleshooting-faq.md) | Practical answers to common questions, credential troubleshooting, and recovery tips. |
+| **08** | [Colleague simulation & multi-developer testing](colleague-simulation.md) | Simulating concurrent development, rebasing over colleague merges, and conflict injection with Alex Developer. |
 
 ---
 
