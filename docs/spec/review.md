@@ -54,7 +54,7 @@
 6. **Description Composition:**
    - Assemble review body from template:
      - Load markdown checklist from `config.review.template` (or fallback template).
-     - Append `# Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge.instructions: false` or `--no-merge-instructions` flag; overridden by `--merge-instructions`):
+     - Append `### Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge.instructions: false` or `--no-merge-instructions` flag; overridden by `--merge-instructions`):
        - **Merge Strategy Resolution Hierarchy:**
          1. CLI override (`-s, --strategy <squash|merge|rebase>`).
          2. Target branch pattern match (`review.merge.strategies.targets`).
@@ -65,7 +65,7 @@
          - **`squash` (`Squash and merge (recommended)`):** Commit: `<issueKey>: <summary>` (all commits squashed into a single commit).
          - **`merge` (`Create a merge commit`):** Commit: `Merge branch '<branch>' into <target>` (merge commit preserving all constituent commits).
          - **`rebase` (`Rebase and merge`):** Commit: Linear rebase onto `<target>` (all constituent commits preserved, no merge commit).
-       - **Branch Cleanup:** Instructs deletion of source branch after merge.
+       - **Branch cleanup:** Instructs deletion of source branch after merge.
        - **Built-in Convention as Configuration Snippet:**
          ```yaml
          review:

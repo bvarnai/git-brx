@@ -202,7 +202,7 @@ scm:
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--no-merge-instructions"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
-		assert.False(t, strings.Contains(capturedBody, "# Merge instructions"))
+		assert.False(t, strings.Contains(capturedBody, "### Merge instructions"))
 	})
 
 	t.Run("ReviewEnforcesMergeInstructionsViaFlagOverridingConfig", func(t *testing.T) {
@@ -263,7 +263,7 @@ scm:
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--merge-instructions"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
-		assert.Contains(t, capturedBody, "# Merge instructions")
+		assert.Contains(t, capturedBody, "### Merge instructions")
 	})
 
 	t.Run("ReviewEpicBranchDefaultsToMergeCommitInstructions", func(t *testing.T) {

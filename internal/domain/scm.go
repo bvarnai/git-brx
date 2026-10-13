@@ -68,15 +68,15 @@ func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 
 	switch strategy {
 	case "merge":
-		return "# Merge instructions\n" +
+		return "### Merge instructions\n" +
 			"- **Strategy:** Create a merge commit\n" +
 			"  - **Commit:** `Merge branch '" + opts.Branch + "' into " + target + "` (merge commit preserving all constituent commits)\n" +
-			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+			"- **Branch cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	case "rebase":
-		return "# Merge instructions\n" +
+		return "### Merge instructions\n" +
 			"- **Strategy:** Rebase and merge\n" +
 			"  - **Commit:** Linear rebase onto `" + target + "` (all constituent commits preserved, no merge commit)\n" +
-			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+			"- **Branch cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	default:
 		squashTitle := opts.Branch
 		if opts.IssueKey != "" && opts.Summary != "" {
@@ -85,9 +85,9 @@ func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 			squashTitle = opts.Summary
 		}
 
-		return "# Merge instructions\n" +
+		return "### Merge instructions\n" +
 			"- **Strategy:** Squash and merge (recommended)\n" +
 			"  - **Commit:** `" + squashTitle + "` (all commits squashed into a single commit)\n" +
-			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
+			"- **Branch cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	}
 }

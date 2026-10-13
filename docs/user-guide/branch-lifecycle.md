@@ -147,10 +147,10 @@ git brx review
 3. **Reviewer routing:** Evaluates modified files or issue components against `.git-brx.yaml`'s `review.mapping`. If multiple reviewers are configured for a component, it automatically balances the load.
 4. **PR description & checklist:** Loads your team's review template (e.g. `.github/pull_request_template.md`) and appends standardized **Merge Instructions** resolved according to branch conventions:
    ```markdown
-   # Merge instructions
+   ### Merge instructions
    - **Strategy:** Squash and merge (recommended)
      - **Commit:** `TASK-101: Add user authentication API` (all commits squashed into a single commit)
-   - **Branch Cleanup:** Delete source branch `issue/TASK-101` after merging
+   - **Branch cleanup:** Delete source branch `issue/TASK-101` after merging
    ```
    - Standard branches (`issue/*`, `feature/*` targeting `main`) default to **Squash and merge**.
    - Multi-commit branches (`epic/*` or `release/*` as source or target) automatically resolve to **Create a merge commit** to preserve granular commit history.

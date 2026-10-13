@@ -195,7 +195,7 @@ func TestComposeReviewDescription(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
 		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main")
 		assert.Contains(t, desc, "Details")
-		assert.Contains(t, desc, "# Merge instructions")
+		assert.Contains(t, desc, "### Merge instructions")
 	})
 
 	t.Run("merge instructions false suppresses merge instructions", func(t *testing.T) {
@@ -209,7 +209,7 @@ func TestComposeReviewDescription(t *testing.T) {
 		}
 		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
 		assert.Contains(t, desc, "Details")
-		assert.False(t, strings.Contains(desc, "# Merge instructions"))
+		assert.False(t, strings.Contains(desc, "### Merge instructions"))
 	})
 
 	t.Run("epic branch produces merge commit instructions by convention", func(t *testing.T) {
