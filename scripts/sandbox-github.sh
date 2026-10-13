@@ -4,15 +4,18 @@
 # creating the repository, seeding test issues, and creating ad-hoc issues.
 set -euo pipefail
 
-GITHUB_TOKEN="${GITHUB_TOKEN:-${COWORKER_GITHUB_TOKEN:-}}"
+ADMIN_GITHUB_TOKEN="${ADMIN_GITHUB_TOKEN:-${GITHUB_ADMIN_TOKEN:-${GITHUB_TOKEN:-}}}"
+ME_GITHUB_TOKEN="${ME_GITHUB_TOKEN:-${USER_GITHUB_TOKEN:-${GITHUB_TOKEN:-}}}"
+ALEX_GITHUB_TOKEN="${ALEX_GITHUB_TOKEN:-${COWORKER_GITHUB_TOKEN:-}}"
 
 resolve_owner() {
     if [[ -n "${REPO_OWNER:-}" ]]; then
         return 0
     fi
-    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    local probe_token="${ADMIN_GITHUB_TOKEN:-${ME_GITHUB_TOKEN:-}}"
+    if [[ -n "$probe_token" ]]; then
         local user_login
-        user_login=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/user | jq -r '.login // empty' 2>/dev/null || true)
+        user_login=$(curl -s -H "Authorization: Bearer ${probe_token}" https://api.github.com/user | jq -r '.login // empty' 2>/dev/null || true)
         if [[ -n "$user_login" && "$user_login" != "null" ]]; then
             REPO_OWNER="$user_login"
             return 0
@@ -33,8 +36,11 @@ usage() {
 Usage: $0 [COMMAND] [OPTIONS]
 
 Commands:
-  --init-repo                 Check or create private GitHub repository
-  --seed-issues               Seed initial test issues (#1..#4) if repo has no issues
+  --init-repo                 Check or create private GitHub repository (uses ADMIN token)
+  --delete-repo               Delete GitHub sandbox repository (uses ADMIN token)
+  --invite-collaborator <usr> Add collaborator and auto-accept if ALEX token set
+  --accept-invitations        Accept pending invitations using ALEX token
+  --seed-issues               Seed initial test issues (#1..#4)
   --create-issue <title>      Create an ad-hoc issue on GitHub
       [--type bug|story]      Issue type / label (default: story)
       [--body <description>]  Optional issue description
@@ -42,38 +48,59 @@ Commands:
 EOF
 }
 
-if [[ -z "$GITHUB_TOKEN" ]]; then
-    echo "Error: GITHUB_TOKEN is not set. Please export GITHUB_TOKEN with repo permissions." >&2
-    exit 1
-fi
-
-api_request() {
-    local method="$1"
-    local endpoint="$2"
-    shift 2
+api_request_with_token() {
+    local token="$1"
+    local method="$2"
+    local endpoint="$3"
+    shift 3
     local data="${1:-}"
 
     if [[ -n "$data" ]]; then
         curl -s -w "\n%{http_code}" \
             -X "$method" \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Authorization: Bearer ${token}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/${endpoint}" \
             -d "$data"
     else
         curl -s -w "\n%{http_code}" \
             -X "$method" \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Authorization: Bearer ${token}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/${endpoint}"
     fi
+}
+
+admin_api_request() {
+    if [[ -z "$ADMIN_GITHUB_TOKEN" ]]; then
+        echo "Error: ADMIN_GITHUB_TOKEN is required for this operation." >&2
+        exit 1
+    fi
+    api_request_with_token "$ADMIN_GITHUB_TOKEN" "$@"
+}
+
+alex_api_request() {
+    if [[ -z "$ALEX_GITHUB_TOKEN" ]]; then
+        echo "Error: ALEX_GITHUB_TOKEN is required for this operation." >&2
+        exit 1
+    fi
+    api_request_with_token "$ALEX_GITHUB_TOKEN" "$@"
+}
+
+api_request() {
+    local token="${ME_GITHUB_TOKEN:-${ADMIN_GITHUB_TOKEN:-}}"
+    if [[ -z "$token" ]]; then
+        echo "Error: GITHUB_TOKEN is not set." >&2
+        exit 1
+    fi
+    api_request_with_token "$token" "$@"
 }
 
 init_repo() {
     echo "==> [GitHub Sandbox] Checking if repository ${REPO_OWNER}/${REPO_NAME} exists..."
     local status_code
     status_code=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+        -H "Authorization: Bearer ${ADMIN_GITHUB_TOKEN:-${ME_GITHUB_TOKEN:-}}" \
         -H "Accept: application/vnd.github+json" \
         "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}")
 
@@ -83,15 +110,15 @@ init_repo() {
     elif [[ "$status_code" == "404" ]]; then
         echo "    Repository not found. Creating private repository ${REPO_OWNER}/${REPO_NAME}..."
         local resp
-        resp=$(api_request "POST" "user/repos" "{\"name\":\"${REPO_NAME}\",\"private\":true,\"description\":\"Dedicated sandbox for git-brx multi-developer collaboration testing\",\"auto_init\":true}")
+        resp=$(admin_api_request "POST" "user/repos" "{\"name\":\"${REPO_NAME}\",\"private\":true,\"description\":\"Dedicated sandbox for git-brx multi-developer collaboration testing\",\"auto_init\":true}")
         local code
         code=$(echo "$resp" | tail -n1)
         if [[ "$code" != "201" ]]; then
             echo "Error: Failed to create repository (HTTP $code):" >&2
             echo "$resp" | head -n -1 >&2
             echo "" >&2
-            echo "Tip: If your fine-grained Personal Access Token is restricted to specific repositories," >&2
-            echo "please create 'git-brx-sandbox' manually at https://github.com/new and re-run." >&2
+            echo "Tip: Ensure ADMIN_GITHUB_TOKEN has repository creation permissions," >&2
+            echo "or create 'git-brx-sandbox' manually at https://github.com/new and re-run." >&2
             exit 1
         fi
         echo "    Repository ${REPO_OWNER}/${REPO_NAME} created successfully."
@@ -100,6 +127,76 @@ init_repo() {
         echo "Error: Unexpected response from GitHub API (HTTP $status_code)." >&2
         exit 1
     fi
+}
+
+delete_repo() {
+    echo "==> [GitHub Sandbox] Deleting repository ${REPO_OWNER}/${REPO_NAME}..."
+    local resp
+    resp=$(admin_api_request "DELETE" "repos/${REPO_OWNER}/${REPO_NAME}")
+    local code
+    code=$(echo "$resp" | tail -n1)
+    if [[ "$code" == "204" ]]; then
+        echo "    Repository ${REPO_OWNER}/${REPO_NAME} successfully deleted."
+    elif [[ "$code" == "404" ]]; then
+        echo "    Repository does not exist on GitHub."
+    else
+        echo "Error: Failed to delete repository (HTTP $code):" >&2
+        echo "$resp" | head -n -1 >&2
+        exit 1
+    fi
+}
+
+invite_collaborator() {
+    local username="$1"
+    local permission="${2:-push}"
+    echo "==> [GitHub Sandbox] Adding collaborator '${username}' (permission: ${permission})..."
+    local resp
+    resp=$(admin_api_request "PUT" "repos/${REPO_OWNER}/${REPO_NAME}/collaborators/${username}" "{\"permission\":\"${permission}\"}")
+    local code
+    code=$(echo "$resp" | tail -n1)
+
+    if [[ "$code" == "201" ]]; then
+        echo "    Invitation sent to ${username}."
+        local inv_id
+        inv_id=$(echo "$resp" | head -n -1 | jq -r '.id // empty' 2>/dev/null || true)
+        if [[ -n "${ALEX_GITHUB_TOKEN:-}" && "$username" == "alexvarnai" ]]; then
+            accept_invitation "$inv_id"
+        else
+            echo "    Alex can accept invitation at: https://github.com/${REPO_OWNER}/${REPO_NAME}/invitations"
+        fi
+    elif [[ "$code" == "204" ]]; then
+        echo "    User ${username} is already a collaborator."
+    else
+        echo "Warning: Could not add collaborator (HTTP $code):" >&2
+        echo "$resp" | head -n -1 >&2
+    fi
+}
+
+accept_invitation() {
+    local direct_id="${1:-}"
+    if [[ -z "${ALEX_GITHUB_TOKEN:-}" ]]; then
+        echo "    (ALEX_GITHUB_TOKEN not provided, skipping automatic invitation acceptance)"
+        return 0
+    fi
+    echo "==> [GitHub Sandbox] Accepting repository invitation for Alex Varnai..."
+    local inv_id="$direct_id"
+    if [[ -z "$inv_id" ]]; then
+        local list_resp
+        list_resp=$(alex_api_request "GET" "user/repository_invitations")
+        inv_id=$(echo "$list_resp" | head -n -1 | jq -r --arg repo "${REPO_NAME}" '.[] | select(.repository.name == $repo) | .id' 2>/dev/null || true)
+    fi
+
+    if [[ -n "$inv_id" && "$inv_id" != "null" ]]; then
+        local accept_resp
+        accept_resp=$(alex_api_request "PATCH" "user/repository_invitations/${inv_id}")
+        local code
+        code=$(echo "$accept_resp" | tail -n1)
+        if [[ "$code" == "204" ]]; then
+            echo "    Invitation #${inv_id} successfully accepted by Alex Varnai!"
+            return 0
+        fi
+    fi
+    echo "    Alex can accept invitation manually at: https://github.com/${REPO_OWNER}/${REPO_NAME}/invitations"
 }
 
 create_issue() {
@@ -183,6 +280,28 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --init-repo)
             init_repo
+            shift
+            ;;
+        --delete-repo)
+            delete_repo
+            shift
+            ;;
+        --invite-collaborator)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --invite-collaborator requires a username" >&2
+                exit 1
+            fi
+            INVITE_USER="$2"
+            INVITE_PERM="push"
+            shift 2
+            if [[ $# -gt 1 && "$1" == "--permission" ]]; then
+                INVITE_PERM="$2"
+                shift 2
+            fi
+            invite_collaborator "$INVITE_USER" "$INVITE_PERM"
+            ;;
+        --accept-invitations)
+            accept_invitation
             shift
             ;;
         --seed-issues)
