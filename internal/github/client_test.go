@@ -261,11 +261,11 @@ func TestClient_FormatMergeInstructions(t *testing.T) {
 	opts.Branch = "epic/1"
 	mergeInstructions := client.FormatMergeInstructions(opts)
 	assert.Contains(t, mergeInstructions, "Create a merge commit")
-	assert.Contains(t, mergeInstructions, "All commits from this branch will be added to the base branch via a merge commit")
+	assert.Contains(t, mergeInstructions, "Merge branch 'epic/1' into main")
 
 	// Rebase strategy
 	opts.Strategy = "rebase"
 	rebaseInstructions := client.FormatMergeInstructions(opts)
 	assert.Contains(t, rebaseInstructions, "Rebase and merge")
-	assert.Contains(t, rebaseInstructions, "rebased and added to `main`")
+	assert.Contains(t, rebaseInstructions, "Linear rebase onto `main`")
 }

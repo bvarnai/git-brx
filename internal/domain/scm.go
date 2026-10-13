@@ -70,12 +70,12 @@ func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 	case "merge":
 		return "# Merge instructions\n" +
 			"- **Strategy:** Create a merge commit\n" +
-			"  - **Commit:** All commits from this branch will be added to the base branch via a merge commit\n" +
+			"  - **Commit:** `Merge branch '" + opts.Branch + "' into " + target + "` (merge commit preserving all constituent commits)\n" +
 			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	case "rebase":
 		return "# Merge instructions\n" +
 			"- **Strategy:** Rebase and merge\n" +
-			"  - **Commit:** All commits from this branch will be rebased and added to `" + target + "`\n" +
+			"  - **Commit:** Linear rebase onto `" + target + "` (all constituent commits preserved, no merge commit)\n" +
 			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	default:
 		squashTitle := opts.Branch
@@ -87,7 +87,7 @@ func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 
 		return "# Merge instructions\n" +
 			"- **Strategy:** Squash and merge (recommended)\n" +
-			"  - **Commit:** `" + squashTitle + "`\n" +
+			"  - **Commit:** `" + squashTitle + "` (all commits squashed into a single commit)\n" +
 			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	}
 }

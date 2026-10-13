@@ -62,9 +62,9 @@
          4. Built-in convention: Source or target branch starts with `epic/` or `release/` -> `merge` (`Create a merge commit`).
          5. Global configuration fallback: `review.merge.strategy` (defaults to `squash`).
        - **Supported Strategies:**
-         - **`squash` (`Squash and merge (recommended)`):** Commit title formatted as `<issueKey>: <summary>` (or `<branch>` if unlinked).
-         - **`merge` (`Create a merge commit`):** All commits added to base branch via a merge commit.
-         - **`rebase` (`Rebase and merge`):** All commits rebased and added linearly to base branch.
+         - **`squash` (`Squash and merge (recommended)`):** Commit: `<issueKey>: <summary>` (all commits squashed into a single commit).
+         - **`merge` (`Create a merge commit`):** Commit: `Merge branch '<branch>' into <target>` (merge commit preserving all constituent commits).
+         - **`rebase` (`Rebase and merge`):** Commit: Linear rebase onto `<target>` (all constituent commits preserved, no merge commit).
        - **Branch Cleanup:** Instructs deletion of source branch after merge.
        - **Built-in Convention as Configuration Snippet:**
          ```yaml
