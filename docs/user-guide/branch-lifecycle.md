@@ -144,7 +144,13 @@ git brx review
 ### Automated PR assembly:
 1. **Publication check:** Verifies that your local branch has actually been pushed to `origin`. If not, it halts and directs you to run `git brx publish`.
 2. **Issue metadata extraction:** Parses the issue key from your branch name and retrieves the issue summary, description, and component tags from Jira/GitHub.
-3. **Reviewer routing:** Evaluates modified files or issue components against `.git-brx.yaml`'s `review.mapping`. If multiple reviewers are configured for a component, it automatically balances the load.
+3. **Structured reviewer routing:** Resolves reviewers through hierarchical rules defined in `.git-brx.yaml` (`review.mapping`):
+   - **CLI Override:** Explicit flag `-r, --reviewer <user>` takes absolute precedence.
+   - **Changed file paths (`mapping.paths`):** Modified files are matched against recursive glob patterns (e.g., `internal/ui/**`, `docs/**`). Reviewers from all matched paths are aggregated.
+   - **Issue labels (`mapping.labels`):** If no paths matched, matches against Jira components or GitHub issue labels.
+   - **Branch patterns (`mapping.branches`):** If no labels matched, matches against source branch globs (e.g., `epic/*`).
+   - **Default fallback (`mapping.default`):** Falls back to default reviewers if no preceding rules match.
+   - **Author exclusion:** Automatically filters out the PR author so authors are never requested to review their own changes.
 4. **PR description & checklist:** Loads your team's review template (e.g. `.github/pull_request_template.md`) and appends standardized **Merge Instructions** resolved according to branch conventions:
    ```markdown
    ### Merge instructions

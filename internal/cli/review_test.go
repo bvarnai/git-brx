@@ -341,7 +341,9 @@ func (m *mockSCMProvider) CreatePullRequest(ctx context.Context, req domain.Pull
 func (m *mockSCMProvider) GetPullRequestForBranch(ctx context.Context, branch string) (*domain.PullRequestDetail, error) {
 	return nil, nil
 }
-func (m *mockSCMProvider) ResolveReviewers(components []string) []string { return nil }
+func (m *mockSCMProvider) ResolveReviewers(opts domain.ReviewerResolutionOptions) []string {
+	return nil
+}
 func (m *mockSCMProvider) FormatMergeInstructions(opts domain.MergeInstructionOptions) string {
 	return domain.FormatDefaultMergeInstructions(opts)
 }

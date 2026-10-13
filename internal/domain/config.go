@@ -33,11 +33,19 @@ type BranchConfig struct {
 	Mapping  map[string]string `yaml:"mapping,omitempty" json:"mapping,omitempty"`
 }
 
+// ReviewMappingConfig defines structured reviewer routing by paths, labels, branches, and fallback default.
+type ReviewMappingConfig struct {
+	Paths    map[string]any `yaml:"paths,omitempty" json:"paths,omitempty"`
+	Labels   map[string]any `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Branches map[string]any `yaml:"branches,omitempty" json:"branches,omitempty"`
+	Default  any            `yaml:"default,omitempty" json:"default,omitempty"`
+}
+
 // ReviewConfig defines code review reviewer routing, description template, and merge configuration.
 type ReviewConfig struct {
-	Mapping  map[string]any `yaml:"mapping,omitempty" json:"mapping,omitempty"`
-	Template string         `yaml:"template,omitempty" json:"template,omitempty"`
-	Merge    MergeConfig    `yaml:"merge,omitempty" json:"merge,omitempty"`
+	Mapping  ReviewMappingConfig `yaml:"mapping,omitempty" json:"mapping,omitempty"`
+	Template string              `yaml:"template,omitempty" json:"template,omitempty"`
+	Merge    MergeConfig         `yaml:"merge,omitempty" json:"merge,omitempty"`
 }
 
 // MergeConfig defines merge instructions, default strategy, and branch-specific strategy mappings.

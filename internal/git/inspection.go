@@ -333,3 +333,39 @@ func (i *Inspector) UnmergedFiles(ctx context.Context, dir string) ([]string, er
 	}
 	return unmerged, nil
 }
+
+// ChangedFiles returns the list of file paths modified between baseBranch and HEAD.
+func (i *Inspector) ChangedFiles(ctx context.Context, dir, baseBranch string) ([]string, error) {
+	if strings.TrimSpace(baseBranch) == "" {
+		baseBranch = "main"
+	}
+	out, err := i.runner.Run(ctx, dir, "diff", "--name-only", baseBranch+"...HEAD")
+	if err != nil {
+		out, err = i.runner.Run(ctx, dir, "diff", "--name-only", baseBranch, "HEAD")
+		if err != nil {
+			return nil, fmt.Errorf("failed to determine changed files relative to %s: %w", baseBranch, err)
+		}
+	}
+
+	var files []string
+	for _, l := range strings.Split(out, "\n") {
+		trimmed := strings.TrimSpace(l)
+		if trimmed != "" {
+			files = append(files, trimmed)
+		}
+	}
+	return files, nil
+}
+
+// Author returns the local Git user.name or user.email.
+func (i *Inspector) Author(ctx context.Context, dir string) string {
+	name, err := i.runner.Run(ctx, dir, "config", "user.name")
+	if err == nil && strings.TrimSpace(name) != "" {
+		return strings.TrimSpace(name)
+	}
+	email, err := i.runner.Run(ctx, dir, "config", "user.email")
+	if err == nil && strings.TrimSpace(email) != "" {
+		return strings.TrimSpace(email)
+	}
+	return ""
+}

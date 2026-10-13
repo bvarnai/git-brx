@@ -67,9 +67,15 @@ review:
         "release/*": merge
   template: .github/pull_request_template.md
   mapping:
-    backend: [alice, bob]
-    frontend: [carol, dave]
-    security: [charlie]
+    paths:
+      "internal/ui/**": [carol, dave]
+      "internal/git/**": [bob]
+      "docs/**": [tech-writer]
+    labels:
+      security: [charlie]
+      backend: [alice, bob]
+    branches:
+      "epic/*": [lead-architect]
     default: [team-lead]            # Fallback reviewer
 ```
 
@@ -209,8 +215,9 @@ review:
     instructions: true
   template: etc/review-template.md
   mapping:
-    UI: [jsmith, mjones]
-    Database: [dba-team]
+    labels:
+      UI: [jsmith, mjones]
+      Database: [dba-team]
     default: [lead-dev]
 ```
 
@@ -245,8 +252,9 @@ review:
     instructions: true
   template: .github/pull_request_template.md
   mapping:
-    core: [alice]
-    api: [bob]
+    labels:
+      core: [alice]
+      api: [bob]
     default: [charlie]
 ```
 

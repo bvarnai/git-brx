@@ -211,9 +211,7 @@ func (a *App) resolveSCM(cfg *domain.ProjectConfig) (domain.SCMProvider, error) 
 		if cfg.SCM.URI != "" && cfg.SCM.URI != "https://github.com" && cfg.SCM.URI != "http://github.com" {
 			opts = append(opts, github.WithBaseURL(cfg.SCM.URI))
 		}
-		if cfg.Review.Mapping != nil {
-			opts = append(opts, github.WithReviewConfig(&cfg.Review))
-		}
+		opts = append(opts, github.WithReviewConfig(&cfg.Review))
 		return github.NewClient(cfg.SCM.Owner, cfg.SCM.Repo, token, opts...), nil
 	case "", "none":
 		return nil, nil

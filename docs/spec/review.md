@@ -46,11 +46,15 @@
    - Fetch issue details using the configured `IssueTracker` (Jira REST, GitHub, etc.) to retrieve components/labels and summary.
    - If issue call fails (401/404): Fail with Exit Code `6`.
 5. **Reviewer Resolution:**
-   - If `--reviewer` flag was provided, use specified user.
-   - Otherwise, resolve reviewers from issue components using `config.review.mapping`:
-     - Lookup each component in mapping.
-     - If unmapped or no components specified, fallback to `config.review.mapping.default`.
-     - Supports list or comma-separated candidate reviewers.
+   - If `--reviewer` (`-r`) flag was provided, use specified user.
+   - Otherwise, resolve reviewers using structured `config.review.mapping`:
+     - **Resolution Hierarchy:**
+       1. **Changed file paths (`review.mapping.paths`):** Evaluates modified files on topic branch (`git diff --name-only <base>...HEAD`) against path globs (e.g. `internal/ui/**`, `docs/**`). Collects and deduplicates all matched reviewers.
+       2. **Issue labels or components (`review.mapping.labels`):** If no path rules matched, matches issue labels (GitHub) or components (Jira).
+       3. **Branch patterns (`review.mapping.branches`):** If no labels matched, matches topic branch name against glob patterns (e.g. `epic/*`).
+       4. **Default fallback (`review.mapping.default`):** Falls back to default reviewer if no prior rules matched.
+     - **Author Exclusion:** Automatically excludes the PR author (detected from GitHub login or local Git user identity) from the candidate reviewer list across all tiers.
+     - Reviewer values support list format (`[alice, bob]`), comma-separated string (`"alice, bob"`), or single string (`alice`).
 6. **Description Composition:**
    - Assemble review body from template:
      - Load markdown checklist from `config.review.template` (or fallback template).
