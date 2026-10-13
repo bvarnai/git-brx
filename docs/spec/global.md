@@ -400,7 +400,7 @@ Structured schema parsed from YAML (`.git-brx.yaml` / `.git-brx/config.yaml`):
      1. Environment variable override: `GIT_BRX_CONFIG_PATH` (highest priority if set).
      2. Repository-level configuration: `.git-brx.yaml`, `.git-brx.yml`, `.git-brx/config.yaml`.
      3. User-level configuration: `~/.config/git-brx/config.yaml` (user home directory).
-     4. Dynamic Zero-Config Fallback: If no config file exists, auto-detect platform, owner/project, and repository slug directly from `git remote get-url origin` (`github.com`, `gitlab.com`, Bitbucket).
+     4. Dynamic Zero-Config & Partial-Config Fallback: If no config file exists or `platform:` is omitted, auto-detect platform, owner/project, and repository slug directly from `remote.origin.url` (`github.com`, `gitlab.com`, Bitbucket). Setting `platform: none` explicitly opts out of platform presets.
 
 3. **Reliance on Hacked Git Prompt Scripts:**
    - *Legacy Flaw:* `common.sh` sourced a modified version of `git-prompt.sh` that injected global Bash environment variables (`GIT_PROMPT_BRANCH`, `GIT_PROMPT_REBASE`, `GIT_PROMPT_MERGING`, `GIT_PROMPT_DETACHED`).

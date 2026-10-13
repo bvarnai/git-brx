@@ -100,7 +100,11 @@ func (i *Inspector) IsShallow(ctx context.Context, dir string) (bool, error) {
 
 // HasOrigin returns true if remote 'origin' is configured and reachable.
 func (i *Inspector) HasOrigin(ctx context.Context, dir string) (bool, string, error) {
-	out, err := i.runner.Run(ctx, dir, "remote", "get-url", "origin")
+	out, err := i.runner.Run(ctx, dir, "config", "--get", "remote.origin.url")
+	if err == nil && strings.TrimSpace(out) != "" {
+		return true, strings.TrimSpace(out), nil
+	}
+	out, err = i.runner.Run(ctx, dir, "remote", "get-url", "origin")
 	if err != nil {
 		return false, "", nil
 	}

@@ -62,22 +62,23 @@ func Load(workDir, originURL string) (*domain.ProjectConfig, error) {
 		detected = DetectRemote(originURL)
 	}
 
-	// If no config file was found and no platform was set
-	if configFile == "" {
-		if detected == nil {
+	// If platform is not specified, fall back to detected remote platform
+	if cfg.Platform == "" {
+		if detected != nil {
+			cfg.Platform = detected.Platform
+		} else if configFile == "" {
 			return nil, domain.NewError(domain.ExitConfigError, "No configuration file found and unable to detect platform from remote origin").
 				WithHint("Create a .git-brx.yaml configuration file or configure a valid GitHub remote origin")
 		}
-		cfg.Platform = detected.Platform
 	}
 
 	// Expand platform presets
-	if cfg.Platform != "" {
+	if cfg.Platform != "" && strings.ToLower(cfg.Platform) != "none" {
 		expandPlatformPreset(cfg, detected)
 	}
 
 	// Backfill missing fields from detected remote where applicable
-	if detected != nil {
+	if detected != nil && strings.ToLower(cfg.Platform) != "none" {
 		if cfg.SCM.Owner == "" && detected.Owner != "" {
 			cfg.SCM.Owner = detected.Owner
 		}
@@ -170,6 +171,8 @@ func expandPlatformPreset(cfg *domain.ProjectConfig, detected *DetectedRemote) {
 		if cfg.Tracker.Provider == "" {
 			cfg.Tracker.Provider = "jira"
 		}
+	case "none":
+		// Explicit opt-out: don't expand any presets
 	}
 }
 

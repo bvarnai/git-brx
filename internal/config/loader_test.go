@@ -123,3 +123,65 @@ func TestLoader_MissingConfigAndOriginFails(t *testing.T) {
 	assert.Equal(t, domain.ExitConfigError, appErr.Code)
 	assert.Contains(t, appErr.Message, "No configuration file found")
 }
+
+func TestLoader_PartialConfigAutoInfersPlatformFromRemote(t *testing.T) {
+	tempDir := t.TempDir()
+	content := `
+branch:
+  mapping:
+    enhancement: "issue"
+`
+	err := os.WriteFile(filepath.Join(tempDir, ".git-brx.yaml"), []byte(content), 0644)
+	require.NoError(t, err)
+
+	cfg, err := config.Load(tempDir, "git@github.com:my-org/my-service.git")
+	require.NoError(t, err)
+	assert.Equal(t, "github", cfg.Platform)
+	assert.Equal(t, "github", cfg.Tracker.Provider)
+	assert.Equal(t, "my-org", cfg.Tracker.Owner)
+	assert.Equal(t, "my-service", cfg.Tracker.Repo)
+	assert.Equal(t, "github", cfg.SCM.Provider)
+	assert.Equal(t, "my-org", cfg.SCM.Owner)
+	assert.Equal(t, "my-service", cfg.SCM.Repo)
+	assert.Equal(t, "issue", cfg.Branch.Mapping["enhancement"])
+}
+
+func TestLoader_ExplicitPlatformNonePreserved(t *testing.T) {
+	tempDir := t.TempDir()
+	content := `
+platform: none
+branch:
+  mapping:
+    enhancement: "issue"
+`
+	err := os.WriteFile(filepath.Join(tempDir, ".git-brx.yaml"), []byte(content), 0644)
+	require.NoError(t, err)
+
+	cfg, err := config.Load(tempDir, "git@github.com:my-org/my-service.git")
+	require.NoError(t, err)
+	assert.Equal(t, "none", cfg.Platform)
+	assert.Equal(t, "", cfg.Tracker.Provider)
+	assert.Equal(t, "", cfg.Tracker.Owner)
+	assert.Equal(t, "", cfg.Tracker.Repo)
+	assert.Equal(t, "", cfg.SCM.Provider)
+	assert.Equal(t, "", cfg.SCM.Owner)
+	assert.Equal(t, "", cfg.SCM.Repo)
+	assert.Equal(t, "issue", cfg.Branch.Mapping["enhancement"])
+}
+
+func TestLoader_PartialConfigWithoutRemoteOriginSucceeds(t *testing.T) {
+	tempDir := t.TempDir()
+	content := `
+branch:
+  template: ^(issue|feature)/[0-9]+$
+`
+	err := os.WriteFile(filepath.Join(tempDir, ".git-brx.yaml"), []byte(content), 0644)
+	require.NoError(t, err)
+
+	cfg, err := config.Load(tempDir, "")
+	require.NoError(t, err)
+	assert.Equal(t, "", cfg.Platform)
+	assert.Equal(t, "", cfg.Tracker.Provider)
+	assert.Equal(t, "", cfg.SCM.Provider)
+	assert.Equal(t, "^(issue|feature)/[0-9]+$", cfg.Branch.Template)
+}

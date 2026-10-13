@@ -285,4 +285,72 @@ func TestCreateIntegration(t *testing.T) {
 		assert.Equal(t, int(domain.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/102'")
 	})
+
+	t.Run("PartialConfigWithoutPlatformAutoInfersPlatformFromOrigin", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/testorg/testrepo/issues/103" && r.Method == http.MethodGet {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"number": 103,
+					"title": "Add auto-fallback support",
+					"state": "open",
+					"assignee": {"login": "octocat"},
+					"labels": [{"name": "enhancement"}]
+				}`))
+				return
+			}
+			http.NotFound(w, r)
+		}))
+		defer server.Close()
+
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteDir := h.SetupRemoteBare()
+		h.Git("remote", "remove", "origin")
+		h.Git("config", "url."+remoteDir+".insteadOf", "git@github.com:testorg/testrepo.git")
+		h.Git("remote", "add", "origin", "git@github.com:testorg/testrepo.git")
+		h.Git("push", "-u", "origin", "master")
+
+		// .git-brx.yaml omits platform: entirely, only setting custom branch.mapping and mock URI overrides
+		configContent := "tracker:\n" +
+			"  uri: " + server.URL + "\n" +
+			"scm:\n" +
+			"  uri: " + server.URL + "\n" +
+			"branch:\n" +
+			"  mapping:\n" +
+			"    enhancement: issue\n"
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/103"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Issue #103: Add auto-fallback support")
+		assert.Contains(t, stderr.String(), "Creating branch 'issue/103'")
+	})
+
+	t.Run("ExplicitPlatformNoneSkipsIssueTrackerValidation", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteDir := h.SetupRemoteBare()
+		h.Git("remote", "remove", "origin")
+		h.Git("config", "url."+remoteDir+".insteadOf", "git@github.com:testorg/testrepo.git")
+		h.Git("remote", "add", "origin", "git@github.com:testorg/testrepo.git")
+		h.Git("push", "-u", "origin", "master")
+
+		configContent := "platform: none\n" +
+			"branch:\n" +
+			"  mapping:\n" +
+			"    enhancement: issue\n"
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/999"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		// Tracker validation skipped; no Target Issue printed
+		assert.NotContains(t, stderr.String(), "Target Issue:")
+		assert.Contains(t, stderr.String(), "Creating branch 'issue/999'")
+	})
 }
