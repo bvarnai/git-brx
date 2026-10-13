@@ -14,14 +14,35 @@
 
 ---
 
-## 1. Zero-config mode (GitHub auto-detection)
+## 1. Zero-config & partial-config modes (Remote auto-detection)
 
+### Zero-config mode
 If your repository uses GitHub, you **do not need any `.git-brx.yaml` file at all**.
 
 When `git-brx` initializes, it inspects your remote origin URL:
 - `git@github.com:my-org/my-project.git` ➔ Configures `platform: github`, `owner: my-org`, `repo: my-project`.
 
 All branch naming rules and issue validations immediately work with standard defaults.
+
+### Partial-config mode
+When you create a `.git-brx.yaml` to customize specific rules (such as custom `branch.mapping` or `review.mapping`) but omit `platform:`, `git-brx` automatically falls back to detecting your platform from the remote `origin` URL. You only need to define what you want to customize:
+
+```yaml
+# .git-brx.yaml
+branch:
+  mapping:
+    enhancement: "issue"
+```
+
+In this case, `git-brx` detects `platform: github` from `origin`, auto-populates GitHub issue tracker and code review presets, and applies your custom branch mapping.
+
+### Disabling platform integrations (`platform: none`)
+If you want to maintain a `.git-brx.yaml` file (for example, to enforce branch naming templates or local workflows) but disable remote issue tracker checks and review integrations entirely, explicitly set:
+
+```yaml
+# .git-brx.yaml
+platform: none
+```
 
 ---
 
