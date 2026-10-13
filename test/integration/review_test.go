@@ -105,7 +105,8 @@ scm:
 				assert.Equal(t, "issue/101", body["head"])
 				assert.Equal(t, "master", body["base"])
 				assert.Equal(t, "fix(#101): Authentication Refactor", body["title"])
-				assert.Contains(t, body["body"], "Default (leave GitHub's pre-filled title)")
+				assert.Contains(t, body["body"], "Squash and merge (recommended)")
+				assert.Contains(t, body["body"], "101: Authentication Refactor")
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
@@ -320,7 +321,7 @@ scm:
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
-		assert.Contains(t, capturedBody, "Create a merge commit (`--no-ff`)")
+		assert.Contains(t, capturedBody, "Create a merge commit")
 	})
 
 	t.Run("ReviewFlagStrategyRebaseOverridesConvention", func(t *testing.T) {
@@ -378,6 +379,6 @@ scm:
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--strategy=rebase"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
-		assert.Contains(t, capturedBody, "Rebase & Merge")
+		assert.Contains(t, capturedBody, "Rebase and merge")
 	})
 }

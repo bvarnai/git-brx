@@ -148,12 +148,12 @@ git brx review
 4. **PR description & checklist:** Loads your team's review template (e.g. `.github/pull_request_template.md`) and appends standardized **Merge Instructions** resolved according to branch conventions:
    ```markdown
    # Merge instructions
-   - **Strategy:** Squash & Merge (recommended)
-     - **Commit Title:** `TASK-101: Add user authentication API`
+   - **Strategy:** Squash and merge (recommended)
+     - **Commit:** `TASK-101: Add user authentication API`
    - **Branch Cleanup:** Delete source branch `issue/TASK-101` after merging
    ```
-   - Standard branches (`issue/*`, `feature/*` targeting `main`) default to **Squash & Merge**.
-   - Multi-commit branches (`epic/*` or `release/*` as source or target) automatically resolve to **Merge commit (`--no-ff`)** to preserve granular commit history.
+   - Standard branches (`issue/*`, `feature/*` targeting `main`) default to **Squash and merge**.
+   - Multi-commit branches (`epic/*` or `release/*` as source or target) automatically resolve to **Create a merge commit** to preserve granular commit history.
    - Override the resolved strategy on demand using `-s, --strategy`:
      ```bash
      git brx review -s merge

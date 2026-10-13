@@ -61,20 +61,21 @@ func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 		strategy = "squash"
 	}
 
+	target := opts.TargetBranch
+	if target == "" {
+		target = "main"
+	}
+
 	switch strategy {
 	case "merge":
 		return "# Merge instructions\n" +
-			"- **Strategy:** Create a merge commit (`--no-ff`)\n" +
-			"  - **Reason:** Multi-commit integration / release branch; preserve constituent commit history\n" +
-			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging (or follow team retention policy)\n"
+			"- **Strategy:** Create a merge commit\n" +
+			"  - **Commit:** All commits from this branch will be added to the base branch via a merge commit\n" +
+			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	case "rebase":
-		target := opts.TargetBranch
-		if target == "" {
-			target = "main"
-		}
 		return "# Merge instructions\n" +
-			"- **Strategy:** Rebase & Merge\n" +
-			"  - **Commit History:** Ensure individual commits are rebased linearly onto `" + target + "`\n" +
+			"- **Strategy:** Rebase and merge\n" +
+			"  - **Commit:** All commits from this branch will be rebased and added to `" + target + "`\n" +
 			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	default:
 		squashTitle := opts.Branch
@@ -85,8 +86,8 @@ func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 		}
 
 		return "# Merge instructions\n" +
-			"- **Strategy:** Squash & Merge (recommended)\n" +
-			"  - **Commit Title:** `" + squashTitle + "`\n" +
+			"- **Strategy:** Squash and merge (recommended)\n" +
+			"  - **Commit:** `" + squashTitle + "`\n" +
 			"- **Branch Cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	}
 }

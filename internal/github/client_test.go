@@ -252,20 +252,20 @@ func TestClient_FormatMergeInstructions(t *testing.T) {
 	}
 
 	instructions := client.FormatMergeInstructions(opts)
-	assert.Contains(t, instructions, "Squash & Merge (recommended)")
-	assert.Contains(t, instructions, "Default (leave GitHub's pre-filled title)")
+	assert.Contains(t, instructions, "Squash and merge (recommended)")
+	assert.Contains(t, instructions, "10: My summary")
 	assert.Contains(t, instructions, "Delete source branch `issue/10` after merging")
 
 	// Merge strategy
 	opts.Strategy = "merge"
 	opts.Branch = "epic/1"
 	mergeInstructions := client.FormatMergeInstructions(opts)
-	assert.Contains(t, mergeInstructions, "Create a merge commit (`--no-ff`)")
-	assert.Contains(t, mergeInstructions, "Multi-commit integration / release branch")
+	assert.Contains(t, mergeInstructions, "Create a merge commit")
+	assert.Contains(t, mergeInstructions, "All commits from this branch will be added to the base branch via a merge commit")
 
 	// Rebase strategy
 	opts.Strategy = "rebase"
 	rebaseInstructions := client.FormatMergeInstructions(opts)
-	assert.Contains(t, rebaseInstructions, "Rebase & Merge")
-	assert.Contains(t, rebaseInstructions, "linearly onto `main`")
+	assert.Contains(t, rebaseInstructions, "Rebase and merge")
+	assert.Contains(t, rebaseInstructions, "rebased and added to `main`")
 }

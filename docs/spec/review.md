@@ -59,12 +59,12 @@
          1. CLI override (`-s, --strategy <squash|merge|rebase>`).
          2. Target branch pattern match (`review.merge.strategies.targets`).
          3. Source branch pattern match (`review.merge.strategies.sources`).
-         4. Built-in convention: Source or target branch starts with `epic/` or `release/` -> `merge` (`Create a merge commit (--no-ff)`).
+         4. Built-in convention: Source or target branch starts with `epic/` or `release/` -> `merge` (`Create a merge commit`).
          5. Global configuration fallback: `review.merge.strategy` (defaults to `squash`).
        - **Supported Strategies:**
-         - **`squash` (`Squash & Merge (recommended)`):** Commit title formatted as `<issueKey>: <summary>` (or `<branch>` if unlinked).
-         - **`merge` (`Create a merge commit (--no-ff)`):** Preserves individual commit history when integrating multi-commit epic or release branches.
-         - **`rebase` (`Rebase & Merge`):** Rebase all commits linearly onto target branch.
+         - **`squash` (`Squash and merge (recommended)`):** Commit title formatted as `<issueKey>: <summary>` (or `<branch>` if unlinked).
+         - **`merge` (`Create a merge commit`):** All commits added to base branch via a merge commit.
+         - **`rebase` (`Rebase and merge`):** All commits rebased and added linearly to base branch.
        - **Branch Cleanup:** Instructs deletion of source branch after merge.
        - **Built-in Convention as Configuration Snippet:**
          ```yaml
