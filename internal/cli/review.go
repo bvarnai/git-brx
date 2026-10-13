@@ -16,8 +16,10 @@ import (
 
 // ReviewOptions stores flags for the review command.
 type ReviewOptions struct {
-	Reviewer string
-	Title    string
+	Reviewer            string
+	Title               string
+	MergeInstructions   bool
+	NoMergeInstructions bool
 }
 
 // newReviewCmd constructs the 'review' subcommand.
@@ -32,18 +34,31 @@ standardized pull request description with merge instructions, and creates
 the pull request on the configured SCM platform (e.g. GitHub or Bitbucket).`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runReview(cmd.Context(), opts, args)
+			if cmd.Flags().Changed("merge-instructions") && cmd.Flags().Changed("no-merge-instructions") {
+				return domain.NewError(domain.ExitUsageError, "Cannot specify both --merge-instructions and --no-merge-instructions")
+			}
+			var mergeInstrOverride *bool
+			if cmd.Flags().Changed("merge-instructions") {
+				b := opts.MergeInstructions
+				mergeInstrOverride = &b
+			} else if cmd.Flags().Changed("no-merge-instructions") {
+				b := !opts.NoMergeInstructions
+				mergeInstrOverride = &b
+			}
+			return a.runReview(cmd.Context(), opts, mergeInstrOverride, args)
 		},
 		ValidArgsFunction: a.completeBranchNames,
 	}
 
 	cmd.Flags().StringVarP(&opts.Reviewer, "reviewer", "r", "", "Designate an explicit reviewer instead of component mapping")
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "Override default pull request title")
+	cmd.Flags().BoolVar(&opts.MergeInstructions, "merge-instructions", false, "Append merge instructions to the pull request description")
+	cmd.Flags().BoolVar(&opts.NoMergeInstructions, "no-merge-instructions", false, "Do not append merge instructions to the pull request description")
 
 	return cmd
 }
 
-func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) error {
+func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverride *bool, args []string) error {
 	if len(args) > 1 {
 		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[1])
 	}
@@ -105,6 +120,10 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, args []string) 
 	cfg, err := config.Load(rootDir, originURL)
 	if err != nil {
 		return err
+	}
+
+	if mergeInstrOverride != nil {
+		cfg.Review.MergeInstructions = mergeInstrOverride
 	}
 
 	scm, err := a.resolveSCM(cfg)
@@ -239,8 +258,15 @@ func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 		sb.WriteString("### Verification & Testing\n- [ ] Automated tests pass\n- [ ] Manual verification completed\n\n")
 	}
 
-	// Append merge instructions unless explicitly disabled via review.instructions: false
-	if cfg.Review.Instructions == nil || *cfg.Review.Instructions {
+	// Append merge instructions unless explicitly disabled via review.merge_instructions: false (or legacy review.instructions: false)
+	appendInstructions := true
+	if cfg.Review.MergeInstructions != nil {
+		appendInstructions = *cfg.Review.MergeInstructions
+	} else if cfg.Review.Instructions != nil {
+		appendInstructions = *cfg.Review.Instructions
+	}
+
+	if appendInstructions {
 		opts := domain.MergeInstructionOptions{
 			IssueKey:     issueKey,
 			Summary:      summary,

@@ -29,6 +29,12 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 			errSubstr:    "Unexpected argument: target2",
 		},
 		{
+			name:         "conflicting merge-instructions flags returns usage error",
+			args:         []string{"review", "--merge-instructions", "--no-merge-instructions"},
+			expectedCode: int(domain.ExitUsageError),
+			errSubstr:    "Cannot specify both --merge-instructions and --no-merge-instructions",
+		},
+		{
 			name: "outside worktree returns code 3",
 			args: []string{"review"},
 			mockResponses: map[string]mockGitResponse{
@@ -184,6 +190,30 @@ func TestComposeReviewDescription(t *testing.T) {
 		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main")
 		assert.Contains(t, desc, "Details")
 		assert.Contains(t, desc, "# Merge instructions")
+	})
+
+	t.Run("merge_instructions false suppresses merge instructions", func(t *testing.T) {
+		f := false
+		cfg := &domain.ProjectConfig{
+			Review: domain.ReviewConfig{
+				MergeInstructions: &f,
+			},
+		}
+		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
+		assert.Contains(t, desc, "Details")
+		assert.False(t, strings.Contains(desc, "# Merge instructions"))
+	})
+
+	t.Run("legacy instructions false suppresses merge instructions", func(t *testing.T) {
+		f := false
+		cfg := &domain.ProjectConfig{
+			Review: domain.ReviewConfig{
+				Instructions: &f,
+			},
+		}
+		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
+		assert.Contains(t, desc, "Details")
+		assert.False(t, strings.Contains(desc, "# Merge instructions"))
 	})
 }
 

@@ -51,7 +51,7 @@
 6. **Description Composition:**
    - Assemble review body from template:
      - Load markdown checklist from `config.review.template` (or fallback template).
-     - Append `# Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.instructions: false`):
+     - Append `# Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge_instructions: false` or `--no-merge-instructions` flag; overridden by `--merge-instructions`; legacy alias `config.review.instructions` also supported):
        - **Squash & Merge (recommended):** Commit title formatted as `<issueKey>: <summary>` (or `<branch>` if issue is unlinked).
        - **Branch Cleanup:** Instructs deletion of source branch after merge.
        - Timeless, platform-agnostic format focusing on Git intent rather than volatile web UI button labels.

@@ -55,7 +55,7 @@ platform: github
 
 # Reviewer Routing Configuration
 review:
-  instructions: true                # Injects Squash & Merge guidance into PR
+  merge_instructions: true          # Injects Squash & Merge guidance and cleanup steps into PR
   template: .github/pull_request_template.md
   mapping:
     backend: [alice, bob]
@@ -196,7 +196,7 @@ branch:
     Epic: epic
 
 review:
-  instructions: true
+  merge_instructions: true
   template: etc/review-template.md
   mapping:
     UI: [jsmith, mjones]
@@ -231,7 +231,7 @@ scm:
   repo: backend-service
 
 review:
-  instructions: true
+  merge_instructions: true
   template: .github/pull_request_template.md
   mapping:
     core: [alice]
