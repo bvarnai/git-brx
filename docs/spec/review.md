@@ -54,7 +54,7 @@
 6. **Description Composition:**
    - Assemble review body from template:
      - Load markdown checklist from `config.review.template` (or fallback template).
-     - Append `# Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge.instructions: false`, `config.review.merge_instructions: false`, or `--no-merge-instructions` flag; overridden by `--merge-instructions`; legacy alias `config.review.instructions` also supported):
+     - Append `# Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge.instructions: false` or `--no-merge-instructions` flag; overridden by `--merge-instructions`):
        - **Merge Strategy Resolution Hierarchy:**
          1. CLI override (`-s, --strategy <squash|merge|rebase>`).
          2. Target branch pattern match (`review.merge.strategies.targets`).

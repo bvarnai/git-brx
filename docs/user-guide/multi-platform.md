@@ -205,7 +205,8 @@ branch:
     Epic: epic
 
 review:
-  merge_instructions: true
+  merge:
+    instructions: true
   template: etc/review-template.md
   mapping:
     UI: [jsmith, mjones]
@@ -240,7 +241,8 @@ scm:
   repo: backend-service
 
 review:
-  merge_instructions: true
+  merge:
+    instructions: true
   template: .github/pull_request_template.md
   mapping:
     core: [alice]

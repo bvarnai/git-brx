@@ -247,7 +247,8 @@ tracker:
   owner: test-org
   repo: test-repo
 review:
-  merge_instructions: false
+  merge:
+    instructions: false
 scm:
   provider: github
   uri: ` + server.URL + `

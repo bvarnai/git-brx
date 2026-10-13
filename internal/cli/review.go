@@ -132,8 +132,6 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 
 	if mergeInstrOverride != nil {
 		cfg.Review.Merge.Instructions = mergeInstrOverride
-		cfg.Review.MergeInstructions = mergeInstrOverride
-		cfg.Review.Instructions = mergeInstrOverride
 	}
 
 	scm, err := a.resolveSCM(cfg)
@@ -278,10 +276,6 @@ func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 	appendInstructions := true
 	if cfg.Review.Merge.Instructions != nil {
 		appendInstructions = *cfg.Review.Merge.Instructions
-	} else if cfg.Review.MergeInstructions != nil {
-		appendInstructions = *cfg.Review.MergeInstructions
-	} else if cfg.Review.Instructions != nil {
-		appendInstructions = *cfg.Review.Instructions
 	}
 
 	if appendInstructions {

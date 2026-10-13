@@ -198,23 +198,13 @@ func TestComposeReviewDescription(t *testing.T) {
 		assert.Contains(t, desc, "# Merge instructions")
 	})
 
-	t.Run("merge_instructions false suppresses merge instructions", func(t *testing.T) {
+	t.Run("merge instructions false suppresses merge instructions", func(t *testing.T) {
 		f := false
 		cfg := &domain.ProjectConfig{
 			Review: domain.ReviewConfig{
-				MergeInstructions: &f,
-			},
-		}
-		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
-		assert.Contains(t, desc, "Details")
-		assert.False(t, strings.Contains(desc, "# Merge instructions"))
-	})
-
-	t.Run("legacy instructions false suppresses merge instructions", func(t *testing.T) {
-		f := false
-		cfg := &domain.ProjectConfig{
-			Review: domain.ReviewConfig{
-				Instructions: &f,
+				Merge: domain.MergeConfig{
+					Instructions: &f,
+				},
 			},
 		}
 		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
