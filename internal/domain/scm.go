@@ -37,6 +37,7 @@ type PullRequestDetail struct {
 
 // MergeInstructionOptions captures metadata needed to format merge instructions.
 type MergeInstructionOptions struct {
+	PRTitle      string
 	IssueKey     string
 	Summary      string
 	Branch       string
@@ -87,7 +88,9 @@ func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 			"- **Branch cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	default:
 		squashTitle := opts.Branch
-		if opts.IssueKey != "" && opts.Summary != "" {
+		if opts.PRTitle != "" {
+			squashTitle = opts.PRTitle
+		} else if opts.IssueKey != "" && opts.Summary != "" {
 			squashTitle = opts.IssueKey + ": " + opts.Summary
 		} else if opts.Summary != "" {
 			squashTitle = opts.Summary
