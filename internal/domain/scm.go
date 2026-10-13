@@ -44,12 +44,20 @@ type MergeInstructionOptions struct {
 	Strategy     string // "squash", "merge", "rebase"
 }
 
+// ReviewerResolutionOptions specifies parameters for multi-tier reviewer resolution.
+type ReviewerResolutionOptions struct {
+	ChangedFiles []string
+	Labels       []string
+	Branch       string
+	Author       string
+}
+
 // SCMProvider defines the abstract interface for source control platforms (Bitbucket, GitHub, GitLab).
 type SCMProvider interface {
 	Name() string
 	CreatePullRequest(ctx context.Context, req PullRequestRequest) (*PullRequestResult, error)
 	GetPullRequestForBranch(ctx context.Context, branch string) (*PullRequestDetail, error)
-	ResolveReviewers(components []string) []string
+	ResolveReviewers(opts ReviewerResolutionOptions) []string
 	FormatMergeInstructions(opts MergeInstructionOptions) string
 	FormatClosingIssue(issueKey string) string
 }

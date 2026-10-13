@@ -37,8 +37,9 @@ branch:
   template: ^(issue|feature)/[0-9]+$
 review:
   mapping:
-    frontend: [alice, bob]
-    backend: charlie
+    labels:
+      frontend: [alice, bob]
+      backend: charlie
     default: lead
 `
 	err := os.WriteFile(filepath.Join(tempDir, ".git-brx.yaml"), []byte(content), 0644)
@@ -52,13 +53,13 @@ review:
 	assert.Equal(t, "web", cfg.SCM.Repo)
 
 	// Reviewer resolution
-	reviewers := config.ResolveReviewers(&cfg.Review, []string{"frontend"})
+	reviewers := config.ResolveReviewers(&cfg.Review.Mapping, domain.ReviewerResolutionOptions{Labels: []string{"frontend"}})
 	assert.Equal(t, []string{"alice", "bob"}, reviewers)
 
-	reviewersBackend := config.ResolveReviewers(&cfg.Review, []string{"backend"})
+	reviewersBackend := config.ResolveReviewers(&cfg.Review.Mapping, domain.ReviewerResolutionOptions{Labels: []string{"backend"}})
 	assert.Equal(t, []string{"charlie"}, reviewersBackend)
 
-	reviewersDefault := config.ResolveReviewers(&cfg.Review, []string{"unknown"})
+	reviewersDefault := config.ResolveReviewers(&cfg.Review.Mapping, domain.ReviewerResolutionOptions{Labels: []string{"unknown"}})
 	assert.Equal(t, []string{"lead"}, reviewersDefault)
 }
 

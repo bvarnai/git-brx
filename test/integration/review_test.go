@@ -381,4 +381,147 @@ scm:
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.Contains(t, capturedBody, "Rebase and merge")
 	})
+
+	t.Run("ReviewResolvesReviewersFromPathGlobsAndFiltersAuthor", func(t *testing.T) {
+		t.Setenv("GITHUB_TOKEN", "mock-token")
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+
+		originDir := t.TempDir()
+		h.Git("init", "--bare", originDir)
+		h.Git("remote", "add", "origin", originDir)
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/301")
+		h.CommitFile("internal/ui/button.go", "package ui", "Add UI button")
+		h.Git("push", "-u", "origin", "issue/301")
+
+		var requestedReviewers []string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/user" && r.Method == http.MethodGet {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"login": "current-author"}`))
+				return
+			}
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 301, "title": "Add button", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 31, "html_url": "https://github.com/test-org/test-repo/pull/31"}`))
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/requested_reviewers") && r.Method == http.MethodPost {
+				var req struct {
+					Reviewers []string `json:"reviewers"`
+				}
+				_ = json.NewDecoder(r.Body).Decode(&req)
+				requestedReviewers = req.Reviewers
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte(`
+platform: github
+tracker:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+scm:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+review:
+  mapping:
+    paths:
+      "internal/ui/**": [current-author, carol]
+    default: [team-lead]
+`)
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644)
+		require.NoError(t, err)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		// current-author must be excluded, only carol remains
+		assert.Equal(t, []string{"carol"}, requestedReviewers)
+	})
+
+	t.Run("ReviewFlagOverridesMappingRules", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+
+		originDir := t.TempDir()
+		h.Git("init", "--bare", originDir)
+		h.Git("remote", "add", "origin", originDir)
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/302")
+		h.CommitFile("internal/ui/button.go", "package ui", "Add UI button")
+		h.Git("push", "-u", "origin", "issue/302")
+
+		var requestedReviewers []string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 302, "title": "Add button", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 32, "html_url": "https://github.com/test-org/test-repo/pull/32"}`))
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/requested_reviewers") && r.Method == http.MethodPost {
+				var req struct {
+					Reviewers []string `json:"reviewers"`
+				}
+				_ = json.NewDecoder(r.Body).Decode(&req)
+				requestedReviewers = req.Reviewers
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte(`
+platform: github
+tracker:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+scm:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+review:
+  mapping:
+    paths:
+      "internal/ui/**": [carol]
+    default: [team-lead]
+`)
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644)
+		require.NoError(t, err)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--reviewer", "explicit-reviewer"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, []string{"explicit-reviewer"}, requestedReviewers)
+	})
 }

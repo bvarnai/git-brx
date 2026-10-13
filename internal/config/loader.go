@@ -176,63 +176,6 @@ func expandPlatformPreset(cfg *domain.ProjectConfig, detected *DetectedRemote) {
 	}
 }
 
-// ResolveReviewers maps issue components to reviewers with a fallback to "default".
-func ResolveReviewers(reviewCfg *domain.ReviewConfig, components []string) []string {
-	if reviewCfg == nil || len(reviewCfg.Mapping) == 0 {
-		return nil
-	}
-
-	seen := make(map[string]bool)
-	var reviewers []string
-
-	addReviewer := func(val any) {
-		switch v := val.(type) {
-		case string:
-			for _, item := range strings.Split(v, ",") {
-				trimmed := strings.TrimSpace(item)
-				if trimmed != "" && !seen[trimmed] {
-					seen[trimmed] = true
-					reviewers = append(reviewers, trimmed)
-				}
-			}
-		case []any:
-			for _, item := range v {
-				if s, ok := item.(string); ok {
-					trimmed := strings.TrimSpace(s)
-					if trimmed != "" && !seen[trimmed] {
-						seen[trimmed] = true
-						reviewers = append(reviewers, trimmed)
-					}
-				}
-			}
-		case []string:
-			for _, item := range v {
-				trimmed := strings.TrimSpace(item)
-				if trimmed != "" && !seen[trimmed] {
-					seen[trimmed] = true
-					reviewers = append(reviewers, trimmed)
-				}
-			}
-		}
-	}
-
-	matched := false
-	for _, comp := range components {
-		if val, ok := reviewCfg.Mapping[comp]; ok {
-			addReviewer(val)
-			matched = true
-		}
-	}
-
-	if !matched {
-		if def, ok := reviewCfg.Mapping["default"]; ok {
-			addReviewer(def)
-		}
-	}
-
-	return reviewers
-}
-
 func regexpEscape(s string) string {
 	special := `\.+*?()|[]{}^$`
 	var b strings.Builder

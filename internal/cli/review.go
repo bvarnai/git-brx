@@ -180,7 +180,26 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		if issue != nil {
 			components = issue.Components
 		}
-		reviewers = scm.ResolveReviewers(components)
+
+		changedFiles, _ := a.Inspector.ChangedFiles(ctx, rootDir, targetBranch)
+
+		author := ""
+		if userProvider, ok := scm.(interface {
+			GetCurrentUser(context.Context) (string, error)
+		}); ok {
+			author, _ = userProvider.GetCurrentUser(ctx)
+		}
+		if author == "" {
+			author = a.Inspector.Author(ctx, rootDir)
+		}
+
+		resOpts := domain.ReviewerResolutionOptions{
+			ChangedFiles: changedFiles,
+			Labels:       components,
+			Branch:       currBranch.Name,
+			Author:       author,
+		}
+		reviewers = scm.ResolveReviewers(resOpts)
 	}
 
 	// 6. Title & Description Composition

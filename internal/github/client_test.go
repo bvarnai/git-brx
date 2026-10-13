@@ -130,18 +130,39 @@ func TestClient_CreatePullRequest_Success(t *testing.T) {
 
 func TestClient_ResolveReviewers(t *testing.T) {
 	reviewCfg := &domain.ReviewConfig{
-		Mapping: map[string]any{
-			"ui":      []string{"alice", "bob"},
-			"backend": "charlie",
-			"default": "lead",
+		Mapping: domain.ReviewMappingConfig{
+			Paths: map[string]any{
+				"internal/ui/**": []string{"alice", "bob"},
+			},
+			Labels: map[string]any{
+				"ui":      []string{"alice", "bob"},
+				"backend": "charlie",
+			},
+			Default: "lead",
 		},
 	}
 
 	client := github.NewClient("my-org", "my-repo", "token", github.WithReviewConfig(reviewCfg))
 
-	assert.Equal(t, []string{"alice", "bob"}, client.ResolveReviewers([]string{"ui"}))
-	assert.Equal(t, []string{"charlie"}, client.ResolveReviewers([]string{"backend"}))
-	assert.Equal(t, []string{"lead"}, client.ResolveReviewers([]string{"unknown"}))
+	assert.Equal(t, []string{"alice", "bob"}, client.ResolveReviewers(domain.ReviewerResolutionOptions{Labels: []string{"ui"}}))
+	assert.Equal(t, []string{"charlie"}, client.ResolveReviewers(domain.ReviewerResolutionOptions{Labels: []string{"backend"}}))
+	assert.Equal(t, []string{"lead"}, client.ResolveReviewers(domain.ReviewerResolutionOptions{Labels: []string{"unknown"}}))
+	assert.Equal(t, []string{"alice", "bob"}, client.ResolveReviewers(domain.ReviewerResolutionOptions{ChangedFiles: []string{"internal/ui/app.go"}}))
+}
+
+func TestClient_GetCurrentUser(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/user", r.URL.Path)
+		assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"login": "octocat"}`))
+	}))
+	defer server.Close()
+
+	client := github.NewClient("my-org", "my-repo", "test-token", github.WithBaseURL(server.URL))
+	login, err := client.GetCurrentUser(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "octocat", login)
 }
 
 func TestClient_GetPullRequestForBranch(t *testing.T) {

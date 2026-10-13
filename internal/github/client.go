@@ -296,9 +296,43 @@ func (c *Client) GetPullRequestForBranch(ctx context.Context, branch string) (*d
 	}, nil
 }
 
-// ResolveReviewers maps issue labels or components to reviewers.
-func (c *Client) ResolveReviewers(components []string) []string {
-	return config.ResolveReviewers(c.ReviewCfg, components)
+// GetCurrentUser retrieves the authenticated GitHub user's login handle.
+func (c *Client) GetCurrentUser(ctx context.Context) (string, error) {
+	if c.Token == "" && (c.BaseURL == "" || c.BaseURL == "https://api.github.com") {
+		return "", nil
+	}
+	url := fmt.Sprintf("%s/user", c.BaseURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	c.setHeaders(req)
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", nil
+	}
+
+	var user struct {
+		Login string `json:"login"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return "", err
+	}
+	return user.Login, nil
+}
+
+// ResolveReviewers resolves designated reviewers using the structured review mapping.
+func (c *Client) ResolveReviewers(opts domain.ReviewerResolutionOptions) []string {
+	if c.ReviewCfg == nil {
+		return nil
+	}
+	return config.ResolveReviewers(&c.ReviewCfg.Mapping, opts)
 }
 
 // FormatMergeInstructions renders standard GitHub-aligned merge instructions.
