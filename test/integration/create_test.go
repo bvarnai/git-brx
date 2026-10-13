@@ -179,4 +179,110 @@ func TestCreateIntegration(t *testing.T) {
 		assert.Equal(t, int(domain.ExitAPIError), code)
 		assert.Contains(t, stderr.String(), "GitHub resource not found")
 	})
+
+	t.Run("DirectGitHubLabelMappingInBranchMapping", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/testorg/testrepo/issues/101" && r.Method == http.MethodGet {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"number": 101,
+					"title": "Add analytics pipeline",
+					"state": "open",
+					"assignee": {"login": "octocat"},
+					"labels": [{"name": "kind/feature"}]
+				}`))
+				return
+			}
+			http.NotFound(w, r)
+		}))
+		defer server.Close()
+
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		configContent := "platform: github\n" +
+			"tracker:\n" +
+			"  provider: github\n" +
+			"  owner: testorg\n" +
+			"  repo: testrepo\n" +
+			"  uri: " + server.URL + "\n" +
+			"scm:\n" +
+			"  provider: github\n" +
+			"  owner: testorg\n" +
+			"  repo: testrepo\n" +
+			"  uri: " + server.URL + "\n" +
+			"branch:\n" +
+			"  mapping:\n" +
+			"    kind/feature: feature\n" +
+			"    kind/bug: issue\n"
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		// 1. Success on feature/101 matching 'kind/feature'
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "feature/101"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Creating branch 'feature/101'")
+
+		// 2. Failure on issue/101 (mismatch guard triggers on direct label)
+		h.Git("checkout", "master")
+		h.Git("branch", "-D", "feature/101")
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/101"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitConfigError), code)
+		assert.Contains(t, stderr.String(), "Issue type 'kind/feature' is not allowed on 'issue' branch")
+		assert.Contains(t, stderr.String(), "Use 'feature' branch or check mapping rules")
+	})
+
+	t.Run("DirectGitHubLabelMappingCaseInsensitiveAndPrecedence", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/testorg/testrepo/issues/102" && r.Method == http.MethodGet {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"number": 102,
+					"title": "Refactor parser",
+					"state": "open",
+					"assignee": {"login": "octocat"},
+					"labels": [{"name": "Enhancement"}]
+				}`))
+				return
+			}
+			http.NotFound(w, r)
+		}))
+		defer server.Close()
+
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		// Direct label "enhancement: issue" overrides default "Story: feature" inference
+		configContent := "platform: github\n" +
+			"tracker:\n" +
+			"  provider: github\n" +
+			"  owner: testorg\n" +
+			"  repo: testrepo\n" +
+			"  uri: " + server.URL + "\n" +
+			"scm:\n" +
+			"  provider: github\n" +
+			"  owner: testorg\n" +
+			"  repo: testrepo\n" +
+			"  uri: " + server.URL + "\n" +
+			"branch:\n" +
+			"  mapping:\n" +
+			"    enhancement: issue\n" +
+			"    Story: feature\n"
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/102"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Creating branch 'issue/102'")
+	})
 }
