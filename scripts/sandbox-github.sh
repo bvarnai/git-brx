@@ -42,7 +42,7 @@ Commands:
   --accept-invitations        Accept pending invitations using ALEX token
   --seed-issues               Seed initial test issues (#1..#7) (uses ADMIN token)
   --create-issue <title>      Create an ad-hoc issue on GitHub (uses ADMIN token)
-      [--type bug|story]      Issue type / label (default: story)
+      [--type bug|story|epic] Issue type / label (default: story)
       [--body <description>]  Optional issue description
   --help                      Show this help message
 EOF
@@ -208,6 +208,8 @@ create_issue() {
     local label="enhancement"
     if [[ "$issue_type" == "bug" ]]; then
         label="bug"
+    elif [[ "$issue_type" == "epic" ]]; then
+        label="epic"
     fi
 
     echo "==> Creating issue: '${title}' (type: ${issue_type}, label: ${label})..."
@@ -274,8 +276,8 @@ seed_issues() {
     create_issue "feat: Add power exponent calculation" \
         "Implement power exponent calculation in calc.go to verify lead review cascade." "story"
 
-    create_issue "feat: Multi-stage batch processing pipeline" \
-        "Implement multi-stage batch calculation pipeline requiring merge commit preservation." "story"
+    create_issue "epic: Multi-stage batch processing pipeline" \
+        "Implement multi-stage batch calculation pipeline requiring merge commit preservation." "epic"
 
     echo "==> Seeding complete. Issues #1 through #7 created."
 }

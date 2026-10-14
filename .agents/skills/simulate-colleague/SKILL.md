@@ -213,53 +213,40 @@ review:
 ### Objective
 Verify that `git brx review` renders explicit merge instructions when a PR requires a non-squash strategy (e.g., preserving full constituent commit history via a true merge commit or linear rebase), and confirm that downstream `git brx sync` correctly handles the resulting non-squashed upstream history.
 
-### Context & Configuration
-By default, `git-brx` recommends squash merges for single feature/issue branches. However, teams frequently require full history preservation:
-- Multi-commit major initiatives (`epic/*` or `release/*` convention)
-- Topic branches configured via `review.merge.strategies.sources` / `review.merge.strategies.targets`
-- On-demand CLI overrides via `git brx review --strategy merge` or `git brx review --strategy rebase`
+### Built-in Convention & Mental Model
+Under `git-brx`'s opinionated convention-over-configuration philosophy, single-ticket branches (`issue/*`, `feature/*`) default to **Squash & Merge**, while major multi-commit initiatives (`epic/*`, `release/*`) automatically resolve to a **true Merge Commit** via built-in engine conventions without requiring custom merge configuration.
 
-### Setup (`.git-brx.yaml` in sandbox):
-```yaml
-review:
-  merge:
-    instructions: true
-    strategy: squash
-    strategies:
-      sources:
-        "feature/7": merge
-```
+Seeded Issue #7 is labeled `epic`, mapping to `epic/7`. When `git brx review` is executed on `epic/7`, `git-brx` recognizes the `epic/*` prefix and automatically commands a merge commit.
 
 ### Steps:
 
-#### Step 1: Primary Developer opens a PR requiring a merge commit
+#### Step 1: Primary Developer opens a PR for an epic requiring a merge commit
 1. **[User]** In `git-brx-sandbox/me`, create a multi-commit branch for seeded Issue #7 and publish:
    ```bash
    git checkout main && git pull origin main
-   git brx create feature/7 -y
+   git brx create epic/7 -y
    echo "step 1" >> pipeline.txt && git add pipeline.txt && git commit -m "feat(#7): implement step 1"
    echo "step 2" >> pipeline.txt && git add pipeline.txt && git commit -m "feat(#7): implement step 2"
    git brx publish
    ```
-2. **[User]** Submit for review (matching `feature/7` in config, or using explicit `--strategy merge`):
+2. **[User]** Submit for review:
    ```bash
    git brx review
-   # or with CLI override: git brx review --strategy merge
    ```
 3. **Verification in PR Description:**
    Inspect the opened PR on GitHub. Verify that the generated description includes:
    ```markdown
    ### Merge instructions
    - **Strategy:** Create a merge commit
-     - **Commit:** `Merge branch 'feature/7' into main` (merge commit preserving all constituent commits)
-   - **Branch cleanup:** Delete source branch `feature/7` after merging
+     - **Commit:** `Merge branch 'epic/7' into main` (merge commit preserving all constituent commits)
+   - **Branch cleanup:** Delete source branch `epic/7` after merging
    ```
 
 #### Step 2: Colleague Alex reviews & merges using a Merge Commit
 1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
    - Alex reviews the PR, observes the instruction to create a merge commit instead of squash, and merges via GitHub UI using **"Create a merge commit"** (or command line equivalent).
-   - Deletes the remote branch `feature/7`.
-   - Alex reports: *"Merged PR for feature/7 into main with a merge commit, preserving constituent commits. Run 'git brx sync' on your other branches to test upstream rebase over a merge commit!"*
+   - Deletes the remote branch `epic/7`.
+   - Alex reports: *"Merged PR for epic/7 into main with a merge commit, preserving constituent commits. Run 'git brx sync' on your other branches to test upstream rebase over a merge commit!"*
 
 #### Step 3: Upstream Synchronization over a Merge Commit
 1. **[User]** On another active topic branch in `git-brx-sandbox/me`:

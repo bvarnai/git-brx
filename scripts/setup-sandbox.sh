@@ -289,9 +289,11 @@ MD_EOF
 
         cat <<'YAML_EOF' > .git-brx.yaml
 branch:
+  template: ^(issue|feature|epic)/[1-9][0-9]*$
   mapping:
     enhancement: "feature"
     bug: "issue"
+    epic: "epic"
 
 review:
   merge:
@@ -312,12 +314,27 @@ YAML_EOF
             (cd "${COLLEAGUE_DIR}" && git pull origin main)
         fi
     else
-        # Ensure .git-brx.yaml in existing sandboxes is updated if it contains inverted mapping
-        if grep -q 'enhancement: "issue"' .git-brx.yaml 2>/dev/null; then
-            echo "==> Updating .git-brx.yaml branch mapping in existing sandbox..."
-            sed -i 's/enhancement: "issue"/enhancement: "feature"\n    bug: "issue"/' .git-brx.yaml
+        # Ensure .git-brx.yaml in existing sandboxes is updated with proper branch template and mapping
+        if ! grep -q 'epic: "epic"' .git-brx.yaml 2>/dev/null; then
+            echo "==> Updating .git-brx.yaml branch mapping and template in existing sandbox..."
+            cat <<'YAML_EOF' > .git-brx.yaml
+branch:
+  template: ^(issue|feature|epic)/[1-9][0-9]*$
+  mapping:
+    enhancement: "feature"
+    bug: "issue"
+    epic: "epic"
+
+review:
+  merge:
+    instructions: true
+  mapping:
+    paths:
+      "docs/**": [alexvarnai]
+    default: [bvarnai]
+YAML_EOF
             git add .git-brx.yaml
-            if git commit -m "fix: correct branch mapping for enhancement and bug"; then
+            if git commit -m "fix: update branch mapping to include epic convention"; then
                 git push origin main
                 (cd "${COLLEAGUE_DIR}" && git pull origin main)
             fi

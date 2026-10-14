@@ -192,28 +192,20 @@ sequenceDiagram
 
 ### Example Flow E: Non-Squash PR Merge Strategy (`merge` commit / `rebase`)
 
-#### Policy / Configuration:
-- Configure `review.merge.strategies.sources` to mandate a merge commit (or pass `--strategy merge` / `--strategy rebase`):
-  ```yaml
-  review:
-    merge:
-      instructions: true
-      strategies:
-        sources:
-          "feature/7": merge
-  ```
+#### Policy / Convention:
+- `git-brx` automatically commands a **Merge commit** for `epic/*` or `release/*` branches under its built-in conventions, without requiring manual merge configuration. Seeded Issue #7 is labeled `epic`, mapping to `epic/7`.
 
 #### Prompt to Antigravity:
-> *"Alex, I just created a multi-commit branch `feature/7` (seeded Issue #7) in `git-brx-sandbox/me` and opened a review with `git brx review`. Please review the PR, verify that the description instructs to use a merge commit instead of squashing, and merge it to `main` preserving all commits."*
+> *"Alex, I just created a multi-commit branch `epic/7` (seeded Issue #7) in `git-brx-sandbox/me` and opened a review with `git brx review`. Please review the PR, verify that the description instructs to use a merge commit instead of squashing, and merge it to `main` preserving all commits."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
-> I reviewed PR for `feature/7` on GitHub. The description explicitly states:
+> I reviewed PR for `epic/7` on GitHub. The description explicitly states:
 > ```markdown
 > ### Merge instructions
 > - **Strategy:** Create a merge commit
->   - **Commit:** `Merge branch 'feature/7' into main` (merge commit preserving all constituent commits)
-> - **Branch cleanup:** Delete source branch `feature/7` after merging
+>   - **Commit:** `Merge branch 'epic/7' into main` (merge commit preserving all constituent commits)
+> - **Branch cleanup:** Delete source branch `epic/7` after merging
 > ```
 > I merged the PR on GitHub using **Create a merge commit** (commit `9d31f0e`) and deleted the remote branch.
 >
@@ -228,10 +220,14 @@ sequenceDiagram
 
 ## 5. Resetting the sandbox environment
 
-If you want to wipe local changes and start completely fresh from GitHub `origin/main`:
+If you want to wipe local changes and start fresh from GitHub `origin/main`:
 
 ```bash
 ./scripts/setup-sandbox.sh --reset
 ```
 
-This cleans both `git-brx-sandbox/me` and `git-brx-sandbox/colleague` and re-clones a pristine copy from `origin/main`.
+If you want to delete the remote GitHub repository completely and re-provision everything from scratch:
+
+```bash
+./scripts/setup-sandbox.sh --recreate
+```
