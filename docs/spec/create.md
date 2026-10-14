@@ -12,7 +12,7 @@
 
 ## 2. Prerequisites & Environment
 - **Required host binaries:** `git` (>= 2.20.0).
-- **Environment variables read:** `GIT_DIR`, `GIT_WORK_TREE`, `GIT_PREFIX`, `GIT_BRX_CONFIG_PATH`, `GIT_BRX_TOKEN`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_COLOR`.
+- **Environment variables read:** `GIT_DIR`, `GIT_WORK_TREE`, `GIT_PREFIX`, `GIT_BRX_CONFIG`, `GIT_BRX_TOKEN`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_COLOR`.
 - **Working directory requirements (GIT_PREFIX behavior):** Can be invoked from any repository subdirectory; operations are executed relative to repository root (`git rev-parse --show-toplevel`).
 - **Git state assertions (e.g., dirty working tree check):**
   - Must be inside a Git working tree (`git rev-parse --is-inside-work-tree` == `true`).
@@ -44,7 +44,7 @@
        - Log: `[git-brx] Hint: To select this branch, use 'git-brx select <branch>' instead`
        - Exit with Exit Code `0`.
 4. **Configuration & Template Matching:**
-   - Load configuration via the discovery cascade (`GIT_BRX_CONFIG_PATH` -> `.git-brx.yaml` -> `.git-brx/config.yaml` -> `~/.config/git-brx/config.yaml` -> zero-config remote origin auto-discovery). If invalid, exit with Exit Code `8`.
+   - Load configuration via the layered cascade (User Global `~/.config/git-brx/config.yaml` / `~/.git-brx.yaml` -> Company Global `GIT_BRX_CONFIG` -> Repo Local `.git-brx.yaml` / `.git-brx/config.yaml` -> zero-config remote origin auto-discovery). If invalid, exit with Exit Code `8`.
    - Compile regular expression template from `config.branch.template` (interpolating `config.tracker.project` if set).
    - Match `<branch>` against the template. Extract:
      - `branchPath` (e.g., `issue`, `feature`, `epic`)

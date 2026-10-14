@@ -106,13 +106,113 @@ platform: gitlab
 	err := os.WriteFile(customPath, []byte(content), 0644)
 	require.NoError(t, err)
 
-	t.Setenv("GIT_BRX_CONFIG_PATH", customPath)
+	t.Setenv("GIT_BRX_CONFIG", customPath)
 
 	cfg, err := config.Load(t.TempDir(), "git@gitlab.com:grp/proj.git")
 	require.NoError(t, err)
 	assert.Equal(t, "gitlab", cfg.Platform)
 	assert.Equal(t, "gitlab", cfg.Tracker.Provider)
 	assert.Equal(t, "gitlab", cfg.SCM.Provider)
+}
+
+func TestLoader_InvalidEnvVarConfigFails(t *testing.T) {
+	t.Setenv("GIT_BRX_CONFIG", "/nonexistent/path/to/config.yaml")
+	_, err := config.Load(t.TempDir(), "")
+	require.Error(t, err)
+	var appErr *domain.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, domain.ExitConfigError, appErr.Code)
+	assert.Contains(t, appErr.Message, "configuration file specified by GIT_BRX_CONFIG not found")
+}
+
+func TestLoader_LayeredCascadeUserCompanyRepo(t *testing.T) {
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+
+	// Tier 1: User Global (~/.config/git-brx/config.yaml)
+	userConfigDir := filepath.Join(fakeHome, ".config", "git-brx")
+	require.NoError(t, os.MkdirAll(userConfigDir, 0755))
+	userConfigContent := `
+platform: github
+branch:
+  template: ^(issue|feature)/[0-9]+$
+  mapping:
+    bug: issue
+    task: issue
+review:
+  mapping:
+    default: [global-lead]
+`
+	require.NoError(t, os.WriteFile(filepath.Join(userConfigDir, "config.yaml"), []byte(userConfigContent), 0644))
+
+	// Tier 2: Company Global via GIT_BRX_CONFIG
+	companyConfigDir := t.TempDir()
+	companyConfigFile := filepath.Join(companyConfigDir, "company-rules.yaml")
+	companyConfigContent := `
+branch:
+  template: ^(story|chore|epic)/[0-9]+$
+  mapping:
+    story: story
+    task: chore
+review:
+  mapping:
+    labels:
+      security: [sec-team]
+`
+	require.NoError(t, os.WriteFile(companyConfigFile, []byte(companyConfigContent), 0644))
+	t.Setenv("GIT_BRX_CONFIG", companyConfigFile)
+
+	// Tier 3: Repo Local (.git-brx.yaml)
+	repoDir := t.TempDir()
+	repoConfigContent := `
+branch:
+  mapping:
+    spike: research
+review:
+  merge:
+    strategy: squash
+`
+	require.NoError(t, os.WriteFile(filepath.Join(repoDir, ".git-brx.yaml"), []byte(repoConfigContent), 0644))
+
+	// Load configuration with remote origin for Tier 4 auto-discovery
+	cfg, err := config.Load(repoDir, "git@github.com:my-company/service-x.git")
+	require.NoError(t, err)
+
+	// Tier 1 Base preserved:
+	assert.Equal(t, "github", cfg.Platform)
+	assert.Equal(t, []any{"global-lead"}, cfg.Review.Mapping.Default)
+	assert.Equal(t, "issue", cfg.Branch.Mapping["bug"])
+
+	// Tier 2 Company Override applied:
+	assert.Equal(t, "^(story|chore|epic)/[0-9]+$", cfg.Branch.Template)
+	assert.Equal(t, "story", cfg.Branch.Mapping["story"])
+	assert.Equal(t, "chore", cfg.Branch.Mapping["task"]) // company overrode user global's task: issue
+	assert.NotNil(t, cfg.Review.Mapping.Labels["security"])
+
+	// Tier 3 Repo Override applied:
+	assert.Equal(t, "research", cfg.Branch.Mapping["spike"]) // repo added spike
+	assert.Equal(t, "squash", cfg.Review.Merge.Strategy)
+
+	// Tier 4 Auto-Discovery applied:
+	assert.Equal(t, "my-company", cfg.SCM.Owner)
+	assert.Equal(t, "service-x", cfg.SCM.Repo)
+}
+
+func TestLoader_UserGlobalDotfileFallback(t *testing.T) {
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+
+	// Test ~/.git-brx.yaml fallback
+	dotfileContent := `
+platform: gitlab
+`
+	require.NoError(t, os.WriteFile(filepath.Join(fakeHome, ".git-brx.yaml"), []byte(dotfileContent), 0644))
+
+	repoDir := t.TempDir()
+	cfg, err := config.Load(repoDir, "git@gitlab.com:org/app.git")
+	require.NoError(t, err)
+	assert.Equal(t, "gitlab", cfg.Platform)
+	assert.Equal(t, "gitlab", cfg.Tracker.Provider)
 }
 
 func TestLoader_MissingConfigAndOriginFails(t *testing.T) {

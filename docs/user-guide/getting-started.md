@@ -95,14 +95,25 @@ git-brx completion powershell | Out-String | Invoke-Expression
 
 ## 3. Configuration cascade
 
-`git-brx` uses a hierarchical discovery cascade to locate project configurations. You can run with **zero configuration** on standard GitHub or Bitbucket repositories, or customize rules using YAML files.
+`git-brx` uses a layered configuration cascade to resolve project settings across personal and enterprise workflows. Instead of a rigid "first-file-wins" model, configurations are cascadingly layered and merged from global defaults down to repository-specific overrides.
 
-### Priority Order:
-1. **Environment variable override:** `GIT_BRX_CONFIG_PATH` pointing to a specific file or folder.
-2. **Repository configuration:** `.git-brx.yaml` or `.git-brx.yml` in the repository root directory.
-3. **Repository folder configuration:** `.git-brx/config.yaml`.
-4. **User-Level configuration:** `~/.config/git-brx/config.yaml` (global settings for your machine).
-5. **Zero-Config auto-discovery (default):** If no config file is found, `git-brx` inspects `git remote get-url origin` and automatically discovers the platform, organization/owner, and repository name.
+### Cascade Hierarchy (from base defaults to most specific override):
+1. **Tier 1: Machine / User Global:**
+   - Looked up in `~/.config/git-brx/config.yaml`, `~/.config/git-brx/config.yml`, `~/.git-brx.yaml`, `~/.git-brx.yml`, or `~/.git-brx/config.yaml`.
+   - Ideal for personal defaults across all repositories on your machine (e.g. personal platform defaults or reviewer preferences).
+2. **Tier 2: Company / Shared Global (`GIT_BRX_CONFIG`):**
+   - Configured via the `GIT_BRX_CONFIG` environment variable pointing to a shared configuration file (e.g., `export GIT_BRX_CONFIG=/path/to/company-rules.yaml` or a synchronized corporate repository).
+   - Overlays corporate branch templates, company-wide review rules, and standard issue type mappings across all enterprise projects.
+3. **Tier 3: Repository Local:**
+   - Looked up in the repository root: `.git-brx.yaml`, `.git-brx.yml`, or `.git-brx/config.yaml`.
+   - Overlays repository-specific settings (e.g. specialized branch mappings, subfolder reviewer paths, or merge strategies).
+4. **Tier 4: Remote Origin Auto-Discovery:**
+   - Inspects `git remote get-url origin` and auto-discovers missing platform, owner/organization, and repository slug.
+
+### Merging Behavior:
+- **Map fields** (such as `branch.mapping`, `review.mapping.paths`, `review.mapping.labels`, `review.mapping.branches`, and `review.merge.strategies.*`) are deep merged: repository rules add new entries or override specific keys while preserving untouched keys from company and user layers.
+- **Scalar fields** (such as `platform`, `branch.template`, `review.merge.strategy`) overwrite prior layers whenever defined.
+- **Reviewer defaults / lists** replace prior values when explicitly defined in a higher tier.
 
 ---
 
