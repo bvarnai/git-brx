@@ -119,28 +119,28 @@ sequenceDiagram
 
 ## 4. Example message flows
 
-### Example Flow A: Simulating an upstream merge & rebase sync (`git brx sync`)
+### Example Flow A: Collaborative feature branch upstream sync (`git brx sync`)
 
 #### Prompt to Antigravity:
-> *"Alex, I am starting work on `feature/1` in `git-brx-sandbox/me`. While I work on this, please implement a new function in `calc.go`, commit it, and merge it directly into `main` on origin."*
+> *"Alex, I am starting work on `feature/2` in `git-brx-sandbox/me`. While I work on this, please implement a new function in `calc.go`, commit it, and merge it directly into `main` on origin."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
-> I switched to `main` in `~/workspace/git-brx-sandbox/colleague`, implemented `func Subtract(a, b int) int` in `calc.go`, and pushed commit `7f21a9c` directly to `origin/main`.
+> I switched to `main` in `~/workspace/git-brx-sandbox/colleague`, implemented `func Subtract(a, b int) int` in `calc.go`, and pushed commit `e434c2f` directly to `origin/main`.
 >
 > **Your Turn:**
 > Switch to `~/workspace/git-brx-sandbox/me` and run:
 > ```bash
 > git brx sync
 > ```
-> `git-brx` will fetch `origin/main`, detect that `main` is ahead by 1 commit, and cleanly rebase your `feature/1` branch on top of my new commit!
+> `git-brx` will fetch `origin/main`, detect that `main` is ahead by 1 commit, and cleanly merge `main` into your `feature/2` branch (as standard for collaborative feature branches)!
 
 ---
 
-### Example Flow B: Injecting a merge conflict (`git brx resolve` / `git brx reset`)
+### Example Flow B: Issue branch linear rebase conflict (`git brx resolve` / `git brx reset`)
 
 #### Prompt to Antigravity:
-> *"Alex, let's simulate a merge conflict. I just changed line 4 of `config.json` on my branch to `"retries": 5`. Please push a conflicting change on `origin/main`."*
+> *"Alex, let's simulate a merge conflict on `issue/3`. I just changed line 4 of `config.json` on my branch to `"retries": 5`. Please push a conflicting change on `origin/main`."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
@@ -151,7 +151,7 @@ sequenceDiagram
 > ```bash
 > git brx sync
 > ```
-> Expected behavior:
+> Because `issue/` branches use linear rebase by default, `git-brx` will attempt to rebase your commit over `origin/main`:
 > 1. `git-brx` halts with Exit code 5 (`ExitConflict`).
 > 2. You will see the hint: `Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort`.
 > 3. You can either fix the conflict markers in `config.json` and run `git brx resolve`, or abort cleanly with `git brx reset`.

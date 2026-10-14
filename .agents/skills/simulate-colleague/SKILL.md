@@ -49,17 +49,20 @@ This prevents topic branches from accidentally inheriting unmerged commits from 
 
 ---
 
-## Playbook 1: Concurrent Feature Merge & Upstream Sync (`git brx sync`)
+## Playbook 1: Collaborative Feature Branch Upstream Merge Sync (`git brx sync`)
 
 ### Objective
-Verify that a developer working on a topic branch can smoothly rebase over a colleague's newly merged commits using `git brx sync`.
+Verify that a developer working on a `feature/` branch synchronizes with upstream `main` via a merge commit (as mandated by `git-brx`'s convention for collaborative feature branches), preserving local commit history without rewriting SHAs.
 
 ### Steps:
 1. **[User]** In `git-brx-sandbox/me`, create a topic branch using seeded Issue #2:
    ```bash
    git brx create feature/2 -y
    ```
-   Add a `Divide` function to `calc.go` and commit.
+   Add a `Divide` function to `calc.go` and commit:
+   ```bash
+   git commit -am "feat(#2): add divide calculation function"
+   ```
 2. **[Colleague (Alex)]** Concurrently in `git-brx-sandbox/colleague`:
    - Checks out `feature/1` using `git brx create feature/1 -y`.
    - Adds a `Subtract` function to `calc.go`, commits, publishes (`git brx publish`), and merges into `main` on origin.
@@ -68,23 +71,32 @@ Verify that a developer working on a topic branch can smoothly rebase over a col
    ```bash
    git brx sync
    ```
-   Verify that `git-brx sync` fetches `origin/main`, detects that `main` is ahead, and rebases `feature/2` on top of Alex's merged changes without conflicts.
+   Verify that `git-brx sync` fetches `origin/main`, detects that `main` is ahead, and cleanly merges `main` into `feature/2` (producing a `Merge branch 'main' into 'feature/2'` commit) without conflicts.
 
 ---
 
-## Playbook 2: Conflict Injection & Resolution (`git brx resolve` / `git brx reset`)
+## Playbook 2: Issue Branch Linear Rebase & Conflict Resolution (`git brx resolve` / `git brx reset`)
 
 ### Objective
-Simulate a merge conflict between concurrent edits on the same lines, and verify diagnostic exit codes (Exit 5) and resolution workflows.
+Simulate a concurrent modification conflict during an `issue/` branch linear rebase, and verify diagnostic exit codes (Exit 5) and resolution workflows.
 
 ### Steps:
-1. **[User]** On `feature/3` in `git-brx-sandbox/me`, modify line 4 of `config.json` to `"retries": 5`. Commit the change.
+1. **[User]** In `git-brx-sandbox/me`, create branch for seeded Issue #3 (bug):
+   ```bash
+   git checkout main && git pull origin main
+   git brx create issue/3 -y
+   ```
+   Modify line 4 of `config.json` to `"retries": 5`. Commit the change:
+   ```bash
+   git commit -am "fix(#3): update retry limit to 5"
+   ```
 2. **[Colleague (Alex)]** On `main` in `git-brx-sandbox/colleague`, modify line 4 of `config.json` to `"retries": 10`, commit, and push directly to `origin/main`.
    - Alex reports: *"Pushed conflicting config change to origin/main. Run 'git brx sync' to observe the conflict!"*
 3. **[User]** In `git-brx-sandbox/me`, run:
    ```bash
    git brx sync
    ```
+   - Because `issue/` branches use the **rebase** sync strategy, `git-brx sync` attempts a linear rebase over `main`.
    - Verify `git-brx sync` stops with Exit code 5 (`ExitConflict`).
    - Verify diagnostic hint: `"Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort"`.
 4. **[Resolution Verification]**:
