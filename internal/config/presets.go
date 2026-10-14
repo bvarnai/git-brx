@@ -46,7 +46,7 @@ func (p *githubPreset) Apply(cfg *domain.ProjectConfig, detected *DetectedRemote
 		}
 	}
 	if cfg.Branch.Template == "" {
-		cfg.Branch.Template = `^(issue|feature|epic)/[1-9][0-9]*$`
+		cfg.Branch.Template = `^(issue|feature)/[1-9][0-9]*$`
 		if inferred != nil {
 			inferred["branch.template"] = "platform default (github)"
 		}
