@@ -120,7 +120,7 @@ The Go implementation must adhere to a strict, application-wide exit code contra
 | `5` | Git State / Merge Conflict Encountered | In-flight rebase or merge already detected, or merge conflicts triggered during `sync` or `update`. |
 | `6` | External Service / API Failure | JIRA or Bitbucket API returned HTTP 401, 403, 404, or 409, or schema validation failed. |
 | `7` | User Aborted / Canceled | User declined interactive confirmation (`[y/N]`), aborted credential entry, or sent `SIGINT`. |
-| `8` | Configuration / Validation Error | Missing `branch.json` / `manifest.json`, malformed JSON, or branch name fails regex naming contract. |
+| `8` | Configuration / Validation Error | Missing or unreadable configuration file (`.git-brx.yaml`), malformed YAML, or branch name fails regex naming contract. |
 
 ---
 
