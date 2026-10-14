@@ -219,7 +219,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		return err
 	}
 
-	prBody := a.ComposeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch, mergeStrategy)
+	prBody := a.ComposeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch, prTitle, mergeStrategy)
 
 	// 7. Dry-Run Check
 	if a.Opts.DryRun {
@@ -257,7 +257,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 }
 
 // ComposeReviewDescription constructs the PR description text.
-func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string, strategy ...string) string {
+func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string, prTitle string, strategy ...string) string {
 	template := ""
 	if cfg.Review.Template != "" {
 		if content, err := os.ReadFile(cfg.Review.Template); err == nil {
@@ -305,7 +305,12 @@ func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 			resolvedStrategy, _ = config.ResolveMergeStrategy(&cfg.Review.Merge, branch, targetBranch, "")
 		}
 
+		if prTitle == "" {
+			prTitle = ComposePullRequestTitle("", branch, issueKey, summary)
+		}
+
 		opts := domain.MergeInstructionOptions{
+			PRTitle:      prTitle,
 			IssueKey:     issueKey,
 			Summary:      summary,
 			Branch:       branch,

@@ -155,7 +155,7 @@ git brx review
    ```markdown
    ### Merge instructions
    - **Strategy:** Squash and merge (recommended)
-     - **Commit:** `TASK-101: Add user authentication API` (all commits squashed into a single commit)
+     - **Commit:** `fix(#TASK-101): add user authentication API` (all commits squashed into a single commit)
    - **Branch cleanup:** Delete source branch `issue/TASK-101` after merging
    ```
    - Standard branches (`issue/*`, `feature/*` targeting `main`) default to **Squash and merge**.

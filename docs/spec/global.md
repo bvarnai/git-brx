@@ -256,6 +256,7 @@ classDiagram
     }
 
     class MergeInstructionOptions {
+        +string PRTitle
         +string IssueKey
         +string Summary
         +string Branch

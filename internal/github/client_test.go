@@ -265,13 +265,27 @@ func TestClient_FormatClosingIssue(t *testing.T) {
 
 func TestClient_FormatMergeInstructions(t *testing.T) {
 	client := github.NewClient("my-org", "my-repo", "token")
+
+	// PRTitle provided
+	optsWithTitle := domain.MergeInstructionOptions{
+		PRTitle:      "fix(#10): My summary",
+		IssueKey:     "10",
+		Summary:      "My summary",
+		Branch:       "issue/10",
+		TargetBranch: "main",
+	}
+	instructionsWithTitle := client.FormatMergeInstructions(optsWithTitle)
+	assert.Contains(t, instructionsWithTitle, "Squash and merge (recommended)")
+	assert.Contains(t, instructionsWithTitle, "fix(#10): My summary")
+	assert.Contains(t, instructionsWithTitle, "Delete source branch `issue/10` after merging")
+
+	// Fallback without PRTitle
 	opts := domain.MergeInstructionOptions{
 		IssueKey:     "10",
 		Summary:      "My summary",
 		Branch:       "issue/10",
 		TargetBranch: "main",
 	}
-
 	instructions := client.FormatMergeInstructions(opts)
 	assert.Contains(t, instructions, "Squash and merge (recommended)")
 	assert.Contains(t, instructions, "10: My summary")

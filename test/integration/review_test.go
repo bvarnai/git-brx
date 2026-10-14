@@ -106,7 +106,7 @@ scm:
 				assert.Equal(t, "master", body["base"])
 				assert.Equal(t, "fix(#101): Authentication Refactor", body["title"])
 				assert.Contains(t, body["body"], "Squash and merge (recommended)")
-				assert.Contains(t, body["body"], "101: Authentication Refactor")
+				assert.Contains(t, body["body"], "fix(#101): Authentication Refactor")
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)

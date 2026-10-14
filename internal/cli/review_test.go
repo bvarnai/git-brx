@@ -168,9 +168,10 @@ func TestComposeReviewDescription(t *testing.T) {
 
 	t.Run("scm formats closing issue in default description", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, scm, "8", "Feature summary", "feature/8", "main")
+		desc := app.ComposeReviewDescription(cfg, scm, "8", "Feature summary", "feature/8", "main", "")
 		assert.Contains(t, desc, "Closes #8")
 		assert.Contains(t, desc, "Feature summary")
+		assert.Contains(t, desc, "feat(#8): Feature summary")
 	})
 
 	t.Run("scm formats closing issue in template", func(t *testing.T) {
@@ -179,23 +180,31 @@ func TestComposeReviewDescription(t *testing.T) {
 				Template: "## Custom Template\nSome details here.",
 			},
 		}
-		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
+		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main", "")
 		assert.Contains(t, desc, "## Custom Template")
 		assert.Contains(t, desc, "Closes #12")
+		assert.Contains(t, desc, "feat(#12): Details")
 	})
 
 	t.Run("scm returning empty string does not inject closing line", func(t *testing.T) {
 		emptySCM := &mockSCMProvider{emptyClosing: true}
 		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, emptySCM, "12", "Details", "feature/12", "main")
+		desc := app.ComposeReviewDescription(cfg, emptySCM, "12", "Details", "feature/12", "main", "")
 		assert.False(t, strings.Contains(desc, "Closes #"))
 	})
 
 	t.Run("nil scm does not panic and formats default instructions", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main")
+		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main", "")
 		assert.Contains(t, desc, "Details")
 		assert.Contains(t, desc, "### Merge instructions")
+		assert.Contains(t, desc, "feat(#12): Details")
+	})
+
+	t.Run("explicit custom prTitle is preserved in merge instructions", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, scm, "39", "Bug details", "issue/39", "main", "fix(#39): Custom PR Title")
+		assert.Contains(t, desc, "- **Commit:** `fix(#39): Custom PR Title`")
 	})
 
 	t.Run("merge instructions false suppresses merge instructions", func(t *testing.T) {
@@ -207,26 +216,26 @@ func TestComposeReviewDescription(t *testing.T) {
 				},
 			},
 		}
-		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main")
+		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main", "")
 		assert.Contains(t, desc, "Details")
 		assert.False(t, strings.Contains(desc, "### Merge instructions"))
 	})
 
 	t.Run("epic branch produces merge commit instructions by convention", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, scm, "1", "Major Epic", "epic/1", "main")
+		desc := app.ComposeReviewDescription(cfg, scm, "1", "Major Epic", "epic/1", "main", "")
 		assert.Contains(t, desc, "Create a merge commit")
 	})
 
 	t.Run("targeting epic branch produces merge commit instructions by convention", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, scm, "10", "Sub task", "feature/10", "epic/1")
+		desc := app.ComposeReviewDescription(cfg, scm, "10", "Sub task", "feature/10", "epic/1", "")
 		assert.Contains(t, desc, "Create a merge commit")
 	})
 
 	t.Run("explicit strategy override produces rebase instructions", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
-		desc := app.ComposeReviewDescription(cfg, scm, "10", "Sub task", "feature/10", "main", "rebase")
+		desc := app.ComposeReviewDescription(cfg, scm, "10", "Sub task", "feature/10", "main", "", "rebase")
 		assert.Contains(t, desc, "Rebase and merge")
 	})
 }
