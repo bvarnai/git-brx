@@ -22,7 +22,7 @@ func (a *App) newConfigCmd() *cobra.Command {
 		Use:   "config [flags]",
 		Short: "Print the effective resolved configuration",
 		Long: `Print the effective cascading configuration resolved across all four tiers
-(User Global, Company Global, Repo Local, and Remote Origin Auto-Discovery) in YAML format.`,
+(User Global, Shared Global, Repo Local, and Remote Origin Auto-Discovery) in YAML format.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runConfig(cmd.Context(), opts, args)

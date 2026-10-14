@@ -80,7 +80,7 @@ The following flags must be accepted across the root binary and all subcommands:
 | `GIT_PREFIX` | Relative offset when invoked from repository subdirectories. | Empty string (root). | Set automatically by Git during plugin/alias dispatch. |
 | `GIT_DIR` | Override path to `.git` repository metadata. | Auto-detected via Git plumbing. | Must point to a valid Git directory structure. |
 | `GIT_WORK_TREE` | Override path to top-level working directory. | Auto-detected via Git plumbing. | Must point to a valid directory. |
-| `GIT_BRX_CONFIG` | Explicit file path for shared/company project configuration overlay. | Search standard configuration cascade. | Must be readable file if provided. |
+| `GIT_BRX_CONFIG` | Explicit file path for shared project configuration overlay. | Search standard configuration cascade. | Must be readable file if provided. |
 | `GIT_BRX_TOKEN` | Authentication token for JIRA and Bitbucket REST APIs. | Consult Git credential helper or OS keychain. | Non-empty string. |
 | `HTTP_PROXY` / `HTTPS_PROXY` | Proxy endpoint for outgoing HTTP REST API requests. | System default / direct connection. | Valid URI syntax (`http://host:port`). |
 | `NO_PROXY` | Comma-separated list of host globs to bypass proxy. | Empty string. | Standard proxy exclusion format. |
@@ -400,7 +400,7 @@ Structured schema parsed from YAML (`.git-brx.yaml` / `.git-brx/config.yaml`):
    - *Failure Mode:* If a developer invoked the tool from a subdirectory, or if their repository clone folder did not contain an underscore (`_`), project detection completely failed.
    - *Go Modernization:* Always resolve the Git root dynamically via `git rev-parse --show-toplevel`. Resolve and layer project configuration through a cascading 4-tier hierarchy with selective scalar overwrites and deep map merging:
      1. Machine / User Global: `~/.config/git-brx/config.yaml`, `~/.git-brx.yaml` (base defaults).
-     2. Company / Shared Global: File path specified by `GIT_BRX_CONFIG` environment variable (corporate standards overlay).
+     2. Shared Global: File path specified by `GIT_BRX_CONFIG` environment variable (shared standards overlay).
      3. Repository Local: `.git-brx.yaml`, `.git-brx.yml`, `.git-brx/config.yaml` in repo root (repository-specific overrides).
      4. Dynamic Zero-Config & Partial-Config Fallback: If no config file exists or `platform:` is omitted, auto-detect platform, owner/project, and repository slug directly from `remote.origin.url` (`github.com`, `gitlab.com`, Bitbucket). Setting `platform: none` explicitly opts out of platform presets.
 

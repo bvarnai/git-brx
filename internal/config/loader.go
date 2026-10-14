@@ -82,12 +82,12 @@ func loadConfigFile(path string) (*domain.ProjectConfig, error) {
 
 // ConfigReport holds the resolved configuration along with provenance and auto-discovery metadata.
 type ConfigReport struct {
-	UserConfigPath    string
-	CompanyConfigPath string
-	RepoConfigPath    string
-	OriginURL         string
-	Config            *domain.ProjectConfig
-	InferredFields    map[string]string
+	UserConfigPath   string
+	SharedConfigPath string
+	RepoConfigPath   string
+	OriginURL        string
+	Config           *domain.ProjectConfig
+	InferredFields   map[string]string
 }
 
 // Inspect evaluates and resolves configuration across all 4 tiers, tracking source paths and auto-discovery provenance.
@@ -110,12 +110,12 @@ func Inspect(workDir, originURL string) (*ConfigReport, error) {
 		foundAnyConfig = true
 	}
 
-	// Tier 2: Company / Shared Global (GIT_BRX_CONFIG)
+	// Tier 2: Shared Global (GIT_BRX_CONFIG)
 	if envPath := os.Getenv("GIT_BRX_CONFIG"); envPath != "" {
 		if _, err := os.Stat(envPath); err != nil {
 			return nil, domain.NewError(domain.ExitConfigError, "configuration file specified by GIT_BRX_CONFIG not found: %s", envPath)
 		}
-		report.CompanyConfigPath = envPath
+		report.SharedConfigPath = envPath
 		envCfg, err := loadConfigFile(envPath)
 		if err != nil {
 			return nil, err
@@ -213,7 +213,7 @@ func Inspect(workDir, originURL string) (*ConfigReport, error) {
 
 // Load loads and resolves configuration across a 4-tier cascade:
 // Tier 1: User / Machine Global (~/.config/git-brx/config.yaml, ~/.git-brx.yaml)
-// Tier 2: Company / Shared Global (GIT_BRX_CONFIG)
+// Tier 2: Shared Global (GIT_BRX_CONFIG)
 // Tier 3: Repository Local (.git-brx.yaml in workDir)
 // Tier 4: Remote Origin Auto-Discovery (git remote origin)
 func Load(workDir, originURL string) (*domain.ProjectConfig, error) {
@@ -231,11 +231,11 @@ func FormatReport(report *ConfigReport, sourcesOnly bool) (string, error) {
 	if userPath == "" {
 		userPath = "none"
 	}
-	companyPath := report.CompanyConfigPath
-	if companyPath == "" {
-		companyPath = "unset"
+	sharedPath := report.SharedConfigPath
+	if sharedPath == "" {
+		sharedPath = "unset"
 	} else {
-		companyPath = companyPath + " ($GIT_BRX_CONFIG)"
+		sharedPath = sharedPath + " ($GIT_BRX_CONFIG)"
 	}
 	repoPath := report.RepoConfigPath
 	if repoPath == "" {
@@ -248,7 +248,7 @@ func FormatReport(report *ConfigReport, sourcesOnly bool) (string, error) {
 
 	b.WriteString("# Source Hierarchy:\n")
 	b.WriteString(fmt.Sprintf("#   Tier 1 (User Global):    %s\n", userPath))
-	b.WriteString(fmt.Sprintf("#   Tier 2 (Company Global): %s\n", companyPath))
+	b.WriteString(fmt.Sprintf("#   Tier 2 (Shared Global):  %s\n", sharedPath))
 	b.WriteString(fmt.Sprintf("#   Tier 3 (Repo Local):     %s\n", repoPath))
 	b.WriteString(fmt.Sprintf("#   Tier 4 (Remote Origin):  %s\n", originURL))
 

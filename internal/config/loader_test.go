@@ -337,7 +337,7 @@ func TestInspect_ZeroConfigAutoInferredComments(t *testing.T) {
 	// Check headers
 	assert.Contains(t, output, "# Source Hierarchy:")
 	assert.Contains(t, output, "#   Tier 1 (User Global):    none")
-	assert.Contains(t, output, "#   Tier 2 (Company Global): unset")
+	assert.Contains(t, output, "#   Tier 2 (Shared Global):  unset")
 	assert.Contains(t, output, "#   Tier 3 (Repo Local):     none")
 	assert.Contains(t, output, "#   Tier 4 (Remote Origin):  git@github.com:my-org/my-service.git")
 
@@ -376,7 +376,7 @@ func TestInspect_SourcesOnly(t *testing.T) {
 	report, err := config.Inspect(repoDir, "git@github.com:acme/core.git")
 	require.NoError(t, err)
 	assert.Equal(t, userConfigFile, report.UserConfigPath)
-	assert.Equal(t, companyConfigFile, report.CompanyConfigPath)
+	assert.Equal(t, companyConfigFile, report.SharedConfigPath)
 	assert.Equal(t, repoConfigFile, report.RepoConfigPath)
 	assert.Equal(t, "git@github.com:acme/core.git", report.OriginURL)
 

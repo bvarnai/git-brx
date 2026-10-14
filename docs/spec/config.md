@@ -8,7 +8,7 @@
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
 
 ## 2. Prerequisites & Environment
-- **Required host binaries:** `git` (>= 2.20.0, optional if user/company global configuration files exist).
+- **Required host binaries:** `git` (>= 2.20.0, optional if user/shared global configuration files exist).
 - **Environment variables read:** `GIT_BRX_CONFIG`, `HOME`, `NO_COLOR`.
 - **Working directory requirements (GIT_PREFIX behavior):** Can be invoked from any repository subdirectory, or from outside a repository if global configuration is defined.
 - **Git state assertions:** Read-only inspection command; safe to execute in any repository state (clean, dirty, rebase, merge, detached HEAD).
@@ -20,7 +20,7 @@
 2. **Cascade Evaluation:**
    - Resolve configuration across the 4-tier cascade:
      - **Tier 1:** User Global (`~/.config/git-brx/config.yaml`, `~/.git-brx.yaml`).
-     - **Tier 2:** Company Global (`GIT_BRX_CONFIG` environment variable).
+     - **Tier 2:** Shared Global (`GIT_BRX_CONFIG` environment variable).
      - **Tier 3:** Repo Local (`.git-brx.yaml`, `.git-brx/config.yaml` in repo root).
      - **Tier 4:** Remote Origin Auto-Discovery (inferred platform, owner, repo, branch conventions).
 3. **Provenance Annotation:**
@@ -28,7 +28,7 @@
      ```yaml
      # Source Hierarchy:
      #   Tier 1 (User Global):    <path or "none">
-     #   Tier 2 (Company Global): <path ($GIT_BRX_CONFIG) or "unset">
+     #   Tier 2 (Shared Global):  <path ($GIT_BRX_CONFIG) or "unset">
      #   Tier 3 (Repo Local):     <path or "none">
      #   Tier 4 (Remote Origin):  <originURL or "none">
      ```
