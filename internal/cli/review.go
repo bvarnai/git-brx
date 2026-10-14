@@ -265,36 +265,50 @@ func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 		} else {
 			template = cfg.Review.Template
 		}
+	} else {
+		// Auto-discover standard repository pull request templates
+		standardTemplates := []string{
+			".github/pull_request_template.md",
+			".github/PULL_REQUEST_TEMPLATE.md",
+			"pull_request_template.md",
+		}
+		for _, path := range standardTemplates {
+			if content, err := os.ReadFile(path); err == nil {
+				template = string(content)
+				break
+			}
+		}
 	}
+	template = strings.TrimSpace(template)
 
 	closingRef := ""
 	if issueKey != "" && scm != nil {
 		closingRef = scm.FormatClosingIssue(issueKey)
 	}
 
-	var sb strings.Builder
-	if template != "" {
-		sb.WriteString(template)
-		sb.WriteString("\n\n")
-		if closingRef != "" {
-			sb.WriteString(closingRef)
-			sb.WriteString("\n\n")
-		}
-	} else {
-		sb.WriteString("### Description\n")
-		if summary != "" {
-			sb.WriteString(fmt.Sprintf("%s\n\n", summary))
-		}
-		if closingRef != "" {
-			sb.WriteString(fmt.Sprintf("%s\n\n", closingRef))
-		}
-		sb.WriteString("### Verification & Testing\n- [ ] Automated tests pass\n- [ ] Manual verification completed\n\n")
-	}
-
 	// Append merge instructions unless explicitly disabled via review.merge.instructions: false
 	appendInstructions := true
 	if cfg.Review.Merge.Instructions != nil {
 		appendInstructions = *cfg.Review.Merge.Instructions
+	}
+
+	var sb strings.Builder
+	if template != "" {
+		sb.WriteString(template)
+	}
+
+	hasFooter := closingRef != "" || appendInstructions
+	if template != "" && hasFooter {
+		sb.WriteString("\n\n---\n")
+	}
+
+	if closingRef != "" {
+		sb.WriteString(closingRef)
+		if appendInstructions {
+			sb.WriteString("\n\n")
+		} else {
+			sb.WriteString("\n")
+		}
 	}
 
 	if appendInstructions {

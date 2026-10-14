@@ -56,8 +56,10 @@
      - **Author Exclusion:** Automatically excludes the PR author (detected from GitHub login or local Git user identity) from the candidate reviewer list across all tiers.
      - Reviewer values support list format (`[alice, bob]`), comma-separated string (`"alice, bob"`), or single string (`alice`).
 6. **Description Composition:**
-   - Assemble review body from template:
-     - Load markdown checklist from `config.review.template` (or fallback template).
+   - Assemble review body:
+     - Load template from `config.review.template`, or auto-discover standard repository templates (`.github/pull_request_template.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `pull_request_template.md`).
+     - If custom template is present, append horizontal divider (`---`).
+     - Append closing reference (`Closes #<issueKey>`) if branch is linked to an issue.
      - Append `### Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge.instructions: false` or `--no-merge-instructions` flag; overridden by `--merge-instructions`):
        - **Merge Strategy Resolution Hierarchy:**
          1. CLI override (`-s, --strategy <squash|merge|rebase>`).
