@@ -101,9 +101,9 @@ git-brx completion powershell | Out-String | Invoke-Expression
 1. **Tier 1: Machine / User Global:**
    - Looked up in `~/.config/git-brx/config.yaml`, `~/.config/git-brx/config.yml`, `~/.git-brx.yaml`, `~/.git-brx.yml`, or `~/.git-brx/config.yaml`.
    - Ideal for personal defaults across all repositories on your machine (e.g. personal platform defaults or reviewer preferences).
-2. **Tier 2: Company / Shared Global (`GIT_BRX_CONFIG`):**
-   - Configured via the `GIT_BRX_CONFIG` environment variable pointing to a shared configuration file (e.g., `export GIT_BRX_CONFIG=/path/to/company-rules.yaml` or a synchronized corporate repository).
-   - Overlays corporate branch templates, company-wide review rules, and standard issue type mappings across all enterprise projects.
+2. **Tier 2: Shared Global (`GIT_BRX_CONFIG`):**
+   - Configured via the `GIT_BRX_CONFIG` environment variable pointing to a shared configuration file (e.g., `export GIT_BRX_CONFIG=/path/to/shared-rules.yaml` or a synchronized organization repository).
+   - Overlays shared branch templates, organization-wide review rules, and standard issue type mappings across projects.
 3. **Tier 3: Repository Local:**
    - Looked up in the repository root: `.git-brx.yaml`, `.git-brx.yml`, or `.git-brx/config.yaml`.
    - Overlays repository-specific settings (e.g. specialized branch mappings, subfolder reviewer paths, or merge strategies).
@@ -111,9 +111,43 @@ git-brx completion powershell | Out-String | Invoke-Expression
    - Inspects `git remote get-url origin` and auto-discovers missing platform, owner/organization, and repository slug.
 
 ### Merging Behavior:
-- **Map fields** (such as `branch.mapping`, `review.mapping.paths`, `review.mapping.labels`, `review.mapping.branches`, and `review.merge.strategies.*`) are deep merged: repository rules add new entries or override specific keys while preserving untouched keys from company and user layers.
+- **Map fields** (such as `branch.mapping`, `review.mapping.paths`, `review.mapping.labels`, `review.mapping.branches`, and `review.merge.strategies.*`) are deep merged: repository rules add new entries or override specific keys while preserving untouched keys from shared and user layers.
 - **Scalar fields** (such as `platform`, `branch.template`, `review.merge.strategy`) overwrite prior layers whenever defined.
 - **Reviewer defaults / lists** replace prior values when explicitly defined in a higher tier.
+
+### Inspecting effective configuration:
+You can verify the exact cascading configuration `git-brx` resolves for your current directory using the `config` command:
+```bash
+git brx config
+```
+This prints the source hierarchy and complete YAML configuration with inline comments highlighting auto-discovered fields:
+```yaml
+# Source hierarchy:
+#   Tier 1 (User global [~/.config/git-brx/config.yaml, ~/.git-brx.yaml]): none
+#   Tier 2 (Shared global [$GIT_BRX_CONFIG]):                             unset
+#   Tier 3 (Repo local [.git-brx.yaml, .git-brx/config.yaml]):             none
+#   Tier 4 (Remote origin [git remote origin]):                           git@github.com:my-org/my-service.git
+
+platform: github # auto-discovered from remote origin
+tracker:
+  provider: github # inferred from platform preset
+  owner: my-org # auto-discovered from remote origin
+  repo: my-service # auto-discovered from remote origin
+scm:
+  provider: github # inferred from platform preset
+  owner: my-org # auto-discovered from remote origin
+  repo: my-service # auto-discovered from remote origin
+branch:
+  template: ^(issue|feature|epic)/[A-Za-z0-9_-]+$ # default convention
+  mapping: # platform default (github)
+    bug: issue
+    enhancement: feature
+```
+
+To view only the participating configuration files:
+```bash
+git brx config --sources
+```
 
 ---
 

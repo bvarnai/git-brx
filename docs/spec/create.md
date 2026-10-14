@@ -44,7 +44,7 @@
        - Log: `[git-brx] Hint: To select this branch, use 'git-brx select <branch>' instead`
        - Exit with Exit Code `0`.
 4. **Configuration & Template Matching:**
-   - Load configuration via the layered cascade (User Global `~/.config/git-brx/config.yaml` / `~/.git-brx.yaml` -> Company Global `GIT_BRX_CONFIG` -> Repo Local `.git-brx.yaml` / `.git-brx/config.yaml` -> zero-config remote origin auto-discovery). If invalid, exit with Exit Code `8`.
+   - Load configuration via the layered cascade (User Global `~/.config/git-brx/config.yaml` / `~/.git-brx.yaml` -> Shared Global `GIT_BRX_CONFIG` -> Repo Local `.git-brx.yaml` / `.git-brx/config.yaml` -> zero-config remote origin auto-discovery). If invalid, exit with Exit Code `8`.
    - Compile regular expression template from `config.branch.template` (interpolating `config.tracker.project` if set).
    - Match `<branch>` against the template. Extract:
      - `branchPath` (e.g., `issue`, `feature`, `epic`)

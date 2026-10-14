@@ -41,7 +41,7 @@
      - Log: `[git-brx] Hint: Run 'git-brx publish' to push your branch before creating a review`
      - Fail with Exit Code `4`.
 4. **Configuration & Issue Loading:**
-   - Load configuration via the layered cascade (User Global `~/.config/git-brx/config.yaml` / `~/.git-brx.yaml` -> Company Global `GIT_BRX_CONFIG` -> Repo Local `.git-brx.yaml` / `.git-brx/config.yaml` -> zero-config remote origin auto-discovery).
+   - Load configuration via the layered cascade (User Global `~/.config/git-brx/config.yaml` / `~/.git-brx.yaml` -> Shared Global `GIT_BRX_CONFIG` -> Repo Local `.git-brx.yaml` / `.git-brx/config.yaml` -> zero-config remote origin auto-discovery).
    - Extract `issueKey` from `<branch>` using the configured branch template regex.
    - Fetch issue details using the configured `IssueTracker` (Jira REST, GitHub, etc.) to retrieve components/labels and summary.
    - If issue call fails (401/404): Fail with Exit Code `6`.
