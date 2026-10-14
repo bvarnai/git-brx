@@ -254,7 +254,7 @@ seed_issues() {
         return 0
     fi
 
-    echo "    No issues found. Seeding initial collaborative scenario issues (#1..#4)..."
+    echo "    No issues found. Seeding initial collaborative scenario issues (#1..#7)..."
     create_issue "feat: Add subtract calculation function" \
         "Implement a Subtract function in calc.go for basic arithmetic calculations." "story"
 
@@ -267,7 +267,16 @@ seed_issues() {
     create_issue "feat: Implement shared pipeline stages" \
         "Add multi-step pipeline processing for calculation batch tasks." "story"
 
-    echo "==> Seeding complete. Issues #1, #2, #3, and #4 created."
+    create_issue "docs: Add architecture and component guidelines" \
+        "Add architecture documentation in docs/architecture.md to verify reviewer routing." "story"
+
+    create_issue "feat: Add power exponent calculation" \
+        "Implement power exponent calculation in calc.go to verify lead review cascade." "story"
+
+    create_issue "feat: Multi-stage batch processing pipeline" \
+        "Implement multi-stage batch calculation pipeline requiring merge commit preservation." "story"
+
+    echo "==> Seeding complete. Issues #1 through #7 created."
 }
 
 # CLI Argument Parsing

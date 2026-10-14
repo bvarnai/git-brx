@@ -36,6 +36,19 @@ For full architectural details and message flows, see [Colleague Simulation Guid
 
 ---
 
+## Sequential Execution & Inter-Playbook Transition Protocol
+
+When running playbooks sequentially, **always ensure your local workspace starts from an up-to-date `main` branch**:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+This prevents topic branches from accidentally inheriting unmerged commits from preceding playbooks, avoids dirty worktree conflicts, and guarantees clean upstream rebase histories.
+
+---
+
 ## Playbook 1: Concurrent Feature Merge & Upstream Sync (`git brx sync`)
 
 ### Objective
@@ -145,12 +158,13 @@ review:
 ### Steps:
 
 #### Scenario A: Primary Developer touches docs (routes to Alex Varnai)
-1. **[User]** In `git-brx-sandbox/me`, create a branch, add/edit a doc file, commit, and publish:
+1. **[User]** In `git-brx-sandbox/me`, ensure clean main, create branch for seeded Issue #5, commit docs, and publish:
    ```bash
-   git brx create feature/1 -y
+   git checkout main && git pull origin main
+   git brx create feature/5 -y
    mkdir -p docs && echo "# Architecture" > docs/architecture.md
    git add docs/architecture.md
-   git commit -m "docs(#1): add architecture documentation"
+   git commit -m "docs(#5): add architecture documentation"
    git brx publish
    ```
 2. **[User]** Submit for review:
@@ -165,12 +179,13 @@ review:
 
 #### Scenario B: Colleague Alex touches code (cascades to Lead bvarnai)
 1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
-   - Checks out a branch, modifies code (`calc.go`), commits as `Alex Varnai`, and publishes:
+   - Checks out branch for seeded Issue #6, modifies code (`calc.go`), commits as `Alex Varnai`, and publishes:
      ```bash
      source ~/workspace/git-brx-sandbox/env-colleague.sh
-     git brx create feature/2 -y
+     git checkout main && git pull origin main
+     git brx create feature/6 -y
      # Edit calc.go
-     git commit -am "feat(#2): add divide calculation"
+     git commit -am "feat(#6): add power exponent calculation"
      git brx publish
      ```
    - Submits the review using Alex's own PAT:
@@ -180,11 +195,11 @@ review:
 2. **Verification:**
    - `git-brx review` inspects `calc.go`, finds no match under `mapping.paths`, and falls back to `mapping.default` (`bvarnai`).
    - PR is opened on GitHub requesting `bvarnai` (Lead) as reviewer.
-   - Alex reports: *"Opened PR for feature/2 on GitHub. Review requested from lead bvarnai!"*
+   - Alex reports: *"Opened PR for feature/6 on GitHub. Review requested from lead bvarnai!"*
 
 #### Scenario C: Author Exclusion (Alex touches docs)
 1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
-   - Modifies `docs/architecture.md`, commits, publishes, and submits review.
+   - On `feature/6`, modifies `docs/architecture.md`, commits, publishes, and submits review.
 2. **Verification:**
    - `mapping.paths` matches `docs/**` $\to$ candidate `alexvarnai`.
    - **Author Exclusion:** `alexvarnai` is detected as the PR author and is excluded.
@@ -212,20 +227,21 @@ review:
     strategy: squash
     strategies:
       sources:
-        "feature/multi-*": merge
+        "feature/7": merge
 ```
 
 ### Steps:
 
 #### Step 1: Primary Developer opens a PR requiring a merge commit
-1. **[User]** In `git-brx-sandbox/me`, create a multi-commit branch and publish:
+1. **[User]** In `git-brx-sandbox/me`, create a multi-commit branch for seeded Issue #7 and publish:
    ```bash
-   git brx create feature/multi-step -y
-   echo "step 1" >> pipeline.txt && git add pipeline.txt && git commit -m "feat: implement step 1"
-   echo "step 2" >> pipeline.txt && git add pipeline.txt && git commit -m "feat: implement step 2"
+   git checkout main && git pull origin main
+   git brx create feature/7 -y
+   echo "step 1" >> pipeline.txt && git add pipeline.txt && git commit -m "feat(#7): implement step 1"
+   echo "step 2" >> pipeline.txt && git add pipeline.txt && git commit -m "feat(#7): implement step 2"
    git brx publish
    ```
-2. **[User]** Submit for review (matching `feature/multi-*` or using explicit `--strategy merge`):
+2. **[User]** Submit for review (matching `feature/7` in config, or using explicit `--strategy merge`):
    ```bash
    git brx review
    # or with CLI override: git brx review --strategy merge
@@ -235,15 +251,15 @@ review:
    ```markdown
    ### Merge instructions
    - **Strategy:** Create a merge commit
-     - **Commit:** `Merge branch 'feature/multi-step' into main` (merge commit preserving all constituent commits)
-   - **Branch cleanup:** Delete source branch `feature/multi-step` after merging
+     - **Commit:** `Merge branch 'feature/7' into main` (merge commit preserving all constituent commits)
+   - **Branch cleanup:** Delete source branch `feature/7` after merging
    ```
 
 #### Step 2: Colleague Alex reviews & merges using a Merge Commit
 1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
    - Alex reviews the PR, observes the instruction to create a merge commit instead of squash, and merges via GitHub UI using **"Create a merge commit"** (or command line equivalent).
-   - Deletes the remote branch `feature/multi-step`.
-   - Alex reports: *"Merged PR #X into main with a merge commit, preserving constituent commits. Run 'git brx sync' on your other branches to test upstream rebase over a merge commit!"*
+   - Deletes the remote branch `feature/7`.
+   - Alex reports: *"Merged PR for feature/7 into main with a merge commit, preserving constituent commits. Run 'git brx sync' on your other branches to test upstream rebase over a merge commit!"*
 
 #### Step 3: Upstream Synchronization over a Merge Commit
 1. **[User]** On another active topic branch in `git-brx-sandbox/me`:
@@ -253,6 +269,7 @@ review:
 2. **Verification:**
    - Verify `git-brx sync` fetches the new merge commit and its constituent commits on `origin/main`.
    - Verify the local branch rebases smoothly on top of `origin/main` without duplicate commit conflicts.
+
 
 
 

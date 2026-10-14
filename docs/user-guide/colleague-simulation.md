@@ -62,7 +62,7 @@ The simulation environment uses a 3-token least-privilege architecture:
 ### What the setup script does:
 1. Dynamically detects your authenticated GitHub account and ensures `git-brx-sandbox` exists.
 2. Invites `alexvarnai` as a collaborator with write (`push`) permissions.
-3. Seeds test issues (#1..#4) for turnkey scenario execution.
+3. Seeds test issues (#1..#7) for turnkey scenario execution.
 4. Clones the repository into `~/workspace/git-brx-sandbox/me` and `~/workspace/git-brx-sandbox/colleague`.
 5. Pre-configures `.git-brx.yaml` with the documentation and lead reviewer mapping.
 6. Generates `~/workspace/git-brx-sandbox/env.sh` (for you) and `env-colleague.sh` (for Alex) with injected PATs and permissions secured (`chmod 700`).
@@ -178,42 +178,42 @@ sequenceDiagram
 - **Lead / Default**: All other changes routed to `bvarnai`
 
 #### Prompt to Antigravity:
-> *"Alex, please create a feature branch in `git-brx-sandbox/colleague`, edit `calc.go`, and submit a review using your PAT. Verify that `bvarnai` is assigned as reviewer rather than you."*
+> *"Alex, please create a feature branch for seeded Issue #6 in `git-brx-sandbox/colleague`, edit `calc.go`, and submit a review using your PAT. Verify that `bvarnai` is assigned as reviewer rather than you."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
-> I checked out `feature/2` in `~/workspace/git-brx-sandbox/colleague`, added changes to `calc.go`, and submitted the PR via `git brx review`.
+> I checked out `feature/6` in `~/workspace/git-brx-sandbox/colleague`, added changes to `calc.go`, and submitted the PR via `git brx review`.
 > Since `calc.go` is code rather than documentation, `git-brx` routed the PR to team lead `bvarnai` via `mapping.default`.
 >
 > **Your Turn:**
-> In `~/workspace/git-brx-sandbox/me`, create a branch with documentation in `docs/architecture.md`, publish, and run `git brx review`. `git-brx` will match `docs/**` and request review from `alexvarnai`!
+> In `~/workspace/git-brx-sandbox/me`, ensure clean main, create branch `feature/5` for seeded Issue #5 with documentation in `docs/architecture.md`, publish, and run `git brx review`. `git-brx` will match `docs/**` and request review from `alexvarnai`!
 
 ---
 
 ### Example Flow E: Non-Squash PR Merge Strategy (`merge` commit / `rebase`)
 
 #### Policy / Configuration:
-- Configure `review.merge.strategies.sources` to mandate a merge commit for multi-part features (or use `--strategy merge` / `--strategy rebase` flag):
+- Configure `review.merge.strategies.sources` to mandate a merge commit (or pass `--strategy merge` / `--strategy rebase`):
   ```yaml
   review:
     merge:
       instructions: true
       strategies:
         sources:
-          "feature/multi-*": merge
+          "feature/7": merge
   ```
 
 #### Prompt to Antigravity:
-> *"Alex, I just created a multi-commit branch `feature/multi-step` in `git-brx-sandbox/me` and opened a review with `git brx review --strategy merge`. Please review the PR, verify that the description instructs to use a merge commit instead of squashing, and merge it to `main` preserving all commits."*
+> *"Alex, I just created a multi-commit branch `feature/7` (seeded Issue #7) in `git-brx-sandbox/me` and opened a review with `git brx review`. Please review the PR, verify that the description instructs to use a merge commit instead of squashing, and merge it to `main` preserving all commits."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
-> I reviewed PR #5 on GitHub. The description explicitly states:
+> I reviewed PR for `feature/7` on GitHub. The description explicitly states:
 > ```markdown
 > ### Merge instructions
 > - **Strategy:** Create a merge commit
->   - **Commit:** `Merge branch 'feature/multi-step' into main` (merge commit preserving all constituent commits)
-> - **Branch cleanup:** Delete source branch `feature/multi-step` after merging
+>   - **Commit:** `Merge branch 'feature/7' into main` (merge commit preserving all constituent commits)
+> - **Branch cleanup:** Delete source branch `feature/7` after merging
 > ```
 > I merged the PR on GitHub using **Create a merge commit** (commit `9d31f0e`) and deleted the remote branch.
 >
