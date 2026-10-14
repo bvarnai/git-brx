@@ -10,6 +10,7 @@ import (
 	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLoader_ZeroConfigAutoInference(t *testing.T) {
@@ -311,4 +312,80 @@ review:
 	assert.Equal(t, "rebase", cfg.Review.Merge.Strategy)
 	assert.Equal(t, "merge", cfg.Review.Merge.Strategies.Sources["epic/*"])
 	assert.Equal(t, "merge", cfg.Review.Merge.Strategies.Targets["release/*"])
+}
+
+func TestInspect_ZeroConfigAutoInferredComments(t *testing.T) {
+	tempDir := t.TempDir()
+	origin := "git@github.com:my-org/my-service.git"
+
+	report, err := config.Inspect(tempDir, origin)
+	require.NoError(t, err)
+	require.NotNil(t, report)
+	assert.Equal(t, "auto-discovered from remote origin", report.InferredFields["platform"])
+	assert.Equal(t, "inferred from platform preset", report.InferredFields["tracker.provider"])
+	assert.Equal(t, "auto-discovered from remote origin", report.InferredFields["tracker.owner"])
+	assert.Equal(t, "auto-discovered from remote origin", report.InferredFields["tracker.repo"])
+	assert.Equal(t, "inferred from platform preset", report.InferredFields["scm.provider"])
+	assert.Equal(t, "auto-discovered from remote origin", report.InferredFields["scm.owner"])
+	assert.Equal(t, "auto-discovered from remote origin", report.InferredFields["scm.repo"])
+	assert.Equal(t, "default convention", report.InferredFields["branch.template"])
+	assert.Equal(t, "default convention", report.InferredFields["branch.mapping"])
+
+	output, err := config.FormatReport(report, false)
+	require.NoError(t, err)
+
+	// Check headers
+	assert.Contains(t, output, "# Source Hierarchy:")
+	assert.Contains(t, output, "#   Tier 1 (User Global):    none")
+	assert.Contains(t, output, "#   Tier 2 (Company Global): unset")
+	assert.Contains(t, output, "#   Tier 3 (Repo Local):     none")
+	assert.Contains(t, output, "#   Tier 4 (Remote Origin):  git@github.com:my-org/my-service.git")
+
+	// Check annotations
+	assert.Contains(t, output, "platform: github # auto-discovered from remote origin")
+	assert.Contains(t, output, "provider: github # inferred from platform preset")
+	assert.Contains(t, output, "owner: my-org # auto-discovered from remote origin")
+	assert.Contains(t, output, "repo: my-service # auto-discovered from remote origin")
+
+	// Verify valid YAML round-trip
+	var parsed domain.ProjectConfig
+	err = yaml.Unmarshal([]byte(output), &parsed)
+	require.NoError(t, err)
+	assert.Equal(t, "github", parsed.Platform)
+	assert.Equal(t, "my-org", parsed.SCM.Owner)
+	assert.Equal(t, "my-service", parsed.SCM.Repo)
+}
+
+func TestInspect_SourcesOnly(t *testing.T) {
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+	userConfigDir := filepath.Join(fakeHome, ".config", "git-brx")
+	require.NoError(t, os.MkdirAll(userConfigDir, 0755))
+	userConfigFile := filepath.Join(userConfigDir, "config.yaml")
+	require.NoError(t, os.WriteFile(userConfigFile, []byte("platform: github\n"), 0644))
+
+	companyConfigDir := t.TempDir()
+	companyConfigFile := filepath.Join(companyConfigDir, "company.yaml")
+	require.NoError(t, os.WriteFile(companyConfigFile, []byte("branch:\n  template: custom\n"), 0644))
+	t.Setenv("GIT_BRX_CONFIG", companyConfigFile)
+
+	repoDir := t.TempDir()
+	repoConfigFile := filepath.Join(repoDir, ".git-brx.yaml")
+	require.NoError(t, os.WriteFile(repoConfigFile, []byte("review:\n  template: pr.md\n"), 0644))
+
+	report, err := config.Inspect(repoDir, "git@github.com:acme/core.git")
+	require.NoError(t, err)
+	assert.Equal(t, userConfigFile, report.UserConfigPath)
+	assert.Equal(t, companyConfigFile, report.CompanyConfigPath)
+	assert.Equal(t, repoConfigFile, report.RepoConfigPath)
+	assert.Equal(t, "git@github.com:acme/core.git", report.OriginURL)
+
+	sourcesOutput, err := config.FormatReport(report, true)
+	require.NoError(t, err)
+	assert.Contains(t, sourcesOutput, "# Source Hierarchy:")
+	assert.Contains(t, sourcesOutput, userConfigFile)
+	assert.Contains(t, sourcesOutput, companyConfigFile)
+	assert.Contains(t, sourcesOutput, repoConfigFile)
+	assert.Contains(t, sourcesOutput, "git@github.com:acme/core.git")
+	assert.NotContains(t, sourcesOutput, "platform:")
 }

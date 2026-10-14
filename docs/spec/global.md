@@ -22,6 +22,7 @@
 | `publish` | `publish.sh` | Pushes branch to remote with lease and configures upstream tracking. |
 | `delete` | `delete.sh` | Validates remote branch deletion, switches to `master`, and deletes local branch. |
 | `review` | `review.sh` | Creates a pull request on configured SCM platform (Bitbucket, GitHub) via REST API with reviewer mapping. |
+| `config` | *N/A (Go native)* | Prints the effective resolved cascading configuration and source provenance in YAML format. |
 
 ### Global Flags
 
