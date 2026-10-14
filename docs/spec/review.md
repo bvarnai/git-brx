@@ -15,7 +15,7 @@
 
 ## 2. Prerequisites & Environment
 - **Required host binaries:** `git` (>= 2.20.0).
-- **Environment variables read:** `GIT_DIR`, `GIT_WORK_TREE`, `GIT_PREFIX`, `GIT_BRX_CONFIG_PATH`, `GIT_BRX_TOKEN`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_COLOR`.
+- **Environment variables read:** `GIT_DIR`, `GIT_WORK_TREE`, `GIT_PREFIX`, `GIT_BRX_CONFIG`, `GIT_BRX_TOKEN`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_COLOR`.
 - **Working directory requirements (GIT_PREFIX behavior):** Can be invoked from any repository subdirectory; operations are executed relative to repository root (`git rev-parse --show-toplevel`).
 - **Git state assertions (e.g., dirty working tree check):**
   - Must be inside a Git working tree (`git rev-parse --is-inside-work-tree` == `true`).
@@ -41,7 +41,7 @@
      - Log: `[git-brx] Hint: Run 'git-brx publish' to push your branch before creating a review`
      - Fail with Exit Code `4`.
 4. **Configuration & Issue Loading:**
-   - Load configuration via the discovery cascade (`GIT_BRX_CONFIG_PATH` -> `.git-brx.yaml` -> `.git-brx/config.yaml` -> `~/.config/git-brx/config.yaml` -> zero-config remote origin auto-discovery).
+   - Load configuration via the layered cascade (User Global `~/.config/git-brx/config.yaml` / `~/.git-brx.yaml` -> Company Global `GIT_BRX_CONFIG` -> Repo Local `.git-brx.yaml` / `.git-brx/config.yaml` -> zero-config remote origin auto-discovery).
    - Extract `issueKey` from `<branch>` using the configured branch template regex.
    - Fetch issue details using the configured `IssueTracker` (Jira REST, GitHub, etc.) to retrieve components/labels and summary.
    - If issue call fails (401/404): Fail with Exit Code `6`.
