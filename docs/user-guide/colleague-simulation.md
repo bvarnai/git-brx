@@ -49,7 +49,7 @@ The simulation environment uses a 3-token least-privilege architecture:
 
 | Token Role | Environment Variable | Account | Recommended Scope / Permissions | Why It's Needed |
 | :--- | :--- | :--- | :--- | :--- |
-| **Admin Token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained | Repository lifecycle provisioning & deletion (`git-brx-sandbox`), inviting `alexvarnai` as collaborator. |
+| **Admin Token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained | Repository lifecycle provisioning & deletion (`git-brx-sandbox`), inviting `alexvarnai` as collaborator, and seeding scenario issues. |
 | **Primary Developer** | `ME_GITHUB_TOKEN` | Primary (`bvarnai`) | **Fine-grained PAT** (All repos or `git-brx-sandbox`):<br>• **Contents:** `Read-only` *(Required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` *(required)* | Injected into `env.sh` for developer operations in `git-brx-sandbox/me` (`create`, `publish`, `review`, `delete`). |
 | **Colleague** | `ALEX_GITHUB_TOKEN` | Colleague (`alexvarnai`) | **Fine-grained PAT** (All repos or `git-brx-sandbox`):<br>• **Contents:** `Read-only` *(Required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` *(required)* | Injected into `env-colleague.sh` for Alex's operations in `git-brx-sandbox/colleague`. |
 
