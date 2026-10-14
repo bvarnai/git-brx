@@ -40,8 +40,8 @@ Commands:
   --delete-repo               Delete GitHub sandbox repository (uses ADMIN token)
   --invite-collaborator <usr> Add collaborator and auto-accept if ALEX token set
   --accept-invitations        Accept pending invitations using ALEX token
-  --seed-issues               Seed initial test issues (#1..#4)
-  --create-issue <title>      Create an ad-hoc issue on GitHub
+  --seed-issues               Seed initial test issues (#1..#7) (uses ADMIN token)
+  --create-issue <title>      Create an ad-hoc issue on GitHub (uses ADMIN token)
       [--type bug|story]      Issue type / label (default: story)
       [--body <description>]  Optional issue description
   --help                      Show this help message
@@ -72,11 +72,12 @@ api_request_with_token() {
 }
 
 admin_api_request() {
-    if [[ -z "$ADMIN_GITHUB_TOKEN" ]]; then
+    local token="${ADMIN_GITHUB_TOKEN:-${ME_GITHUB_TOKEN:-}}"
+    if [[ -z "$token" ]]; then
         echo "Error: ADMIN_GITHUB_TOKEN is required for this operation." >&2
         exit 1
     fi
-    api_request_with_token "$ADMIN_GITHUB_TOKEN" "$@"
+    api_request_with_token "$token" "$@"
 }
 
 alex_api_request() {
@@ -88,7 +89,7 @@ alex_api_request() {
 }
 
 api_request() {
-    local token="${ME_GITHUB_TOKEN:-${ADMIN_GITHUB_TOKEN:-}}"
+    local token="${ADMIN_GITHUB_TOKEN:-${ME_GITHUB_TOKEN:-}}"
     if [[ -z "$token" ]]; then
         echo "Error: GITHUB_TOKEN is not set." >&2
         exit 1
@@ -218,7 +219,7 @@ create_issue() {
         '{title: $t, body: $b, labels: [$l]}')
 
     local resp
-    resp=$(api_request "POST" "repos/${REPO_OWNER}/${REPO_NAME}/issues" "$payload")
+    resp=$(admin_api_request "POST" "repos/${REPO_OWNER}/${REPO_NAME}/issues" "$payload")
     local code
     code=$(echo "$resp" | tail -n1)
 
@@ -237,7 +238,7 @@ create_issue() {
 seed_issues() {
     echo "==> [GitHub Sandbox] Checking for existing issues in ${REPO_OWNER}/${REPO_NAME}..."
     local list_resp
-    list_resp=$(api_request "GET" "repos/${REPO_OWNER}/${REPO_NAME}/issues?state=all&per_page=1")
+    list_resp=$(admin_api_request "GET" "repos/${REPO_OWNER}/${REPO_NAME}/issues?state=all&per_page=1")
     local code
     code=$(echo "$list_resp" | tail -n1)
 
