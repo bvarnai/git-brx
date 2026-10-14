@@ -147,8 +147,8 @@ func (c *Client) GetIssue(ctx context.Context, key string) (*domain.Issue, error
 		lower := strings.ToLower(name)
 		if lower == "bug" || lower == "defect" {
 			issueType = "Bug"
-		} else if lower == "enhancement" || lower == "feature" || lower == "story" {
-			issueType = "Story"
+		} else if lower == "enhancement" || lower == "feature" {
+			issueType = "Enhancement"
 		} else if lower == "epic" {
 			issueType = "Epic"
 		}

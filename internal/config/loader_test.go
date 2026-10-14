@@ -329,7 +329,7 @@ func TestInspect_ZeroConfigAutoInferredComments(t *testing.T) {
 	assert.Equal(t, "auto-discovered from remote origin", report.InferredFields["scm.owner"])
 	assert.Equal(t, "auto-discovered from remote origin", report.InferredFields["scm.repo"])
 	assert.Equal(t, "default convention", report.InferredFields["branch.template"])
-	assert.Equal(t, "default convention", report.InferredFields["branch.mapping"])
+	assert.Equal(t, "platform default (github)", report.InferredFields["branch.mapping"])
 
 	output, err := config.FormatReport(report, false)
 	require.NoError(t, err)
@@ -347,12 +347,17 @@ func TestInspect_ZeroConfigAutoInferredComments(t *testing.T) {
 	assert.Contains(t, output, "provider: github # inferred from platform preset")
 	assert.Contains(t, output, "owner: my-org # auto-discovered from remote origin")
 	assert.Contains(t, output, "repo: my-service # auto-discovered from remote origin")
+	assert.Contains(t, output, "mapping: # platform default (github)")
+	assert.Contains(t, output, "bug: issue")
+	assert.Contains(t, output, "enhancement: feature")
 
 	// Verify valid YAML round-trip
 	var parsed domain.ProjectConfig
 	err = yaml.Unmarshal([]byte(output), &parsed)
 	require.NoError(t, err)
 	assert.Equal(t, "github", parsed.Platform)
+	assert.Equal(t, "issue", parsed.Branch.Mapping["bug"])
+	assert.Equal(t, "feature", parsed.Branch.Mapping["enhancement"])
 	assert.Equal(t, "my-org", parsed.SCM.Owner)
 	assert.Equal(t, "my-service", parsed.SCM.Repo)
 }

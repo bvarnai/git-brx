@@ -322,6 +322,15 @@ func expandPlatformPreset(cfg *domain.ProjectConfig, detected *DetectedRemote, i
 				inferred["scm.provider"] = "inferred from platform preset"
 			}
 		}
+		if len(cfg.Branch.Mapping) == 0 {
+			cfg.Branch.Mapping = map[string]string{
+				"bug":         "issue",
+				"enhancement": "feature",
+			}
+			if inferred != nil {
+				inferred["branch.mapping"] = "platform default (github)"
+			}
+		}
 		if detected != nil {
 			if cfg.Tracker.Owner == "" && detected.Owner != "" {
 				cfg.Tracker.Owner = detected.Owner
@@ -361,6 +370,15 @@ func expandPlatformPreset(cfg *domain.ProjectConfig, detected *DetectedRemote, i
 				inferred["scm.provider"] = "inferred from platform preset"
 			}
 		}
+		if len(cfg.Branch.Mapping) == 0 {
+			cfg.Branch.Mapping = map[string]string{
+				"bug":         "issue",
+				"enhancement": "feature",
+			}
+			if inferred != nil {
+				inferred["branch.mapping"] = "platform default (gitlab)"
+			}
+		}
 		if detected != nil {
 			if cfg.Tracker.Owner == "" && detected.Owner != "" {
 				cfg.Tracker.Owner = detected.Owner
@@ -398,6 +416,17 @@ func expandPlatformPreset(cfg *domain.ProjectConfig, detected *DetectedRemote, i
 			cfg.Tracker.Provider = "jira"
 			if inferred != nil {
 				inferred["tracker.provider"] = "inferred from platform preset"
+			}
+		}
+		if len(cfg.Branch.Mapping) == 0 {
+			cfg.Branch.Mapping = map[string]string{
+				"Bug":   "issue",
+				"Story": "feature",
+				"Epic":  "epic",
+				"Task":  "issue",
+			}
+			if inferred != nil {
+				inferred["branch.mapping"] = "platform default (jira)"
 			}
 		}
 	case "none":

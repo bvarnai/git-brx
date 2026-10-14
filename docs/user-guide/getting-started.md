@@ -139,12 +139,9 @@ scm:
   repo: my-service # auto-discovered from remote origin
 branch:
   template: ^(issue|feature|epic)/[A-Za-z0-9_-]+$ # default convention
-  mapping: # default convention
-    Bug: issue
-    Epic: epic
-    Issue: issue
-    Story: feature
-    Task: issue
+  mapping: # platform default (github)
+    bug: issue
+    enhancement: feature
 ```
 
 To view only the participating configuration files:
