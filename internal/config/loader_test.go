@@ -80,7 +80,7 @@ scm:
   repo: core-app
 
 branch:
-  template: ^(issue|feature)/(${projectkey}-[0-9]+)$
+  template: ^(issue|feature)/(VSB-[0-9]+)$
 `
 	err := os.WriteFile(filepath.Join(tempDir, ".git-brx.yaml"), []byte(content), 0644)
 	require.NoError(t, err)
@@ -94,7 +94,6 @@ branch:
 	assert.Equal(t, "https://bitbucket.company.com", cfg.SCM.URI)
 	assert.Equal(t, "VSB", cfg.SCM.Project)
 	assert.Equal(t, "core-app", cfg.SCM.Repo)
-	// Interpolated template
 	assert.Equal(t, "^(issue|feature)/(VSB-[0-9]+)$", cfg.Branch.Template)
 }
 

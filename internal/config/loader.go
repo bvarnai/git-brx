@@ -54,19 +54,6 @@ func FindRepoConfigFile(workDir string) string {
 	return ""
 }
 
-// FindConfigFile returns the active configuration file path for backward compatibility.
-func FindConfigFile(workDir string) string {
-	if envPath := os.Getenv("GIT_BRX_CONFIG"); envPath != "" {
-		if _, err := os.Stat(envPath); err == nil {
-			return envPath
-		}
-	}
-	if repoPath := FindRepoConfigFile(workDir); repoPath != "" {
-		return repoPath
-	}
-	return FindUserConfigFile()
-}
-
 func loadConfigFile(path string) (*domain.ProjectConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -182,9 +169,6 @@ func Inspect(workDir, originURL string) (*ConfigReport, error) {
 			cfg.Branch.Template = `^(issue|feature|epic)/[A-Za-z0-9_-]+$`
 			report.InferredFields["branch.template"] = "default convention"
 		}
-	} else if cfg.Tracker.Project != "" {
-		// Interpolate legacy ${projectkey} variable if present
-		cfg.Branch.Template = strings.ReplaceAll(cfg.Branch.Template, "${projectkey}", cfg.Tracker.Project)
 	}
 
 	// Default branch mapping
