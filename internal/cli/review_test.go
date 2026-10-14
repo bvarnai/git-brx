@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -166,24 +168,25 @@ func TestComposeReviewDescription(t *testing.T) {
 	app := cli.NewApp(nil, nil, nil)
 	scm := &mockSCMProvider{}
 
-	t.Run("scm formats closing issue in default description", func(t *testing.T) {
+	t.Run("default description layout without template has closing ref and merge instructions only", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
 		desc := app.ComposeReviewDescription(cfg, scm, "8", "Feature summary", "feature/8", "main", "")
-		assert.Contains(t, desc, "Closes #8")
-		assert.Contains(t, desc, "Feature summary")
+		assert.True(t, strings.HasPrefix(desc, "Closes #8\n\n### Merge instructions"))
+		assert.False(t, strings.Contains(desc, "### Description"))
+		assert.False(t, strings.Contains(desc, "### Verification & Testing"))
 		assert.Contains(t, desc, "feat(#8): Feature summary")
 	})
 
-	t.Run("scm formats closing issue in template", func(t *testing.T) {
+	t.Run("scm formats closing issue in template separated by divider", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{
 			Review: domain.ReviewConfig{
 				Template: "## Custom Template\nSome details here.",
 			},
 		}
 		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main", "")
-		assert.Contains(t, desc, "## Custom Template")
-		assert.Contains(t, desc, "Closes #12")
-		assert.Contains(t, desc, "feat(#12): Details")
+		assert.Contains(t, desc, "## Custom Template\nSome details here.\n\n---\nCloses #12\n\n### Merge instructions")
+		assert.False(t, strings.Contains(desc, "### Description"))
+		assert.False(t, strings.Contains(desc, "### Verification & Testing"))
 	})
 
 	t.Run("scm returning empty string does not inject closing line", func(t *testing.T) {
@@ -191,12 +194,31 @@ func TestComposeReviewDescription(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
 		desc := app.ComposeReviewDescription(cfg, emptySCM, "12", "Details", "feature/12", "main", "")
 		assert.False(t, strings.Contains(desc, "Closes #"))
+		assert.True(t, strings.HasPrefix(desc, "### Merge instructions"))
+	})
+
+	t.Run("unlinked branch without issueKey omits Closes line and starts with merge instructions", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, scm, "", "", "feature/scratch", "main", "")
+		assert.False(t, strings.Contains(desc, "Closes #"))
+		assert.False(t, strings.Contains(desc, "---"))
+		assert.True(t, strings.HasPrefix(desc, "### Merge instructions"))
+	})
+
+	t.Run("unlinked branch with template separates template and merge instructions", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{
+			Review: domain.ReviewConfig{
+				Template: "## Team Template",
+			},
+		}
+		desc := app.ComposeReviewDescription(cfg, scm, "", "", "feature/scratch", "main", "")
+		assert.Contains(t, desc, "## Team Template\n\n---\n### Merge instructions")
+		assert.False(t, strings.Contains(desc, "Closes #"))
 	})
 
 	t.Run("nil scm does not panic and formats default instructions", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
 		desc := app.ComposeReviewDescription(cfg, nil, "12", "Details", "feature/12", "main", "")
-		assert.Contains(t, desc, "Details")
 		assert.Contains(t, desc, "### Merge instructions")
 		assert.Contains(t, desc, "feat(#12): Details")
 	})
@@ -217,8 +239,26 @@ func TestComposeReviewDescription(t *testing.T) {
 			},
 		}
 		desc := app.ComposeReviewDescription(cfg, scm, "12", "Details", "feature/12", "main", "")
-		assert.Contains(t, desc, "Details")
+		assert.Equal(t, "Closes #12\n", desc)
 		assert.False(t, strings.Contains(desc, "### Merge instructions"))
+	})
+
+	t.Run("template auto-discovery finds standard pull request template", func(t *testing.T) {
+		tempDir := t.TempDir()
+		githubDir := filepath.Join(tempDir, ".github")
+		require.NoError(t, os.MkdirAll(githubDir, 0755))
+		templatePath := filepath.Join(githubDir, "pull_request_template.md")
+		require.NoError(t, os.WriteFile(templatePath, []byte("## Discovered Template"), 0644))
+
+		// Temporarily change directory to tempDir
+		origWd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.Chdir(tempDir))
+		defer func() { _ = os.Chdir(origWd) }()
+
+		cfg := &domain.ProjectConfig{} // empty Review.Template triggers auto-discovery
+		desc := app.ComposeReviewDescription(cfg, scm, "41", "Auto discovery", "feature/41", "main", "")
+		assert.Contains(t, desc, "## Discovered Template\n\n---\nCloses #41")
 	})
 
 	t.Run("epic branch produces merge commit instructions by convention", func(t *testing.T) {

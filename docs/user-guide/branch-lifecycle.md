@@ -151,8 +151,10 @@ git brx review
    - **Branch patterns (`mapping.branches`):** If no labels matched, matches against source branch globs (e.g., `epic/*`).
    - **Default fallback (`mapping.default`):** Falls back to default reviewers if no preceding rules match.
    - **Author exclusion:** Automatically filters out the PR author so authors are never requested to review their own changes.
-4. **PR description & checklist:** Loads your team's review template (e.g. `.github/pull_request_template.md`) and appends standardized **Merge Instructions** resolved according to branch conventions:
+4. **PR description assembly:** Auto-discovers standard review templates (e.g. `.github/pull_request_template.md`), links the parent issue (`Closes #<id>`), and appends standardized **Merge Instructions** resolved according to branch conventions:
    ```markdown
+   Closes #TASK-101
+
    ### Merge instructions
    - **Strategy:** Squash and merge (recommended)
      - **Commit:** `fix(#TASK-101): add user authentication API` (all commits squashed into a single commit)
