@@ -122,11 +122,11 @@ git brx config
 ```
 This prints the source hierarchy and complete YAML configuration with inline comments highlighting auto-discovered fields:
 ```yaml
-# Source Hierarchy:
-#   Tier 1 (User Global):    none
-#   Tier 2 (Shared Global):  unset
-#   Tier 3 (Repo Local):     none
-#   Tier 4 (Remote Origin):  git@github.com:my-org/my-service.git
+# Source hierarchy:
+#   Tier 1 (User global [~/.config/git-brx/config.yaml, ~/.git-brx.yaml]): none
+#   Tier 2 (Shared global [$GIT_BRX_CONFIG]):                             unset
+#   Tier 3 (Repo local [.git-brx.yaml, .git-brx/config.yaml]):             none
+#   Tier 4 (Remote origin [git remote origin]):                           git@github.com:my-org/my-service.git
 
 platform: github # auto-discovered from remote origin
 tracker:

@@ -335,11 +335,12 @@ func TestInspect_ZeroConfigAutoInferredComments(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check headers
-	assert.Contains(t, output, "# Source Hierarchy:")
-	assert.Contains(t, output, "#   Tier 1 (User Global):    none")
-	assert.Contains(t, output, "#   Tier 2 (Shared Global):  unset")
-	assert.Contains(t, output, "#   Tier 3 (Repo Local):     none")
-	assert.Contains(t, output, "#   Tier 4 (Remote Origin):  git@github.com:my-org/my-service.git")
+	assert.Contains(t, output, "# Source hierarchy:")
+	assert.Contains(t, output, "Tier 1 (User global [~/.config/git-brx/config.yaml, ~/.git-brx.yaml]):")
+	assert.Contains(t, output, "Tier 2 (Shared global [$GIT_BRX_CONFIG]):")
+	assert.Contains(t, output, "Tier 3 (Repo local [.git-brx.yaml, .git-brx/config.yaml]):")
+	assert.Contains(t, output, "Tier 4 (Remote origin [git remote origin]):")
+	assert.Contains(t, output, "git@github.com:my-org/my-service.git")
 
 	// Check annotations
 	assert.Contains(t, output, "platform: github # auto-discovered from remote origin")
@@ -382,7 +383,7 @@ func TestInspect_SourcesOnly(t *testing.T) {
 
 	sourcesOutput, err := config.FormatReport(report, true)
 	require.NoError(t, err)
-	assert.Contains(t, sourcesOutput, "# Source Hierarchy:")
+	assert.Contains(t, sourcesOutput, "# Source hierarchy:")
 	assert.Contains(t, sourcesOutput, userConfigFile)
 	assert.Contains(t, sourcesOutput, companyConfigFile)
 	assert.Contains(t, sourcesOutput, repoConfigFile)

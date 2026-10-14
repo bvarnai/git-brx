@@ -234,8 +234,6 @@ func FormatReport(report *ConfigReport, sourcesOnly bool) (string, error) {
 	sharedPath := report.SharedConfigPath
 	if sharedPath == "" {
 		sharedPath = "unset"
-	} else {
-		sharedPath = sharedPath + " ($GIT_BRX_CONFIG)"
 	}
 	repoPath := report.RepoConfigPath
 	if repoPath == "" {
@@ -246,11 +244,11 @@ func FormatReport(report *ConfigReport, sourcesOnly bool) (string, error) {
 		originURL = "none"
 	}
 
-	b.WriteString("# Source Hierarchy:\n")
-	b.WriteString(fmt.Sprintf("#   Tier 1 (User Global):    %s\n", userPath))
-	b.WriteString(fmt.Sprintf("#   Tier 2 (Shared Global):  %s\n", sharedPath))
-	b.WriteString(fmt.Sprintf("#   Tier 3 (Repo Local):     %s\n", repoPath))
-	b.WriteString(fmt.Sprintf("#   Tier 4 (Remote Origin):  %s\n", originURL))
+	b.WriteString("# Source hierarchy:\n")
+	b.WriteString(fmt.Sprintf("#   %-70s %s\n", "Tier 1 (User global [~/.config/git-brx/config.yaml, ~/.git-brx.yaml]):", userPath))
+	b.WriteString(fmt.Sprintf("#   %-70s %s\n", "Tier 2 (Shared global [$GIT_BRX_CONFIG]):", sharedPath))
+	b.WriteString(fmt.Sprintf("#   %-70s %s\n", "Tier 3 (Repo local [.git-brx.yaml, .git-brx/config.yaml]):", repoPath))
+	b.WriteString(fmt.Sprintf("#   %-70s %s\n", "Tier 4 (Remote origin [git remote origin]):", originURL))
 
 	if sourcesOnly {
 		return b.String(), nil

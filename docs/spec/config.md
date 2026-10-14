@@ -24,15 +24,15 @@
      - **Tier 3:** Repo Local (`.git-brx.yaml`, `.git-brx/config.yaml` in repo root).
      - **Tier 4:** Remote Origin Auto-Discovery (inferred platform, owner, repo, branch conventions).
 3. **Provenance Annotation:**
-   - Prepend the Source Hierarchy header as YAML comments:
+   - Prepend the Source hierarchy header as YAML comments:
      ```yaml
-     # Source Hierarchy:
-     #   Tier 1 (User Global):    <path or "none">
-     #   Tier 2 (Shared Global):  <path ($GIT_BRX_CONFIG) or "unset">
-     #   Tier 3 (Repo Local):     <path or "none">
-     #   Tier 4 (Remote Origin):  <originURL or "none">
+     # Source hierarchy:
+     #   Tier 1 (User global [~/.config/git-brx/config.yaml, ~/.git-brx.yaml]): <path or "none">
+     #   Tier 2 (Shared global [$GIT_BRX_CONFIG]):                             <path or "unset">
+     #   Tier 3 (Repo local [.git-brx.yaml, .git-brx/config.yaml]):             <path or "none">
+     #   Tier 4 (Remote origin [git remote origin]):                           <originURL or "none">
      ```
-   - If `--sources` is specified, emit only the Source Hierarchy header and exit cleanly with Exit Code `0`.
+   - If `--sources` is specified, emit only the Source hierarchy header and exit cleanly with Exit Code `0`.
    - Otherwise, serialize the effective configuration to YAML and annotate auto-discovered or defaulted fields inline with YAML comments (e.g., `# auto-discovered from remote origin`, `# inferred from platform preset`, `# default convention`).
 4. **Standard Output Protocol:**
    - Output directly to `stdout`. The resulting output is 100% valid YAML and safe to redirect directly into a `.git-brx.yaml` file (`git brx config > .git-brx.yaml`).

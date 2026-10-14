@@ -28,8 +28,9 @@ func TestConfigIntegration(t *testing.T) {
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
 
 		out := stdout.String()
-		assert.Contains(t, out, "# Source Hierarchy:")
-		assert.Contains(t, out, "#   Tier 4 (Remote Origin):  git@github.com:acme-org/test-service.git")
+		assert.Contains(t, out, "# Source hierarchy:")
+		assert.Contains(t, out, "Tier 4 (Remote origin [git remote origin]):")
+		assert.Contains(t, out, "git@github.com:acme-org/test-service.git")
 		assert.Contains(t, out, "platform: github # auto-discovered from remote origin")
 		assert.Contains(t, out, "owner: acme-org # auto-discovered from remote origin")
 		assert.Contains(t, out, "repo: test-service # auto-discovered from remote origin")
@@ -54,8 +55,9 @@ func TestConfigIntegration(t *testing.T) {
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
 
 		out := stdout.String()
-		assert.Contains(t, out, "# Source Hierarchy:")
-		assert.Contains(t, out, "Tier 4 (Remote Origin):  git@github.com:acme-org/test-service.git")
+		assert.Contains(t, out, "# Source hierarchy:")
+		assert.Contains(t, out, "Tier 4 (Remote origin [git remote origin]):")
+		assert.Contains(t, out, "git@github.com:acme-org/test-service.git")
 		assert.NotContains(t, out, "platform:")
 	})
 
@@ -91,7 +93,7 @@ branch:
 		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
 
 		out := stdout.String()
-		assert.Contains(t, out, companyFile+" ($GIT_BRX_CONFIG)")
+		assert.Contains(t, out, companyFile)
 		assert.Contains(t, out, repoFile)
 
 		var parsed domain.ProjectConfig

@@ -51,7 +51,7 @@ branch:
 			},
 			expectedCode: int(domain.ExitSuccess),
 			validateOut: func(t *testing.T, stdout string) {
-				assert.Contains(t, stdout, "# Source Hierarchy:")
+				assert.Contains(t, stdout, "# Source hierarchy:")
 				assert.Contains(t, stdout, "platform: github")
 				// YAML round trip
 				var cfg domain.ProjectConfig
@@ -71,7 +71,7 @@ branch:
 			},
 			expectedCode: int(domain.ExitSuccess),
 			validateOut: func(t *testing.T, stdout string) {
-				assert.Contains(t, stdout, "# Source Hierarchy:")
+				assert.Contains(t, stdout, "# Source hierarchy:")
 				assert.Contains(t, stdout, configPath)
 				assert.NotContains(t, stdout, "platform: github")
 			},
