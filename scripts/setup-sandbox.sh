@@ -54,7 +54,7 @@ Usage: $0 [OPTIONS]
 Tokens (can also be passed via environment variables):
   --admin-token <pat>  Admin PAT for creating repo, inviting collaborators & seeding issues (ADMIN_GITHUB_TOKEN)
   --me-token <pat>     Fine-grained PAT for Primary Developer 'me' (ME_GITHUB_TOKEN)
-  --alex-token <pat>   Fine-grained PAT for Colleague 'Alex Varnai' (ALEX_GITHUB_TOKEN)
+  --alex-token <pat>   PAT for Colleague 'Alex Varnai' (Classic PAT with 'repo' scope for personal repos) (ALEX_GITHUB_TOKEN)
 
 Options:
   --check              Verify tokens, remote sandbox repository, and local workspaces

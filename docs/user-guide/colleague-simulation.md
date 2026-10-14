@@ -39,7 +39,7 @@ Run the automated provisioning script from the `git-brx` root:
 ```bash
 ADMIN_GITHUB_TOKEN="ghp_..." \
 ME_GITHUB_TOKEN="github_pat_..." \
-ALEX_GITHUB_TOKEN="github_pat_..." \
+ALEX_GITHUB_TOKEN="ghp_..." \
 ./scripts/setup-sandbox.sh
 ```
 
@@ -51,7 +51,12 @@ The simulation environment uses a 3-token least-privilege architecture:
 | :--- | :--- | :--- | :--- | :--- |
 | **Admin Token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained | Repository lifecycle provisioning & deletion (`git-brx-sandbox`), inviting `alexvarnai` as collaborator, and seeding scenario issues. |
 | **Primary Developer** | `ME_GITHUB_TOKEN` | Primary (`bvarnai`) | **Fine-grained PAT** (All repos or `git-brx-sandbox`):<br>• **Contents:** `Read-only` *(Required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` *(required)* | Injected into `env.sh` for developer operations in `git-brx-sandbox/me` (`create`, `publish`, `review`, `delete`). |
-| **Colleague** | `ALEX_GITHUB_TOKEN` | Colleague (`alexvarnai`) | **Fine-grained PAT** (All repos or `git-brx-sandbox`):<br>• **Contents:** `Read-only` *(Required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` *(required)* | Injected into `env-colleague.sh` for Alex's operations in `git-brx-sandbox/colleague`. |
+| **Colleague** | `ALEX_GITHUB_TOKEN` | Colleague (`alexvarnai`) | **Classic PAT** (`repo` scope) *(Mandatory for personal repos)*<br>or Fine-grained PAT *(Organizations only)* | Injected into `env-colleague.sh` for Alex's operations in `git-brx-sandbox/colleague`. |
+
+> [!NOTE]
+> **GitHub Platform Rule: Personal Repositories vs Organizations:**
+> * **Personal Repositories (Sandbox Simulation):** GitHub strictly prevents fine-grained personal access tokens (`github_pat_...`) from accessing private repositories owned by another individual personal user account (`bvarnai`), even when added as an accepted collaborator (GitHub returns `404 Not Found`). When collaborating on private personal repos, the collaborator token (`ALEX_GITHUB_TOKEN`) must be a **Classic PAT (`ghp_...`)** with the `repo` scope.
+> * **Organizations (Enterprise / Team Environments):** In production organizations (e.g. `github.com/my-org/service`), fine-grained PATs are fully supported for all organization members and can be granularly scoped to individual repositories and least-privilege permissions without issue.
 
 > [!IMPORTANT]
 > **Why `Contents: Read-only` is required on Private Repositories:**
