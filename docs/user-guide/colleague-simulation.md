@@ -190,6 +190,42 @@ sequenceDiagram
 
 ---
 
+### Example Flow E: Non-Squash PR Merge Strategy (`merge` commit / `rebase`)
+
+#### Policy / Configuration:
+- Configure `review.merge.strategies.sources` to mandate a merge commit for multi-part features (or use `--strategy merge` / `--strategy rebase` flag):
+  ```yaml
+  review:
+    merge:
+      instructions: true
+      strategies:
+        sources:
+          "feature/multi-*": merge
+  ```
+
+#### Prompt to Antigravity:
+> *"Alex, I just created a multi-commit branch `feature/multi-step` in `git-brx-sandbox/me` and opened a review with `git brx review --strategy merge`. Please review the PR, verify that the description instructs to use a merge commit instead of squashing, and merge it to `main` preserving all commits."*
+
+#### Alex's response in Chat:
+> `[Alex Varnai]:`
+> I reviewed PR #5 on GitHub. The description explicitly states:
+> ```markdown
+> ### Merge instructions
+> - **Strategy:** Create a merge commit
+>   - **Commit:** `Merge branch 'feature/multi-step' into main` (merge commit preserving all constituent commits)
+> - **Branch cleanup:** Delete source branch `feature/multi-step` after merging
+> ```
+> I merged the PR on GitHub using **Create a merge commit** (commit `9d31f0e`) and deleted the remote branch.
+>
+> **Your Turn:**
+> Switch back to `~/workspace/git-brx-sandbox/me` on your active work branch and run:
+> ```bash
+> git brx sync
+> ```
+> `git-brx` will fetch the new merge commit from `origin/main` and rebase your topic branch cleanly over it!
+
+---
+
 ## 5. Resetting the sandbox environment
 
 If you want to wipe local changes and start completely fresh from GitHub `origin/main`:

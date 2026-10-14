@@ -191,4 +191,68 @@ review:
    - Cascades to `mapping.default` (`bvarnai`).
    - PR is opened with lead `bvarnai` requested as reviewer, avoiding self-assignment.
 
+---
+
+## Playbook 6: Non-Squash PR Merge Strategy (`merge` commit / `rebase`)
+
+### Objective
+Verify that `git brx review` renders explicit merge instructions when a PR requires a non-squash strategy (e.g., preserving full constituent commit history via a true merge commit or linear rebase), and confirm that downstream `git brx sync` correctly handles the resulting non-squashed upstream history.
+
+### Context & Configuration
+By default, `git-brx` recommends squash merges for single feature/issue branches. However, teams frequently require full history preservation:
+- Multi-commit major initiatives (`epic/*` or `release/*` convention)
+- Topic branches configured via `review.merge.strategies.sources` / `review.merge.strategies.targets`
+- On-demand CLI overrides via `git brx review --strategy merge` or `git brx review --strategy rebase`
+
+### Setup (`.git-brx.yaml` in sandbox):
+```yaml
+review:
+  merge:
+    instructions: true
+    strategy: squash
+    strategies:
+      sources:
+        "feature/multi-*": merge
+```
+
+### Steps:
+
+#### Step 1: Primary Developer opens a PR requiring a merge commit
+1. **[User]** In `git-brx-sandbox/me`, create a multi-commit branch and publish:
+   ```bash
+   git brx create feature/multi-step -y
+   echo "step 1" >> pipeline.txt && git add pipeline.txt && git commit -m "feat: implement step 1"
+   echo "step 2" >> pipeline.txt && git add pipeline.txt && git commit -m "feat: implement step 2"
+   git brx publish
+   ```
+2. **[User]** Submit for review (matching `feature/multi-*` or using explicit `--strategy merge`):
+   ```bash
+   git brx review
+   # or with CLI override: git brx review --strategy merge
+   ```
+3. **Verification in PR Description:**
+   Inspect the opened PR on GitHub. Verify that the generated description includes:
+   ```markdown
+   ### Merge instructions
+   - **Strategy:** Create a merge commit
+     - **Commit:** `Merge branch 'feature/multi-step' into main` (merge commit preserving all constituent commits)
+   - **Branch cleanup:** Delete source branch `feature/multi-step` after merging
+   ```
+
+#### Step 2: Colleague Alex reviews & merges using a Merge Commit
+1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
+   - Alex reviews the PR, observes the instruction to create a merge commit instead of squash, and merges via GitHub UI using **"Create a merge commit"** (or command line equivalent).
+   - Deletes the remote branch `feature/multi-step`.
+   - Alex reports: *"Merged PR #X into main with a merge commit, preserving constituent commits. Run 'git brx sync' on your other branches to test upstream rebase over a merge commit!"*
+
+#### Step 3: Upstream Synchronization over a Merge Commit
+1. **[User]** On another active topic branch in `git-brx-sandbox/me`:
+   ```bash
+   git brx sync
+   ```
+2. **Verification:**
+   - Verify `git-brx sync` fetches the new merge commit and its constituent commits on `origin/main`.
+   - Verify the local branch rebases smoothly on top of `origin/main` without duplicate commit conflicts.
+
+
 
