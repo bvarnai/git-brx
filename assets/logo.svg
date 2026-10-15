@@ -20,11 +20,6 @@
       <stop offset="100%" stop-color="#0d0e11" />
     </radialGradient>
 
-    <!-- Deep Drop Shadow for Standalone Circular App/Logo Bounds -->
-    <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.65" />
-    </filter>
-
     <!-- Neon Glow Stack -->
     <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
       <feGaussianBlur stdDeviation="6" result="blur1" />
@@ -62,7 +57,7 @@
     .txt-glow {
       font-family: ui-monospace, SFMono-Regular, "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       font-weight: 900;
-      font-size: 50px;
+      font-size: 52px;
       letter-spacing: 4px;
       text-anchor: middle;
       dominant-baseline: central;
@@ -72,7 +67,7 @@
     .txt-core {
       font-family: ui-monospace, SFMono-Regular, "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       font-weight: 900;
-      font-size: 50px;
+      font-size: 52px;
       letter-spacing: 4px;
       text-anchor: middle;
       dominant-baseline: central;
@@ -81,21 +76,21 @@
     }
   </style>
 
-  <!-- Self-Contained Circular Base Assembly with Edge Roll-off -->
-  <g filter="url(#logoShadow)">
-    <!-- Base Outer Edge (R=236) -->
-    <circle cx="256" cy="256" r="236" fill="url(#btnRimShade)" stroke="#0b0c0e" stroke-width="3" />
+  <!-- Fully Circular Base Assembly without Outer Drop Shadow -->
+  <g id="circularBase">
+    <!-- Base Outer Edge (R=252 with 4px border, precisely filling the 512x512 circle) -->
+    <circle cx="256" cy="256" r="252" fill="url(#btnRimShade)" stroke="#0b0c0e" stroke-width="4" />
     
     <!-- Outer Inset Bevel -->
-    <circle cx="256" cy="256" r="218" fill="url(#grooveDark)" stroke="#1a1c22" stroke-width="1.5" />
-    <circle cx="256" cy="256" r="202" fill="#0c0d10" stroke="#000000" stroke-width="3" />
+    <circle cx="256" cy="256" r="232" fill="url(#grooveDark)" stroke="#1a1c22" stroke-width="1.5" />
+    <circle cx="256" cy="256" r="214" fill="#0c0d10" stroke="#000000" stroke-width="3" />
 
     <!-- Intermediate Stepped Rim Structure -->
-    <circle cx="256" cy="256" r="184" fill="url(#btnRimShade)" stroke="#07080a" stroke-width="2" />
-    <circle cx="256" cy="256" r="170" fill="#0a0b0d" stroke="#1f2228" stroke-width="1" />
+    <circle cx="256" cy="256" r="196" fill="url(#btnRimShade)" stroke="#07080a" stroke-width="2" />
+    <circle cx="256" cy="256" r="180" fill="#0a0b0d" stroke="#1f2228" stroke-width="1" />
 
     <!-- Raised Center Core Cap -->
-    <circle cx="256" cy="256" r="158" fill="url(#capFace)" stroke="#2d323a" stroke-width="2" />
+    <circle cx="256" cy="256" r="166" fill="url(#capFace)" stroke="#2d323a" stroke-width="2" />
   </g>
 
   <!-- Ambient Internal Spill Reflection -->
