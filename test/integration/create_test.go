@@ -509,4 +509,3 @@ func TestCreateIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "Creating branch 'epic/302'")
 	})
 }
-
