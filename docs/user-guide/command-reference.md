@@ -1,6 +1,6 @@
 # Complete command reference
 
-This chapter documents all 10 subcommands available in `git-brx`, including flag definitions, accepted arguments, error codes, and practical examples.
+This chapter documents all subcommands available in `git-brx`, including flag definitions, accepted arguments, error codes, and practical examples.
 
 ---
 
@@ -25,8 +25,8 @@ The following flags are accepted across all commands:
 Provisions a new local topic branch after validating branch naming rules and issue status with the configured issue tracker.
 
 ### Flags:
-- `-o`, `--offline`: Skip issue tracker verification and remote ref availability checks.
-- `-y`, `--yes`: Automatically accept confirmation prompts without interactive confirmation.
+- `-o`, `--offline`: Skip issue tracker verification and remote ref availability checks
+- `-y`, `--yes`: Automatically accept confirmation prompts without interactive confirmation
 
 ### Examples:
 ```bash
@@ -40,14 +40,14 @@ git brx create -y issue/VSB-102
 ## 2. `git-brx select`
 **Usage:** `git-brx select [flags] [<branch>]`
 
-Selects and switches the working tree to an existing branch (`master` by default). Performs remote fetch, warns on uncommitted changes, and provides fuzzy typo suggestions.
+Selects and switches the working tree to an existing branch (`main` by default). Performs remote fetch, warns on uncommitted changes, and provides fuzzy typo suggestions.
 
 ### Flags:
 - `-o`, `--offline`: Skip remote `git fetch` and switch between local branches only.
 
 ### Examples:
 ```bash
-git brx select                    # Switches to default master/main branch
+git brx select                    # Switches to default main branch
 git brx select issue/VSB-101       # Switches to issue/VSB-101
 git brx select -o feature/offline # Switches offline without fetching
 ```
@@ -57,13 +57,13 @@ git brx select -o feature/offline # Switches offline without fetching
 ## 3. `git-brx sync`
 **Usage:** `git-brx sync [flags] [<branch>]`
 
-Synchronizes the active branch with target base branch (`master` by default). Automatically rebases for `issue/*` branches and merges for `feature/*` branches.
+Synchronizes the active branch with target base branch (`main` by default). Automatically rebases for `issue/*` branches and merges for `feature/*` branches.
 
 ### Flags:
-- `-m`, `--merge`: Force merge strategy regardless of branch default.
-- `-r`, `--rebase`: Force rebase strategy regardless of branch default.
-- `-a`, `--autostash`: Automatically stash and re-apply dirty working tree changes (rebase only).
-- `-i`, `--interactive`: Launch interactive rebase (rebase only).
+- `-m`, `--merge`: Force merge strategy regardless of branch default
+- `-r`, `--rebase`: Force rebase strategy regardless of branch default
+- `-a`, `--autostash`: Automatically stash and re-apply dirty working tree changes (rebase only)
+- `-i`, `--interactive`: Launch interactive rebase (rebase only)
 
 ### Examples:
 ```bash
@@ -80,7 +80,7 @@ git brx sync -a
 Pulls and rebases remote changes for the current branch from `origin/<current-branch>`.
 
 ### Flags:
-- `-a`, `--autostash`: Automatically stash local changes before rebasing and pop afterwards.
+- `-a`, `--autostash`: Automatically stash local changes before rebasing and pop afterwards
 
 ### Examples:
 ```bash
@@ -96,7 +96,7 @@ git brx update --autostash
 Pushes current branch to remote origin with `--force-with-lease` and establishes upstream tracking.
 
 ### Flags:
-- `--no-force`: Push with standard fast-forward constraints without lease override.
+- `--no-force`: Push with standard fast-forward constraints without lease override
 
 ### Examples:
 ```bash
@@ -112,8 +112,8 @@ git brx publish --dry-run
 Creates a pull request / code review on the configured SCM platform (GitHub, Bitbucket Server), automatically assigning reviewers and appending standardized merge instructions.
 
 ### Flags:
-- `-r`, `--reviewer <user>`: Explicitly specify a reviewer instead of automated component routing.
-- `-t`, `--title <title>`: Override the default pull request title.
+- `-r`, `--reviewer <user>`: Explicitly specify a reviewer instead of automated component routing
+- `-t`, `--title <title>`: Override the default pull request title
 
 ### Examples:
 ```bash
@@ -128,10 +128,10 @@ git brx review --dry-run
 ## 7. `git-brx delete`
 **Usage:** `git-brx delete [flags] [<branch>]`
 
-Safely deletes a topic branch (`issue/*`, `feature/*`, or `epic/*`) after remote merge and prunes stale tracking references. If `<branch>` is omitted, defaults to the current active branch. If currently on the target branch, automatically switches to `master` (or default branch) first.
+Safely deletes a topic branch (`issue/*`, `feature/*`, or `epic/*`) after remote merge and prunes stale tracking references. If `<branch>` is omitted, defaults to the current active branch. If currently on the target branch, automatically switches to `main` (or default branch) first.
 
 ### Flags:
-- `-f`, `--force`: Bypass remote deletion verification (useful for discarding unpublished local branches).
+- `-f`, `--force`: Bypass remote deletion verification (useful for discarding unpublished local branches)
 
 ### Examples:
 ```bash
@@ -148,7 +148,7 @@ git brx delete --force
 Launches the configured GUI merge tool (`git config merge.tool`) for each conflicted file, verifies conflict resolution, stages **only** the resolved files, and continues the active rebase or merge.
 
 ### Flags:
-- `-t`, `--tool <tool>`: Specify explicit merge tool override.
+- `-t`, `--tool <tool>`: Specify explicit merge tool override
 
 ### Examples:
 ```bash
@@ -163,7 +163,7 @@ git brx resolve
 Aborts any in-flight rebase or merge and hard-resets the working tree to the current remote tracking ref (`origin/<branch>`).
 
 ### Flags:
-- `-c`, `--clean`: Also remove untracked files and directories (`git clean -fd`).
+- `-c`, `--clean`: Also remove untracked files and directories (`git clean -fd`)
 
 ### Examples:
 ```bash
@@ -173,18 +173,19 @@ git brx reset --clean
 
 ---
 
+<a id="git-brx-history"></a>
 ## 10. `git-brx history`
 **Usage:** `git-brx history [flags] [<path>]`
 
 Renders a colorized, formatted Git commit graph with date and author details.
 
 ### Flags:
-- `-l`, `--limit <N>`: Limit number of commits displayed.
-- `-b`, `--branch <name>`: Scope history to a specific branch.
-- `--topic`: Show only commits on active topic branch relative to the base branch (`master..HEAD`).
-- `-s`, `--search <query>`: Case-insensitive search of commit messages.
-- `--stat`: Show diffstat summary of modified files.
-- `-p`, `--patch`: Show code diff patch for each commit.
+- `-l`, `--limit <N>`: Limit number of commits displayed
+- `-b`, `--branch <name>`: Scope history to a specific branch
+- `--topic`: Show only commits on active topic branch relative to the base branch (`main..HEAD`)
+- `-s`, `--search <query>`: Case-insensitive search of commit messages
+- `--stat`: Show diffstat summary of modified files
+- `-p`, `--patch`: Show code diff patch for each commit
 
 ### Examples:
 ```bash
@@ -196,14 +197,33 @@ git brx history --stat src/api
 
 ---
 
-## 11. `git-brx name`
+<a id="git-brx-config"></a>
+## 11. `git-brx config`
+**Usage:** `git-brx config [flags]`
+
+Displays the effective cascading configuration resolved across all four tiers (User Global, Shared Global, Repo Local, and Remote Origin Auto-Discovery) in YAML format.
+
+### Flags:
+- `--sources`: Output only the resolved configuration sources hierarchy
+
+### Examples:
+```bash
+git brx config
+git brx config --sources
+```
+
+---
+
+<a id="git-brx-name"></a>
+## 12. `git-brx name`
 **Usage:** `git-brx name [flags]`
 
 Prints the current branch name to `stdout` with a trailing newline. Plumbing-safe for script variable capture (`BRANCH=$(git brx name)`).
 
 ---
 
-## 12. `git-brx help`
+<a id="git-brx-help"></a>
+## 13. `git-brx help`
 **Usage:** `git-brx help [<subcommand>]`
 
 Displays the command catalog or detailed usage for a specific subcommand. When using Git plugins in Windows or terminal environments where Git intercepts `git brx --help` looking for internal manpages or `git-doc`, `git brx help` provides direct, reliable CLI help.
@@ -214,4 +234,5 @@ git brx help
 git brx help create
 git brx help sync
 ```
+
 

@@ -149,7 +149,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 		if branchErr == nil {
 			baseBranch := a.Inspector.DefaultBranch(ctx, rootDir)
 			if baseBranch == "" {
-				baseBranch = "master"
+				baseBranch = "main"
 			}
 
 			if currBranch.IsDetached {

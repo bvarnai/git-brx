@@ -25,8 +25,8 @@ flowchart LR
 
 ### Identity decoupling
 Both workspaces target the same GitHub repository (`git-brx-sandbox`), but use distinct local Git configurations:
-- **User Workspace (`git-brx-sandbox/me`):** Inherits your standard global Git settings (`git config user.name`/`user.email`) and `GITHUB_TOKEN`.
-- **Colleague Workspace (`git-brx-sandbox/colleague`):** Configured with Alex's identity (`Alex Varnai <alexvarnai@users.noreply.github.com>`, GitHub handle `alexvarnai`) and `ALEX_GITHUB_TOKEN`.
+- **User Workspace (`git-brx-sandbox/me`):** Inherits your standard global Git settings (`git config user.name`/`user.email`) and `GITHUB_TOKEN`
+- **Colleague Workspace (`git-brx-sandbox/colleague`):** Configured with Alex's identity (`Alex Varnai <alexvarnai@users.noreply.github.com>`, GitHub handle `alexvarnai`) and `ALEX_GITHUB_TOKEN`
 
 This guarantees that Git commits, author history, reviewer routing, and logs cleanly distinguish between both engineers.
 
@@ -43,34 +43,34 @@ ALEX_GITHUB_TOKEN="ghp_..." \
 ./scripts/setup-sandbox.sh
 ```
 
-### GitHub Token Permissions Reference
+### GitHub token permissions reference
 
 The simulation environment uses a 3-token least-privilege architecture:
 
-| Token Role | Environment Variable | Account | Recommended Scope / Permissions | Why It's Needed |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin Token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained | Repository lifecycle provisioning & deletion (`git-brx-sandbox`), inviting `alexvarnai` as collaborator, and seeding scenario issues. |
-| **Primary Developer** | `ME_GITHUB_TOKEN` | Primary (`bvarnai`) | **Fine-grained PAT** (All repos or `git-brx-sandbox`):<br>• **Contents:** `Read-only` *(Required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` *(required)* | Injected into `env.sh` for developer operations in `git-brx-sandbox/me` (`create`, `publish`, `review`, `delete`). |
-| **Colleague** | `ALEX_GITHUB_TOKEN` | Colleague (`alexvarnai`) | **Classic PAT** (`repo` scope) *(Mandatory for personal repos)*<br>or Fine-grained PAT *(Organizations only)* | Injected into `env-colleague.sh` for Alex's operations in `git-brx-sandbox/colleague`. |
+| Token role | Environment variable | Account | Recommended scope / permissions | Why It's Needed |
+| :--- | :--- | :--- | :--- | :--- |0
+| **Admin Token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained | Repository lifecycle provisioning & deletion (`git-brx-sandbox`), inviting `alexvarnai` as collaborator, and seeding scenario issues |
+| **Primary Developer** | `ME_GITHUB_TOKEN` | Primary (`bvarnai`) | **Fine-grained PAT** (All repos or `git-brx-sandbox`):<br>• **Contents:** `Read-only` *(Required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` *(required)* | Injected into `env.sh` for developer operations in `git-brx-sandbox/me` (`create`, `publish`, `review`, `delete`) |
+| **Colleague** | `ALEX_GITHUB_TOKEN` | Colleague (`alexvarnai`) | **Classic PAT** (`repo` scope) *(Mandatory for personal repos)*<br>or Fine-grained PAT *(Organizations only)* | Injected into `env-colleague.sh` for Alex's operations in `git-brx-sandbox/colleague` |
 
 > [!NOTE]
 > **GitHub Platform Rule: Personal Repositories vs Organizations:**
-> * **Personal Repositories (Sandbox Simulation):** GitHub strictly prevents fine-grained personal access tokens (`github_pat_...`) from accessing private repositories owned by another individual personal user account (`bvarnai`), even when added as an accepted collaborator (GitHub returns `404 Not Found`). When collaborating on private personal repos, the collaborator token (`ALEX_GITHUB_TOKEN`) must be a **Classic PAT (`ghp_...`)** with the `repo` scope.
-> * **Organizations (Enterprise / Team Environments):** In production organizations (e.g. `github.com/my-org/service`), fine-grained PATs are fully supported for all organization members and can be granularly scoped to individual repositories and least-privilege permissions without issue.
+> * **Personal Repositories (Sandbox Simulation):** GitHub strictly prevents fine-grained personal access tokens (`github_pat_...`) from accessing private repositories owned by another individual personal user account (`bvarnai`), even when added as an accepted collaborator (GitHub returns `404 Not Found`). When collaborating on private personal repos, the collaborator token (`ALEX_GITHUB_TOKEN`) must be a **Classic PAT (`ghp_...`)** with the `repo` scope
+> * **Organizations (Enterprise / Team Environments):** In production organizations (e.g. `github.com/my-org/service`), fine-grained PATs are fully supported for all organization members and can be granularly scoped to individual repositories and least-privilege permissions without issue
 
 > [!IMPORTANT]
 > **Why `Contents: Read-only` is required on Private Repositories:**
-> * On **public** repositories, GitHub's git engine automatically allows tokens to inspect commits, diffs, and branch references without explicit permissions.
-> * On **private** repositories (like `git-brx-sandbox`), GitHub governs branches and commits under the **Contents** permission (*"Repository contents, commits, branches, downloads, releases, and merges"*).
-> * When opening a Pull Request (`POST /repos/{owner}/{repo}/pulls`), GitHub's backend must read the commits between `head` and `base`. If `Contents: Read-only` is missing on a private repo, GitHub rejects PR creation with `422 Validation Failed (not all refs are readable)`.
+> * On **public** repositories, GitHub's git engine automatically allows tokens to inspect commits, diffs, and branch references without explicit permissions
+> * On **private** repositories (like `git-brx-sandbox`), GitHub governs branches and commits under the **Contents** permission (*"Repository contents, commits, branches, downloads, releases, and merges"*)
+> * When opening a Pull Request (`POST /repos/{owner}/{repo}/pulls`), GitHub's backend must read the commits between `head` and `base`. If `Contents: Read-only` is missing on a private repo, GitHub rejects PR creation with `422 Validation Failed (not all refs are readable)`
 
 ### What the setup script does:
-1. Dynamically detects your authenticated GitHub account and ensures `git-brx-sandbox` exists.
-2. Invites `alexvarnai` as a collaborator with write (`push`) permissions.
-3. Seeds test issues (#1..#7) for turnkey scenario execution.
-4. Clones the repository into `~/workspace/git-brx-sandbox/me` and `~/workspace/git-brx-sandbox/colleague`.
-5. Pre-configures `.git-brx.yaml` with the documentation and lead reviewer mapping.
-6. Generates `~/workspace/git-brx-sandbox/env.sh` (for you) and `env-colleague.sh` (for Alex) with injected PATs and permissions secured (`chmod 700`).
+1. Dynamically detects your authenticated GitHub account and ensures `git-brx-sandbox` exists
+2. Invites `alexvarnai` as a collaborator with write (`push`) permissions
+3. Seeds test issues (#1..#7) for turnkey scenario execution
+4. Clones the repository into `~/workspace/git-brx-sandbox/me` and `~/workspace/git-brx-sandbox/colleague`
+5. Pre-configures `.git-brx.yaml` with the documentation and lead reviewer mapping
+6. Generates `~/workspace/git-brx-sandbox/env.sh` (for you) and `env-colleague.sh` (for Alex) with injected PATs and permissions secured (`chmod 700`)
 
 ### Activating your shell
 In any terminal where you want to work as yourself:
@@ -81,8 +81,8 @@ cd ~/workspace/git-brx-sandbox/me
 ```
 
 This immediately:
-- Prepends `git-brx/bin` to your `PATH` so `git brx` executes the local compiled binary.
-- Enables Bash tab autocompletion for both `git-brx` and `git brx`.
+- Prepends `git-brx/bin` to your `PATH` so `git brx` executes the local compiled binary
+- Enables Bash tab autocompletion for both `git-brx` and `git brx`
 
 ---
 

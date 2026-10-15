@@ -99,21 +99,21 @@ git-brx completion powershell | Out-String | Invoke-Expression
 
 ### Cascade Hierarchy (from base defaults to most specific override):
 1. **Tier 1: Machine / User Global:**
-   - Looked up in `~/.config/git-brx/config.yaml`, `~/.config/git-brx/config.yml`, `~/.git-brx.yaml`, `~/.git-brx.yml`, or `~/.git-brx/config.yaml`.
-   - Ideal for personal defaults across all repositories on your machine (e.g. personal platform defaults or reviewer preferences).
+   - Looked up in `~/.config/git-brx/config.yaml`, `~/.config/git-brx/config.yml`, `~/.git-brx.yaml`, `~/.git-brx.yml`, or `~/.git-brx/config.yaml`
+   - Ideal for personal defaults across all repositories on your machine (e.g. personal platform defaults or reviewer preferences)
 2. **Tier 2: Shared Global (`GIT_BRX_CONFIG`):**
-   - Configured via the `GIT_BRX_CONFIG` environment variable pointing to a shared configuration file (e.g., `export GIT_BRX_CONFIG=/path/to/shared-rules.yaml` or a synchronized organization repository).
-   - Overlays shared branch templates, organization-wide review rules, and standard issue type mappings across projects.
+   - Configured via the `GIT_BRX_CONFIG` environment variable pointing to a shared configuration file (e.g., `export GIT_BRX_CONFIG=/path/to/shared-rules.yaml` or a synchronized organization repository)
+   - Overlays shared branch templates, organization-wide review rules, and standard issue type mappings across projects
 3. **Tier 3: Repository Local:**
-   - Looked up in the repository root: `.git-brx.yaml`, `.git-brx.yml`, or `.git-brx/config.yaml`.
-   - Overlays repository-specific settings (e.g. specialized branch mappings, subfolder reviewer paths, or merge strategies).
+   - Looked up in the repository root: `.git-brx.yaml`, `.git-brx.yml`, or `.git-brx/config.yaml`
+   - Overlays repository-specific settings (e.g. specialized branch mappings, subfolder reviewer paths, or merge strategies)
 4. **Tier 4: Remote Origin Auto-Discovery:**
-   - Inspects `git remote get-url origin` and auto-discovers missing platform, owner/organization, and repository slug.
+   - Inspects `git remote get-url origin` and auto-discovers missing platform, owner/organization, and repository slug
 
 ### Merging Behavior:
-- **Map fields** (such as `branch.mapping`, `review.mapping.paths`, `review.mapping.labels`, `review.mapping.branches`, and `review.merge.strategies.*`) are deep merged: repository rules add new entries or override specific keys while preserving untouched keys from shared and user layers.
-- **Scalar fields** (such as `platform`, `branch.template`, `review.merge.strategy`) overwrite prior layers whenever defined.
-- **Reviewer defaults / lists** replace prior values when explicitly defined in a higher tier.
+- **Map fields** (such as `branch.mapping`, `review.mapping.paths`, `review.mapping.labels`, `review.mapping.branches`, and `review.merge.strategies.*`) are deep merged: repository rules add new entries or override specific keys while preserving untouched keys from shared and user layers
+- **Scalar fields** (such as `platform`, `branch.template`, `review.merge.strategy`) overwrite prior layers whenever defined
+- **Reviewer defaults / lists** replace prior values when explicitly defined in a higher tier
 
 ### Inspecting effective configuration:
 You can verify the exact cascading configuration `git-brx` resolves for your current directory using the `config` command:
@@ -210,7 +210,7 @@ export GH_TOKEN="ghp_xxxxxxxxxxxx"
 Or allow `git-brx` to consult your Git credential helper automatically (`git credential fill`).
 
 > [!TIP]
-> For step-by-step instructions on generating a fine-grained personal access token with the exact permissions required by `git-brx`, see the [GitHub token configuration & permissions guide](multi-platform.md#authentication--personal-access-token-pat-setup).
+> For step-by-step instructions on generating a fine-grained personal access token with the exact permissions required by `git-brx`, see the [GitHub token configuration & permissions guide](platforms/github.md#2-authentication--personal-access-token-pat-setup).
 
 ### Bitbucket server & Jira authentication
 For Atlassian enterprise servers, define:

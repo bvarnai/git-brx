@@ -3,7 +3,7 @@
 ## 1. Command Signature
 - **Usage:** `git-brx sync [flags] [<branch>]`
 - **Arguments:**
-  - `<branch>` *(optional)*: Base branch to synchronize changes from. Defaults to `master` if omitted.
+  - `<branch>` *(optional)*: Base branch to synchronize changes from. Defaults to `main` (or repository default) if omitted.
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
   - Strategy flags:
@@ -40,7 +40,7 @@
      - If both `--merge` and `--rebase` are supplied, fail with Exit Code `2` (`Multiple override sync strategies specified`).
      - If resolved strategy is `merge` and either `--autostash` or `--interactive` is set, fail with Exit Code `2` (`Flags --autostash and --interactive are only supported with rebase strategy`).
 3. **Target Base Branch Resolution & Strategy Logging:**
-   - If positional argument `<branch>` is omitted, default to repository base branch (e.g. `master`) and log:
+   - If positional argument `<branch>` is omitted, default to repository base branch (e.g. `main`) and log:
      `[git-brx] Syncing '<current_branch>' with '<base>' base branch by default (strategy: <strategy>)`.
    - If positional argument `<branch>` is explicitly supplied, log:
      `[git-brx] Syncing '<current_branch>' with '<base>' (strategy: <strategy>)`.

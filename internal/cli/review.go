@@ -119,7 +119,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 	} else {
 		targetBranch = a.Inspector.DefaultBranch(ctx, rootDir)
 		if targetBranch == "" {
-			targetBranch = "master"
+			targetBranch = "main"
 		}
 		a.UI.Log("Selecting '%s' target branch by default", targetBranch)
 	}

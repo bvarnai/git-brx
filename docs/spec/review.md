@@ -3,7 +3,7 @@
 ## 1. Command Signature
 - **Usage:** `git-brx review [flags] [<target_branch>]`
 - **Arguments:**
-  - `<target_branch>` *(optional)*: Target branch to merge into. Defaults to `master` if omitted.
+  - `<target_branch>` *(optional)*: Target branch to merge into. Defaults to repository default branch (`main` or `master`) if omitted.
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
   - Feature flags:
@@ -29,8 +29,8 @@
    - Assert attached branch: `git symbolic-ref --short -q HEAD`. Store current branch `<branch>`.
    - Validate branch prefix (`issue`, `feature`, or `epic`). If unrecognized, fail with Exit Code `3`.
 2. **Target Branch Resolution:**
-   - If `<target_branch>` argument is omitted, default to `master` and log:
-     `[git-brx] Selecting 'master' target branch by default`.
+   - If `<target_branch>` argument is omitted, default to repository default base branch (e.g. `main`) and log:
+     `[git-brx] Selecting '<default>' target branch by default`.
 3. **Publication Precondition Check:**
    - Verify that `<branch>` has been published to remote `origin`:
      ```bash
@@ -113,7 +113,7 @@
 | :--- | :--- | :--- | :--- |
 | `0` | Pull request created successfully. | `[git-brx] Created pull-request:` (URL emitted to stdout) | None. |
 | `2` | Excess positional arguments or unknown flags. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
-| `3` | Detached HEAD or unpermitted branch type (e.g. running on `master`). | `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch` | None. |
+| `3` | Detached HEAD or unpermitted branch type (e.g. running on `main` or `master`). | `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch` | None. |
 | `4` | Source branch not published on remote origin. | `[git-brx] Error: Branch '<branch>' has not been pushed to remote origin` | None. |
 | `6` | JIRA or Bitbucket API failure (HTTP 401, 404, 409 conflict). | `[git-brx] Error: A pull request for branch '<branch>' already exists` / `[git-brx] Error: Request failure` | None. |
 | `8` | Configuration file or review template missing / corrupt. | `[git-brx] Error: Configuration file not found` | None. |

@@ -16,14 +16,14 @@
   - Must NOT be in a shallow repository (`git rev-parse --is-shallow-repository` must be `false`).
   - Must NOT be in a detached HEAD state (`git symbolic-ref -q HEAD`).
   - Remote `origin` must exist.
-  - Protected branch check: Publishing with force-with-lease directly to `master` or `release/*` should be guarded or rejected unless explicit flags are given.
+  - Protected branch check: Publishing with force-with-lease directly to `main`, `master`, or `release/*` should be guarded or rejected unless explicit flags are given.
 
 ## 3. Core Execution Flow
 1. **Repository & State Assertions:**
    - Verify worktree: `git rev-parse --is-inside-work-tree`.
    - Verify non-shallow repository: `git rev-parse --is-shallow-repository`. If true, fail with Exit Code `3`.
    - Verify attached branch: `git symbolic-ref --short -q HEAD`. Store current branch name `<branch>`.
-   - Protected branch assertion: If `<branch>` is `master`, log warning or require confirmation before pushing with lease.
+   - Protected branch assertion: If `<branch>` is `main` or `master`, log warning or require confirmation before pushing with lease.
 2. **Upstream Tracking Evaluation:**
    - Inspect existing upstream configuration:
      ```bash

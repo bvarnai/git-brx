@@ -8,7 +8,7 @@ This guide walks you through the complete lifecycle of a development branch in `
 
 To maintain an orderly, reproducible codebase, `git-brx` organizes work into a strict **branch taxonomy**. Each branch type serves a specific lifecycle purpose, dictates how changes synchronize with the mainline, and guides code review merge strategies:
 
-| Branch Type | Target Scope & Purpose | Lifespan | Default `sync` Strategy | Recommended PR Merge Strategy |
+| Branch type | Target scope & purpose | Lifespan | Default `sync` strategy | Recommended PR merge strategy |
 | :--- | :--- | :--- | :--- | :--- |
 | **`issue/<id>`** | Bug fixes, minor tasks, tech debt | Short-lived | **Rebase** (`git rebase`) | **Squash & Merge** |
 | **`feature/<id>`** | Backlog stories, new capabilities | Short-to-medium | **Merge** (`git merge`) | **Squash & Merge** *(or Merge commit)* |
@@ -17,9 +17,9 @@ To maintain an orderly, reproducible codebase, `git-brx` organizes work into a s
 | **`main` / `master`** | Production single source of truth | Permanent | N/A | Protected base branch |
 
 ### Why sync strategies diverge by branch type:
-* **`issue/*` branches $\to$ Rebase:** Bugfixes and small tasks are typically developed by a single engineer. Rebasing on top of `main` keeps commit history strictly linear, eliminates unnecessary merge bubbles, and prepares the change for clean squash merging.
-* **`feature/*` and `epic/*` branches $\to$ Merge:** Features and epics frequently involve multiple contributors or long-running work. Running a 3-way merge from `main` into your feature branch preserves team collaboration commits and avoids disruptive history rewrites (`force-push`) for teammates sharing the branch.
-* *Need to override?* You can always use `git brx sync --rebase` (`-r`) or `git brx sync --merge` (`-m`).
+* **`issue/*` branches $\to$ Rebase:** Bugfixes and small tasks are typically developed by a single engineer. Rebasing on top of `main` keeps commit history strictly linear, eliminates unnecessary merge bubbles, and prepares the change for clean squash merging
+* **`feature/*` and `epic/*` branches $\to$ Merge:** Features and epics frequently involve multiple contributors or long-running work. Running a 3-way merge from `main` into your feature branch preserves team collaboration commits and avoids disruptive history rewrites (`force-push`) for teammates sharing the branch
+* *Need to override?* You can always use `git brx sync --rebase` (`-r`) or `git brx sync --merge` (`-m`)
 
 > [!NOTE]
 > **Convention over configuration:** `git-brx` deliberately trades arbitrary branch naming freedom for automated safety and streamlined workflows. All tracked work must follow the `<type>/<id>` convention so `git-brx` can safely automate sync strategies, PR composition, and post-merge cleanup. For untracked local experiments, standard Git (`git checkout -b scratch-spike`) is always available.
@@ -39,16 +39,16 @@ git brx create issue/TASK-101
 ```
 
 ### What happens behind the scenes:
-1. **Repository verification:** Asserts that you are inside a valid Git worktree and that no active merge or rebase is blocking your workspace.
-2. **Naming validation:** Matches the target branch against your configured regex template (e.g. `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`).
+1. **Repository verification:** Asserts that you are inside a valid Git worktree and that no active merge or rebase is blocking your workspace
+2. **Naming validation:** Matches the target branch against your configured regex template (e.g. `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`)
 3. **Collision checks:**
-   - Checks if the branch already exists locally. If so, `git-brx` provides an informational message and advises running `git brx select issue/TASK-101`.
-   - Checks if the branch exists on the remote `origin`.
+   - Checks if the branch already exists locally. If so, `git-brx` provides an informational message and advises running `git brx select issue/TASK-101`
+   - Checks if the branch exists on the remote `origin`
 4. **Tracker verification:**
    - Queries your issue tracker (Jira or GitHub Issues).
-   - Validates that `TASK-101` exists, checks the issue type against your branch prefix mapping (e.g., verifying that a `Bug` maps to `issue/`), and prints the issue title and current assignee.
-   - Prompts for confirmation: `Are you sure [y/n]?` (bypassable in automation via `-y` or `--yes`).
-5. **Checkout:** Executes `git checkout -b issue/TASK-101` from your current clean base.
+   - Validates that `TASK-101` exists, checks the issue type against your branch prefix mapping (e.g., verifying that a `Bug` maps to `issue/`), and prints the issue title and current assignee
+   - Prompts for confirmation: `Are you sure [y/n]?` (bypassable in automation via `-y` or `--yes`)
+5. **Checkout:** Executes `git checkout -b issue/TASK-101` from your current clean base
 
 ### Offline mode:
 Working on an airplane or without VPN access? Use `--offline` / `-o`:
@@ -65,7 +65,7 @@ This skips the remote Git check and tracker API lookup, provisioning the branch 
 Switching branches with raw `git checkout` can lead to lost work, detached HEAD states, or dirty collisions. `git brx select` provides safe switching with intelligent defaults:
 
 ```bash
-# Switch back to the default branch (master or main):
+# Switch back to the default branch (main or master):
 git brx select
 
 # Switch to a specific topic branch:
@@ -73,7 +73,7 @@ git brx select issue/TASK-101
 ```
 
 **Guardrails provided by `select`:**
-- **Auto-fetch:** Automatically fetches the latest remote refs before switching.
+- **Auto-fetch:** Automatically fetches the latest remote refs before switching
 - **Behind hint:** If you are already on the target branch and it is behind remote origin, `git-brx` warns you:
   ```text
   [git-brx] Already on 'issue/TASK-101'
@@ -84,7 +84,7 @@ git brx select issue/TASK-101
   [git-brx] Error: Branch 'featrue/login' not found
   [git-brx] Hint: Did you mean 'feature/login'?
   ```
-- **Carried-over changes warning:** If you have uncommitted changes that Git carried over into the new branch, `git-brx` prominently warns you so you don't commit unrelated edits into the wrong branch.
+- **Carried-over changes warning:** If you have uncommitted changes that Git carried over into the new branch, `git-brx` prominently warns you so you don't commit unrelated edits into the wrong branch
 
 ### Inspecting branch identity (`git brx name`)
 Prints the current branch name to `stdout`. Designed with strict Unix plumbing discipline:
@@ -100,7 +100,7 @@ If HEAD is detached, it prints the short commit SHA and logs a diagnostic warnin
 # View recent history:
 git brx history -l 10
 
-# View only commits on your active topic branch relative to master:
+# View only commits on your active topic branch relative to main:
 git brx history --topic
 
 # Search commit messages:
@@ -124,7 +124,7 @@ git brx publish
 In raw Git, developers often alternate dangerously between `git push` (which fails if history was rebased) and `git push -f` (which blindly wipes out remote commits made by colleagues).
 
 `git-brx publish` uses **`--force-with-lease`** automatically:
-- If this is your first time publishing, it executes `git push --set-upstream origin <branch> --force-with-lease`.
+- If this is your first time publishing, it executes `git push --set-upstream origin <branch> --force-with-lease`
 - If someone else pushed commits to your remote branch since you last fetched, `git brx publish` **rejects the push** and protects the remote work:
   ```text
   [git-brx] Error: Publish rejected: remote has newer commits
@@ -142,15 +142,15 @@ git brx review
 ```
 
 ### Automated PR assembly:
-1. **Publication check:** Verifies that your local branch has actually been pushed to `origin`. If not, it halts and directs you to run `git brx publish`.
-2. **Issue metadata extraction:** Parses the issue key from your branch name and retrieves the issue summary, description, and component tags from Jira/GitHub.
+1. **Publication check:** Verifies that your local branch has actually been pushed to `origin`. If not, it halts and directs you to run `git brx publish`
+2. **Issue metadata extraction:** Parses the issue key from your branch name and retrieves the issue summary, description, and component tags from Jira/GitHub
 3. **Structured reviewer routing:** Resolves reviewers through hierarchical rules defined in `.git-brx.yaml` (`review.mapping`):
-   - **CLI Override:** Explicit flag `-r, --reviewer <user>` takes absolute precedence.
-   - **Changed file paths (`mapping.paths`):** Modified files are matched against recursive glob patterns (e.g., `internal/ui/**`, `docs/**`). Reviewers from all matched paths are aggregated.
-   - **Issue labels (`mapping.labels`):** If no paths matched, matches against Jira components or GitHub issue labels.
-   - **Branch patterns (`mapping.branches`):** If no labels matched, matches against source branch globs (e.g., `epic/*`).
-   - **Default fallback (`mapping.default`):** Falls back to default reviewers if no preceding rules match.
-   - **Author exclusion:** Automatically filters out the PR author so authors are never requested to review their own changes.
+   - **CLI Override:** Explicit flag `-r, --reviewer <user>` takes absolute precedence
+   - **Changed file paths (`mapping.paths`):** Modified files are matched against recursive glob patterns (e.g., `internal/ui/**`, `docs/**`). Reviewers from all matched paths are aggregated
+   - **Issue labels (`mapping.labels`):** If no paths matched, matches against Jira components or GitHub issue labels
+   - **Branch patterns (`mapping.branches`):** If no labels matched, matches against source branch globs (e.g., `epic/*`)
+   - **Default fallback (`mapping.default`):** Falls back to default reviewers if no preceding rules match
+   - **Author exclusion:** Automatically filters out the PR author so authors are never requested to review their own changes
 4. **PR description assembly:** Auto-discovers standard review templates (e.g. `.github/pull_request_template.md`), links the parent issue (`Closes #<id>`), and appends standardized **Merge Instructions** resolved according to branch conventions:
    ```markdown
    Closes #TASK-101
@@ -166,7 +166,7 @@ git brx review
      ```bash
      git brx review -s merge
      ```
-5. **PR submission:** Calls the GitHub or Bitbucket Server REST API, prints the clickable PR URL to `stdout`, and logs confirmation to `stderr`.
+5. **PR submission:** Calls the GitHub or Bitbucket Server REST API, prints the clickable PR URL to `stdout`, and logs confirmation to `stderr`
 
 **Dry-run mode:**
 Want to preview the generated PR description and assigned reviewers before creating it?
@@ -185,14 +185,14 @@ git brx delete
 ```
 
 ### How `delete` protects you:
-1. **Remote merge verification:** `git brx delete` checks whether your branch still exists on the remote server.
+1. **Remote merge verification:** `git brx delete` checks whether your branch still exists on the remote server
 2. **SCM diagnostics:** If the branch is still on the remote, it queries the SCM provider API:
-   - If the PR is still **Open**, it blocks deletion and reminds you to finish the review first.
-   - If the PR is **Merged**, it informs you that the PR was merged and directs you to delete the remote branch on the server (or use `--force`).
-3. **Safe return to base:** Switches your local worktree back to `master` (or `main`).
-4. **Local removal & pruning:** Deletes the local topic branch (`git branch -D`) and prunes stale remote tracking references (`git remote prune origin`).
+   - If the PR is still **Open**, it blocks deletion and reminds you to finish the review first
+   - If the PR is **Merged**, it informs you that the PR was merged and directs you to delete the remote branch on the server (or use `--force`)
+3. **Safe return to base:** Switches your local worktree back to `main` (or `master`)
+4. **Local removal & pruning:** Deletes the local topic branch (`git branch -D`) and prunes stale remote tracking references (`git remote prune origin`)
 5. **Next step hint:** Reminds you:
    ```text
    [git-brx] Deleted local branch 'issue/TASK-101' and pruned origin
-   [git-brx] Hint: Your local 'master' may not be up-to-date. Use 'git-brx update' to update changes.
+   [git-brx] Hint: Your local 'main' may not be up-to-date. Use 'git-brx update' to update changes.
    ```

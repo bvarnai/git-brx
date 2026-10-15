@@ -3,7 +3,7 @@
 ## 1. Command Signature
 - **Usage:** `git-brx select [flags] [<branch>]`
 - **Arguments:**
-  - `<branch>` *(optional)*: Target branch to switch to. Defaults to `master` if omitted.
+  - `<branch>` *(optional)*: Target branch to switch to. Defaults to `main` (or repository default) if omitted.
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
   - Feature flags:
@@ -25,7 +25,7 @@
    - Check in-progress operations via `checks.CheckInProgress`. If active, log `[git-brx] Error: Cannot switch branches during an active <op>` and fail with Exit Code `5`.
    - Check detached HEAD via `checks.CheckDetachedHead`. If detached with unreferenced commits, log `[git-brx] Error: You are on a detached HEAD with unreferenced commits` and fail with Exit Code `5`.
 2. **Target Branch Resolution:**
-   - If positional argument `<branch>` is absent, dynamically resolve default branch (`master` -> `main` -> `origin/HEAD`) and log:
+   - If positional argument `<branch>` is absent, dynamically resolve default branch (`main` -> `master` -> `origin/HEAD`) and log:
      `[git-brx] Selecting '<default>' branch by default`.
    - Otherwise, set target to specified argument `<branch>`.
 3. **Already on Target Branch Check:**
@@ -78,5 +78,5 @@
 - **In-Progress Operations Ignored:** Legacy `select.sh` had no precondition check against in-progress rebases, merges, cherry-picks, or reverts, allowing developers to switch branches and leave orphaned `.git/rebase-*` state behind. Modern spec enforces explicit checks.
 - **Silent Dirty Worktree Pollution:** Standard Git checkout silently carries uncommitted edits across branches if no direct file conflict exists. Modern Go spec emits a prominent warning to protect beginners from accidental commits into wrong branches.
 - **Detached HEAD Orphan Commits:** Switching away from detached HEAD with unreferenced commits leaves dangling commits. Modern Go spec blocks branch switching until the user saves their work into a named branch.
-- **Dynamic Default Branch Resolution:** Instead of hardcoding `master`, dynamically detects `master` or `main` or `origin/HEAD`.
+- **Dynamic Default Branch Resolution:** Instead of hardcoding `master`, dynamically detects `main` or `master` or `origin/HEAD`.
 - **Fuzzy Typo Matching:** Typo in branch names suggests closest existing branch name.
