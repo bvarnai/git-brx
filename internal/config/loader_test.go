@@ -346,19 +346,22 @@ func TestInspect_ZeroConfigAutoInferredComments(t *testing.T) {
 	assert.Contains(t, output, "provider: github # inferred from platform preset")
 	assert.Contains(t, output, "owner: my-org # auto-discovered from remote origin")
 	assert.Contains(t, output, "repo: my-service # auto-discovered from remote origin")
-	assert.Contains(t, output, "template: ^(issue|feature)/[1-9][0-9]*$ # platform default (github)")
+	assert.Contains(t, output, "template: ^(issue|feature|epic)/[1-9][0-9]*$ # platform default (github)")
 	assert.Contains(t, output, "mapping: # platform default (github)")
 	assert.Contains(t, output, "bug: issue")
-	assert.Contains(t, output, "enhancement: feature")
+	assert.Contains(t, output, "feature: feature")
+	assert.Contains(t, output, "epic: epic")
 
 	// Verify valid YAML round-trip
 	var parsed domain.ProjectConfig
 	err = yaml.Unmarshal([]byte(output), &parsed)
 	require.NoError(t, err)
 	assert.Equal(t, "github", parsed.Platform)
-	assert.Equal(t, "^(issue|feature)/[1-9][0-9]*$", parsed.Branch.Template)
+	assert.Equal(t, "^(issue|feature|epic)/[1-9][0-9]*$", parsed.Branch.Template)
 	assert.Equal(t, "issue", parsed.Branch.Mapping["bug"])
-	assert.Equal(t, "feature", parsed.Branch.Mapping["enhancement"])
+	assert.Equal(t, []string{"issue", "feature"}, config.ParseBranchTargets(parsed.Branch.Mapping["enhancement"]))
+	assert.Equal(t, "feature", parsed.Branch.Mapping["feature"])
+	assert.Equal(t, "epic", parsed.Branch.Mapping["epic"])
 	assert.Equal(t, "my-org", parsed.SCM.Owner)
 	assert.Equal(t, "my-service", parsed.SCM.Repo)
 }

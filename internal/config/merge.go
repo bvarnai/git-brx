@@ -63,7 +63,7 @@ func MergeConfigs(base, override *domain.ProjectConfig) *domain.ProjectConfig {
 	}
 	if len(override.Branch.Mapping) > 0 {
 		if res.Branch.Mapping == nil {
-			res.Branch.Mapping = make(map[string]string)
+			res.Branch.Mapping = make(map[string]any)
 		}
 		for k, v := range override.Branch.Mapping {
 			res.Branch.Mapping[k] = v
@@ -139,7 +139,7 @@ func cloneConfig(c *domain.ProjectConfig) *domain.ProjectConfig {
 
 	// Deep copy maps
 	if c.Branch.Mapping != nil {
-		clone.Branch.Mapping = make(map[string]string, len(c.Branch.Mapping))
+		clone.Branch.Mapping = make(map[string]any, len(c.Branch.Mapping))
 		for k, v := range c.Branch.Mapping {
 			clone.Branch.Mapping[k] = v
 		}

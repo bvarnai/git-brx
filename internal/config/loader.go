@@ -173,12 +173,13 @@ func Inspect(workDir, originURL string) (*ConfigReport, error) {
 
 	// Default branch mapping
 	if len(cfg.Branch.Mapping) == 0 {
-		cfg.Branch.Mapping = map[string]string{
-			"Bug":   "issue",
-			"Story": "feature",
-			"Epic":  "epic",
-			"Task":  "issue",
-			"Issue": "issue",
+		cfg.Branch.Mapping = map[string]any{
+			"Bug":         "issue",
+			"Story":       "feature",
+			"Epic":        "epic",
+			"Task":        "issue",
+			"Issue":       "issue",
+			"enhancement": []string{"issue", "feature"},
 		}
 		report.InferredFields["branch.mapping"] = "default convention"
 	}

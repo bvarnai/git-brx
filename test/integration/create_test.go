@@ -353,4 +353,160 @@ func TestCreateIntegration(t *testing.T) {
 		assert.NotContains(t, stderr.String(), "Target Issue:")
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/999'")
 	})
+
+	t.Run("DualMappingDefaultGitHubPreset", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/repos/testorg/testrepo/issues/201":
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"number": 201,
+					"title": "Add flexible enhancement routing",
+					"state": "open",
+					"assignee": {"login": "octocat"},
+					"labels": [{"name": "enhancement"}]
+				}`))
+			case "/repos/testorg/testrepo/issues/202":
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"number": 202,
+					"title": "Fix crash on startup",
+					"state": "open",
+					"assignee": {"login": "octocat"},
+					"labels": [{"name": "bug"}]
+				}`))
+			default:
+				http.NotFound(w, r)
+			}
+		}))
+		defer server.Close()
+
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteDir := h.SetupRemoteBare()
+		h.Git("remote", "remove", "origin")
+		h.Git("config", "url."+remoteDir+".insteadOf", "git@github.com:testorg/testrepo.git")
+		h.Git("remote", "add", "origin", "git@github.com:testorg/testrepo.git")
+		h.Git("push", "-u", "origin", "master")
+
+		// Point tracker/scm to mock server, using default GitHub preset for template & mapping
+		configContent := "platform: github\n" +
+			"tracker:\n" +
+			"  uri: " + server.URL + "\n" +
+			"scm:\n" +
+			"  uri: " + server.URL + "\n"
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		// 1. Enhancement allows 'issue/' branch
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/201"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Creating branch 'issue/201'")
+
+		// Clean up branch for next test
+		h.Git("checkout", "master")
+		h.Git("branch", "-D", "issue/201")
+		stdout.Reset()
+		stderr.Reset()
+
+		// 2. Enhancement also allows 'feature/' branch
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "feature/201"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Creating branch 'feature/201'")
+
+		// 3. Enhancement rejects 'epic/' branch with plural hint
+		h.Git("checkout", "master")
+		h.Git("branch", "-D", "feature/201")
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "epic/201"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitConfigError), code)
+		assert.Contains(t, stderr.String(), "Issue type 'enhancement' is not allowed on 'epic' branch")
+		assert.Contains(t, stderr.String(), "Use 'issue' or 'feature' branch or check mapping rules")
+
+		// 4. Bug allows 'issue/' branch
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/202"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Creating branch 'issue/202'")
+
+		// 5. Bug rejects 'feature/' branch with single target hint
+		h.Git("checkout", "master")
+		h.Git("branch", "-D", "issue/202")
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "feature/202"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitConfigError), code)
+		assert.Contains(t, stderr.String(), "Issue type 'bug' is not allowed on 'feature' branch")
+		assert.Contains(t, stderr.String(), "Use 'issue' branch or check mapping rules")
+	})
+
+	t.Run("MultiBranchCustomMappingArrayAndCommaString", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/repos/testorg/testrepo/issues/301":
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"number": 301,
+					"title": "Custom array routing",
+					"state": "open",
+					"assignee": {"login": "octocat"},
+					"labels": [{"name": "rfq"}]
+				}`))
+			case "/repos/testorg/testrepo/issues/302":
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"number": 302,
+					"title": "Comma string routing",
+					"state": "open",
+					"assignee": {"login": "octocat"},
+					"labels": [{"name": "task"}]
+				}`))
+			default:
+				http.NotFound(w, r)
+			}
+		}))
+		defer server.Close()
+
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteDir := h.SetupRemoteBare()
+		h.Git("remote", "remove", "origin")
+		h.Git("config", "url."+remoteDir+".insteadOf", "git@github.com:testorg/testrepo.git")
+		h.Git("remote", "add", "origin", "git@github.com:testorg/testrepo.git")
+		h.Git("push", "-u", "origin", "master")
+
+		configContent := "platform: github\n" +
+			"tracker:\n" +
+			"  uri: " + server.URL + "\n" +
+			"scm:\n" +
+			"  uri: " + server.URL + "\n" +
+			"branch:\n" +
+			"  template: '^(issue|feature|epic)/[1-9][0-9]*$'\n" +
+			"  mapping:\n" +
+			"    rfq:\n" +
+			"      - issue\n" +
+			"      - feature\n" +
+			"    task: 'issue, feature, epic'\n"
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), []byte(configContent), 0644)
+		require.NoError(t, err)
+
+		// rfq on feature succeeds
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "feature/301"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Creating branch 'feature/301'")
+
+		// task on epic succeeds
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "epic/302"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Creating branch 'epic/302'")
+	})
 }
+
