@@ -88,6 +88,12 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 		return domain.NewError(domain.ExitPreconditionRemote, "Update failed: unable to fetch 'origin/%s'", currBranch.Name)
 	}
 
+	delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, currBranch.Name, remoteRef)
+	if deltaErr == nil && delta != nil && delta.BehindCount == 0 {
+		a.UI.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, remoteRef)
+		return nil
+	}
+
 	// Rebase onto remote tracking ref
 	if _, rebaseErr := a.Operations.Rebase(ctx, rootDir, remoteRef, opts.Autostash, false); rebaseErr != nil {
 		if strings.Contains(rebaseErr.Error(), "conflict") || isRebaseConflict(ctx, a.Inspector, rootDir) {
@@ -97,7 +103,20 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 		return domain.WrapError(domain.ExitConflict, rebaseErr, "Update failed: could not rebase onto '%s'", remoteRef)
 	}
 
-	a.UI.Log("Current branch '%s' is up to date", currBranch.Name)
+	if deltaErr == nil && delta != nil {
+		commitUnit := "commits"
+		if delta.BehindCount == 1 {
+			commitUnit = "commit"
+		}
+		if delta.AheadCount == 0 {
+			a.UI.Log("Fast-forwarded '%s' to match '%s' (%d new %s)", currBranch.Name, remoteRef, delta.BehindCount, commitUnit)
+		} else {
+			a.UI.Log("Rebased '%s' onto '%s' (%d new %s)", currBranch.Name, remoteRef, delta.BehindCount, commitUnit)
+		}
+	} else {
+		a.UI.Log("Current branch '%s' is up to date", currBranch.Name)
+	}
+
 	return nil
 }
 
