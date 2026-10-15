@@ -29,8 +29,8 @@ type SCMConfig struct {
 
 // BranchConfig defines branch naming contracts and type mapping.
 type BranchConfig struct {
-	Template string            `yaml:"template,omitempty"`
-	Mapping  map[string]string `yaml:"mapping,omitempty"`
+	Template string         `yaml:"template,omitempty"`
+	Mapping  map[string]any `yaml:"mapping,omitempty"`
 }
 
 // ReviewMappingConfig defines structured reviewer routing by paths, labels, branches, and fallback default.

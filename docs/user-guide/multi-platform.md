@@ -151,33 +151,36 @@ A common question is how Git-native authentication (SSH keys or HTTPS credential
 
 ### Branch prefix & label mapping on GitHub:
 When creating a branch via `git brx create <branch>`, `git-brx` validates the target issue's labels to ensure branch prefixes match the nature of the change:
-* **Labels `bug` or `defect` $\to$ `issue/`:** Restricted to bugfixes and patches.
-* **Labels `enhancement`, `feature`, or `story` $\to$ `feature/`:** Reserved for backlog features and stories.
+* **Label `enhancement` $\to$ `[issue, feature]`:** Flexible dual-routing! Enhancements can be branched as quick fixes (`issue/<id>`) or full feature branches (`feature/<id>`).
+* **Label `bug` $\to$ `issue/`:** Strictly restricted to bugfixes and patches (attempting to create `feature/` or `epic/` is rejected).
+* **Label `feature` $\to$ `feature/`:** Reserved for backlog features.
 * **Label `epic` $\to$ `epic/`:** Reserved for large initiatives.
 * **Unlabeled issues $\to$ `issue/`:** Default fallback if no category label is attached.
 
-#### Custom GitHub label mapping
-If your team uses custom label taxonomies (e.g. `kind/feature`, `type:bug`) or if you want to override default label behaviors, configure `branch.mapping` directly in `.git-brx.yaml`:
+#### Custom GitHub label mapping & multi-branch routing
+If your team uses custom label taxonomies (e.g. `kind/feature`, `type:bug`) or wants multi-branch routing, configure `branch.mapping` directly in `.git-brx.yaml`:
 
 ```yaml
 branch:
+  template: '^(issue|feature|epic)/[1-9][0-9]*$'
   mapping:
     # Direct raw GitHub labels (case-insensitive):
-    "kind/feature": "feature"
     "kind/bug": "issue"
-    "enhancement": "issue"   # map enhancement to issue/ instead of feature/
+    "enhancement": [issue, feature]   # Dual-mapping: allow either issue/ or feature/
+    "task": "issue, feature, epic"   # Comma-separated alternative syntax
 
     # Jira / domain types:
     Bug: "issue"
     Story: "feature"
+    Epic: "epic"
 ```
 
 Direct raw label matches take precedence over inferred domain types (`Story`, `Bug`, `Epic`). Matching is case-insensitive.
 
-If you attempt to create `feature/10` for an issue labeled `bug` (or unlabeled without a mapping), `git-brx` guards against mismatched categorization:
+If you attempt to create `feature/10` for an issue labeled `bug` (or `epic/10` for an enhancement), `git-brx` guards against mismatched categorization and hints at the permitted prefixes:
 ```text
-[git-brx] Error: Issue type 'Bug' is not allowed on 'feature' branch
-[git-brx] Hint: use 'issue' branch or check mapping rules
+[git-brx] Error: Issue type 'bug' is not allowed on 'feature' branch
+[git-brx] Hint: Use 'issue' branch or check mapping rules
 ```
 
 ---

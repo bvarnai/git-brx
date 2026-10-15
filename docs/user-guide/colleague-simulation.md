@@ -119,28 +119,28 @@ sequenceDiagram
 
 ## 4. Example message flows
 
-### Example Flow A: Collaborative feature branch upstream sync (`git brx sync`)
+### Example Flow A: Issue branch linear upstream sync (`git brx sync`)
 
 #### Prompt to Antigravity:
-> *"Alex, I am starting work on `feature/2` in `git-brx-sandbox/me`. While I work on this, please implement a new function in `calc.go`, commit it, and merge it directly into `main` on origin."*
+> *"Alex, I am starting work on `issue/2` in `git-brx-sandbox/me` (seeded Issue #2 `enhancement`). While I work on this, please implement a new function in `calc.go` on `issue/1`, commit it, and merge it directly into `main` on origin."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
-> I switched to `main` in `~/workspace/git-brx-sandbox/colleague`, implemented `func Subtract(a, b int) int` in `calc.go`, and pushed commit `e434c2f` directly to `origin/main`.
+> I checked out `issue/1` in `~/workspace/git-brx-sandbox/colleague`, implemented `func Subtract(a, b int) int` in `calc.go`, published, and merged directly into `origin/main` (commit `e434c2f`).
 >
 > **Your Turn:**
 > Switch to `~/workspace/git-brx-sandbox/me` and run:
 > ```bash
 > git brx sync
 > ```
-> `git-brx` will fetch `origin/main`, detect that `main` is ahead by 1 commit, and cleanly merge `main` into your `feature/2` branch (as standard for collaborative feature branches)!
+> `git-brx` will fetch `origin/main`, detect that `main` is ahead by 1 commit, and cleanly rebase your `issue/2` commit linearly on top of `main` without creating a merge commit!
 
 ---
 
 ### Example Flow B: Issue branch linear rebase conflict (`git brx resolve` / `git brx reset`)
 
 #### Prompt to Antigravity:
-> *"Alex, let's simulate a merge conflict on `issue/3`. I just changed line 4 of `config.json` on my branch to `"retries": 5`. Please push a conflicting change on `origin/main`."*
+> *"Alex, let's simulate a merge conflict on `issue/3` (seeded Issue #3 `bug`). I just changed line 4 of `config.json` on my branch to `"retries": 5`. Please push a conflicting change on `origin/main`."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
@@ -158,14 +158,32 @@ sequenceDiagram
 
 ---
 
-### Example Flow C: Pair-programming on a shared topic branch (`git brx update`)
+### Example Flow C: Collaborative feature branch upstream merge sync (`git brx sync`)
 
 #### Prompt to Antigravity:
-> *"Alex, I just published `feature/4` from `git-brx-sandbox/me`. Please pull it down in your workspace, add a second step, and push it back to origin."*
+> *"Alex, let's test Playbook 3 with a collaborative feature branch. I just created `feature/4` (seeded Issue #4 `enhancement`) and committed stage 1. Please push an update to `main` on origin."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
-> I ran `git brx select feature/4` in `~/workspace/git-brx-sandbox/colleague`, added `Step 2: Validation` to the pipeline file, and pushed commit `8c91d2e` to `origin/feature/4`.
+> I pushed an update to `origin/main`.
+>
+> **Your Turn:**
+> In `~/workspace/git-brx-sandbox/me`, run:
+> ```bash
+> git brx sync
+> ```
+> `git-brx` recognizes `feature/4` as a collaborative feature branch and will deliberately perform a **merge sync** (`Merge branch 'main' into 'feature/4'`), pulling in `main` while preserving your local commit SHAs!
+
+---
+
+### Example Flow D: Pair-programming on a shared topic branch (`git brx update`)
+
+#### Prompt to Antigravity:
+> *"Alex, I just published `feature/4` from `git-brx-sandbox/me`. Please pull it down in your workspace, add a second stage, and push it back to origin."*
+
+#### Alex's response in Chat:
+> `[Alex Varnai]:`
+> I ran `git brx select feature/4` in `~/workspace/git-brx-sandbox/colleague`, added `Stage 2: Validation` to `calc.go`, and pushed commit `8c91d2e` to `origin/feature/4`.
 >
 > **Your Turn:**
 > In `~/workspace/git-brx-sandbox/me`, run:
@@ -176,7 +194,7 @@ sequenceDiagram
 
 ---
 
-### Example Flow D: Testing Reviewer Routing & Author Exclusion (`git brx review`)
+### Example Flow E: Testing Reviewer Routing & Author Exclusion (`git brx review`)
 
 #### Routing Policy:
 - **`docs/**`**: Routed to `alexvarnai`
@@ -195,10 +213,10 @@ sequenceDiagram
 
 ---
 
-### Example Flow E: Non-Squash PR Merge Strategy (`merge` commit / `rebase`)
+### Example Flow F: Non-Squash PR Merge Strategy on Epics (`epic/7`)
 
 #### Policy / Convention:
-- `git-brx` automatically commands a **Merge commit** for `epic/*` or `release/*` branches under its built-in conventions, without requiring manual merge configuration. Seeded Issue #7 is labeled `epic`, mapping to `epic/7`.
+- `git-brx` automatically commands a **Merge commit** for `epic/*` or `release/*` branches under its built-in conventions, without requiring manual merge configuration. Seeded Issue #7 is labeled `epic`, mapping strictly to `epic/7`.
 
 #### Prompt to Antigravity:
 > *"Alex, I just created a multi-commit branch `epic/7` (seeded Issue #7) in `git-brx-sandbox/me` and opened a review with `git brx review`. Please review the PR, verify that the description instructs to use a merge commit instead of squashing, and merge it to `main` preserving all commits."*

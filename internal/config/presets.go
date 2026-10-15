@@ -46,15 +46,17 @@ func (p *githubPreset) Apply(cfg *domain.ProjectConfig, detected *DetectedRemote
 		}
 	}
 	if cfg.Branch.Template == "" {
-		cfg.Branch.Template = `^(issue|feature)/[1-9][0-9]*$`
+		cfg.Branch.Template = `^(issue|feature|epic)/[1-9][0-9]*$`
 		if inferred != nil {
 			inferred["branch.template"] = "platform default (github)"
 		}
 	}
 	if len(cfg.Branch.Mapping) == 0 {
-		cfg.Branch.Mapping = map[string]string{
+		cfg.Branch.Mapping = map[string]any{
 			"bug":         "issue",
-			"enhancement": "feature",
+			"enhancement": []string{"issue", "feature"},
+			"feature":     "feature",
+			"epic":        "epic",
 		}
 		if inferred != nil {
 			inferred["branch.mapping"] = "platform default (github)"
@@ -113,9 +115,11 @@ func (p *gitlabPreset) Apply(cfg *domain.ProjectConfig, detected *DetectedRemote
 		}
 	}
 	if len(cfg.Branch.Mapping) == 0 {
-		cfg.Branch.Mapping = map[string]string{
+		cfg.Branch.Mapping = map[string]any{
 			"bug":         "issue",
-			"enhancement": "feature",
+			"enhancement": []string{"issue", "feature"},
+			"feature":     "feature",
+			"epic":        "epic",
 		}
 		if inferred != nil {
 			inferred["branch.mapping"] = "platform default (gitlab)"
@@ -180,7 +184,7 @@ func (p *bitbucketPreset) Apply(cfg *domain.ProjectConfig, detected *DetectedRem
 		}
 	}
 	if len(cfg.Branch.Mapping) == 0 {
-		cfg.Branch.Mapping = map[string]string{
+		cfg.Branch.Mapping = map[string]any{
 			"Bug":   "issue",
 			"Story": "feature",
 			"Epic":  "epic",

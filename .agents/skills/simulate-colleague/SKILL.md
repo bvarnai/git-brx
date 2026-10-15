@@ -47,31 +47,37 @@ git pull origin main
 
 This prevents topic branches from accidentally inheriting unmerged commits from preceding playbooks, avoids dirty worktree conflicts, and guarantees clean upstream rebase histories.
 
+### Platform Preset & Branch Mapping Conventions
+Under the `git-brx` **GitHub platform preset**, branch types map seamlessly to GitHub issue labels:
+- **`enhancement` $\to$ `[issue, feature]` (Dual-Mapping):** Flexible routing! Work can be branched as a focused issue branch (`issue/<id>`) for standard linear rebase sync, or as a collaborative `feature/<id>` branch for merge sync.
+- **`bug` $\to$ `issue/`:** Strictly restricted to issue branches with linear rebase.
+- **`epic` $\to$ `epic/`:** Strictly restricted to epic branches requiring merge commit PR strategy.
+
 ---
 
-## Playbook 1: Collaborative Feature Branch Upstream Merge Sync (`git brx sync`)
+## Playbook 1: Issue Branch Linear Rebase Upstream Sync (`git brx sync`)
 
 ### Objective
-Verify that a developer working on a `feature/` branch synchronizes with upstream `main` via a merge commit (as mandated by `git-brx`'s convention for collaborative feature branches), preserving local commit history without rewriting SHAs.
+Verify that a developer working on an `issue/` branch (created from an issue labeled `enhancement` via dual-mapping) synchronizes with upstream `main` via a **linear rebase**, pulling in latest upstream changes and placing local commits on top cleanly without merge commit clutter.
 
 ### Steps:
-1. **[User]** In `git-brx-sandbox/me`, create a topic branch using seeded Issue #2:
+1. **[User]** In `git-brx-sandbox/me`, create a topic branch using seeded Issue #2 (labeled `enhancement`):
    ```bash
-   git brx create feature/2 -y
+   git brx create issue/2 -y
    ```
    Add a `Divide` function to `calc.go` and commit:
    ```bash
    git commit -am "feat(#2): add divide calculation function"
    ```
 2. **[Colleague (Alex)]** Concurrently in `git-brx-sandbox/colleague`:
-   - Checks out `feature/1` using `git brx create feature/1 -y`.
+   - Checks out `issue/1` using `git brx create issue/1 -y` (also labeled `enhancement`).
    - Adds a `Subtract` function to `calc.go`, commits, publishes (`git brx publish`), and merges into `main` on origin.
-   - Alex reports: *"Merged feature/1 into origin/main. Now run 'git brx sync' in your workspace!"*
+   - Alex reports: *"Merged issue/1 into origin/main. Now run 'git brx sync' in your workspace!"*
 3. **[User]** In `git-brx-sandbox/me`, run:
    ```bash
    git brx sync
    ```
-   Verify that `git-brx sync` fetches `origin/main`, detects that `main` is ahead, and cleanly merges `main` into `feature/2` (producing a `Merge branch 'main' into 'feature/2'` commit) without conflicts.
+   Verify that `git-brx sync` fetches `origin/main`, detects that `main` is ahead, and cleanly rebases `issue/2` on top of `main` (linear history, no merge commit).
 
 ---
 
@@ -81,7 +87,7 @@ Verify that a developer working on a `feature/` branch synchronizes with upstrea
 Simulate a concurrent modification conflict during an `issue/` branch linear rebase, and verify diagnostic exit codes (Exit 5) and resolution workflows.
 
 ### Steps:
-1. **[User]** In `git-brx-sandbox/me`, create branch for seeded Issue #3 (bug):
+1. **[User]** In `git-brx-sandbox/me`, create branch for seeded Issue #3 (strictly labeled `bug`):
    ```bash
    git checkout main && git pull origin main
    git brx create issue/3 -y
@@ -105,15 +111,40 @@ Simulate a concurrent modification conflict during an `issue/` branch linear reb
 
 ---
 
-## Playbook 3: Pair Programming on a Shared Published Branch (`git brx update`)
+## Playbook 3: Collaborative Feature Branch Upstream Merge Sync (`git brx sync`)
+
+### Objective
+Verify that a developer working on a collaborative `feature/` branch synchronizes with upstream `main` via a **merge commit** (as mandated by `git-brx`'s convention for feature branches), preserving local commit history without rewriting SHAs.
+
+### Steps:
+1. **[User]** In `git-brx-sandbox/me`, create a feature branch using seeded Issue #4 (labeled `enhancement`):
+   ```bash
+   git checkout main && git pull origin main
+   git brx create feature/4 -y
+   ```
+   Add a new step in `calc.go` and commit:
+   ```bash
+   git commit -am "feat(#4): implement calculation pipeline stage 1"
+   ```
+2. **[Colleague (Alex)]** Concurrently on `main` in `git-brx-sandbox/colleague`:
+   - Adds a non-conflicting helper function or doc comment to `main`, commits, and pushes to `origin/main`.
+   - Alex reports: *"Pushed updates to origin/main. Now run 'git brx sync' in your workspace!"*
+3. **[User]** In `git-brx-sandbox/me`, run:
+   ```bash
+   git brx sync
+   ```
+   Verify that `git-brx sync` fetches `origin/main`, detects that `main` is ahead, and cleanly merges `main` into `feature/4` (producing a `Merge branch 'main' into 'feature/4'` commit) without conflicts, preserving your original commit SHA.
+
+---
+
+## Playbook 4: Pair Programming on a Shared Published Branch (`git brx update`)
 
 ### Objective
 Simulate two developers collaborating on the same published topic branch.
 
 ### Steps:
-1. **[User]** Create and publish a shared topic branch using seeded Issue #4:
+1. **[User]** Publish the topic branch from Playbook 3:
    ```bash
-   git brx create feature/4 -y
    git brx publish
    ```
 2. **[Colleague (Alex)]** In `git-brx-sandbox/colleague`:
@@ -122,27 +153,12 @@ Simulate two developers collaborating on the same published topic branch.
      git brx select feature/4
      ```
    - Adds a commit and pushes to origin.
-   - Alex reports: *"Added step 2 to the pipeline on origin/feature/4. Run 'git brx update' to pull my changes!"*
+   - Alex reports: *"Added stage 2 on origin/feature/4. Run 'git brx update' to pull my changes!"*
 3. **[User]** In `git-brx-sandbox/me`, run:
    ```bash
    git brx update
    ```
    Verify that `git-brx update` rebases cleanly over Alex's remote commit with `--autostash`.
-
----
-
-## Playbook 4: Topic Branch Deletion After Merge (`git brx delete`)
-
-### Objective
-Verify that `git brx delete` protects unmerged remote branches and cleanly prunes merged branches.
-
-### Steps:
-1. After merging a PR on GitHub, delete the remote branch on origin.
-2. In `git-brx-sandbox/me`, run:
-   ```bash
-   git brx delete <branch-name>
-   ```
-3. Verify that `git-brx` deletes the local branch, prunes the stale remote tracking ref, and switches back to the default branch.
 
 ---
 
@@ -153,10 +169,7 @@ Verify that `git brx review` accurately assigns `alexvarnai` for documentation c
 
 ### Setup (.git-brx.yaml in sandbox):
 ```yaml
-scm:
-  provider: github
-  owner: bvarnai
-  repo: git-brx-sandbox
+platform: github
 
 review:
   merge:
@@ -220,15 +233,15 @@ review:
 
 ---
 
-## Playbook 6: Non-Squash PR Merge Strategy (`merge` commit / `rebase`)
+## Playbook 6: Non-Squash PR Merge Strategy on Epics (`epic/7`)
 
 ### Objective
-Verify that `git brx review` renders explicit merge instructions when a PR requires a non-squash strategy (e.g., preserving full constituent commit history via a true merge commit or linear rebase), and confirm that downstream `git brx sync` correctly handles the resulting non-squashed upstream history.
+Verify that `git brx review` renders explicit merge instructions when a PR requires a non-squash strategy (e.g., preserving full constituent commit history via a true merge commit), and confirm that downstream `git brx sync` correctly handles the resulting non-squashed upstream history.
 
 ### Built-in Convention & Mental Model
 Under `git-brx`'s opinionated convention-over-configuration philosophy, single-ticket branches (`issue/*`, `feature/*`) default to **Squash & Merge**, while major multi-commit initiatives (`epic/*`, `release/*`) automatically resolve to a **true Merge Commit** via built-in engine conventions without requiring custom merge configuration.
 
-Seeded Issue #7 is labeled `epic`, mapping to `epic/7`. When `git brx review` is executed on `epic/7`, `git-brx` recognizes the `epic/*` prefix and automatically commands a merge commit.
+Seeded Issue #7 is labeled `epic`, mapping strictly to `epic/7`. When `git brx review` is executed on `epic/7`, `git-brx` recognizes the `epic/*` prefix and automatically commands a merge commit.
 
 ### Steps:
 
@@ -268,6 +281,22 @@ Seeded Issue #7 is labeled `epic`, mapping to `epic/7`. When `git brx review` is
 2. **Verification:**
    - Verify `git-brx sync` fetches the new merge commit and its constituent commits on `origin/main`.
    - Verify the local branch rebases smoothly on top of `origin/main` without duplicate commit conflicts.
+
+---
+
+## Playbook 7: Topic Branch Deletion After Merge (`git brx delete`)
+
+### Objective
+Verify that `git brx delete` protects unmerged remote branches and cleanly prunes merged branches.
+
+### Steps:
+1. After merging a PR on GitHub, delete the remote branch on origin.
+2. In `git-brx-sandbox/me`, run:
+   ```bash
+   git brx delete <branch-name>
+   ```
+3. Verify that `git-brx` deletes the local branch, prunes the stale remote tracking ref, and switches back to the default branch.
+
 
 
 
