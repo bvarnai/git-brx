@@ -52,19 +52,21 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Tokens (can also be passed via environment variables):
-  --admin-token <pat>  Admin PAT for creating repo & inviting collaborators (ADMIN_GITHUB_TOKEN)
+  --admin-token <pat>  Admin PAT for creating repo, inviting collaborators & seeding issues (ADMIN_GITHUB_TOKEN)
   --me-token <pat>     Fine-grained PAT for Primary Developer 'me' (ME_GITHUB_TOKEN)
-  --alex-token <pat>   Fine-grained PAT for Colleague 'Alex Varnai' (ALEX_GITHUB_TOKEN)
+  --alex-token <pat>   PAT for Colleague 'Alex Varnai' (Classic PAT with 'repo' scope for personal repos) (ALEX_GITHUB_TOKEN)
 
 Options:
   --check              Verify tokens, remote sandbox repository, and local workspaces
   --reset              Remove local git-brx-sandbox/me and colleague directories and re-clone
+  --recreate           Delete remote sandbox repository on GitHub, clean local workspaces, and recreate from scratch
   --help               Show this help message
 EOF
 }
 
 CHECK_MODE=false
 RESET_MODE=false
+RECREATE_MODE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -85,6 +87,11 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --reset)
+            RESET_MODE=true
+            shift
+            ;;
+        --recreate)
+            RECREATE_MODE=true
             RESET_MODE=true
             shift
             ;;
@@ -112,6 +119,11 @@ fi
 export ADMIN_GITHUB_TOKEN ME_GITHUB_TOKEN ALEX_GITHUB_TOKEN
 
 # 2. Check/Create Remote Repository, Add Collaborator, and Seed Issues
+if [[ "$RECREATE_MODE" == "true" ]]; then
+    echo "==> Recreating sandbox: deleting remote repository on GitHub..."
+    "${SCRIPT_DIR}/sandbox-github.sh" --delete-repo
+fi
+
 "${SCRIPT_DIR}/sandbox-github.sh" --init-repo
 if [[ "$CHECK_MODE" == "true" ]]; then
     echo "==> Check complete. Remote repository is ready."
@@ -277,8 +289,11 @@ MD_EOF
 
         cat <<'YAML_EOF' > .git-brx.yaml
 branch:
+  template: ^(issue|feature|epic)/[1-9][0-9]*$
   mapping:
-    enhancement: "issue"
+    enhancement: "feature"
+    bug: "issue"
+    epic: "epic"
 
 review:
   merge:
@@ -297,6 +312,32 @@ YAML_EOF
             echo "    Sample files pushed to origin/main."
             # Sync colleague clone
             (cd "${COLLEAGUE_DIR}" && git pull origin main)
+        fi
+    else
+        # Ensure .git-brx.yaml in existing sandboxes is updated with proper branch template and mapping
+        if ! grep -q 'epic: "epic"' .git-brx.yaml 2>/dev/null; then
+            echo "==> Updating .git-brx.yaml branch mapping and template in existing sandbox..."
+            cat <<'YAML_EOF' > .git-brx.yaml
+branch:
+  template: ^(issue|feature|epic)/[1-9][0-9]*$
+  mapping:
+    enhancement: "feature"
+    bug: "issue"
+    epic: "epic"
+
+review:
+  merge:
+    instructions: true
+  mapping:
+    paths:
+      "docs/**": [alexvarnai]
+    default: [bvarnai]
+YAML_EOF
+            git add .git-brx.yaml
+            if git commit -m "fix: update branch mapping to include epic convention"; then
+                git push origin main
+                (cd "${COLLEAGUE_DIR}" && git pull origin main)
+            fi
         fi
     fi
 )

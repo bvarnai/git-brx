@@ -36,17 +36,33 @@ For full architectural details and message flows, see [Colleague Simulation Guid
 
 ---
 
-## Playbook 1: Concurrent Feature Merge & Upstream Sync (`git brx sync`)
+## Sequential Execution & Inter-Playbook Transition Protocol
+
+When running playbooks sequentially, **always ensure your local workspace starts from an up-to-date `main` branch**:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+This prevents topic branches from accidentally inheriting unmerged commits from preceding playbooks, avoids dirty worktree conflicts, and guarantees clean upstream rebase histories.
+
+---
+
+## Playbook 1: Collaborative Feature Branch Upstream Merge Sync (`git brx sync`)
 
 ### Objective
-Verify that a developer working on a topic branch can smoothly rebase over a colleague's newly merged commits using `git brx sync`.
+Verify that a developer working on a `feature/` branch synchronizes with upstream `main` via a merge commit (as mandated by `git-brx`'s convention for collaborative feature branches), preserving local commit history without rewriting SHAs.
 
 ### Steps:
 1. **[User]** In `git-brx-sandbox/me`, create a topic branch using seeded Issue #2:
    ```bash
    git brx create feature/2 -y
    ```
-   Add a `Divide` function to `calc.go` and commit.
+   Add a `Divide` function to `calc.go` and commit:
+   ```bash
+   git commit -am "feat(#2): add divide calculation function"
+   ```
 2. **[Colleague (Alex)]** Concurrently in `git-brx-sandbox/colleague`:
    - Checks out `feature/1` using `git brx create feature/1 -y`.
    - Adds a `Subtract` function to `calc.go`, commits, publishes (`git brx publish`), and merges into `main` on origin.
@@ -55,23 +71,32 @@ Verify that a developer working on a topic branch can smoothly rebase over a col
    ```bash
    git brx sync
    ```
-   Verify that `git-brx sync` fetches `origin/main`, detects that `main` is ahead, and rebases `feature/2` on top of Alex's merged changes without conflicts.
+   Verify that `git-brx sync` fetches `origin/main`, detects that `main` is ahead, and cleanly merges `main` into `feature/2` (producing a `Merge branch 'main' into 'feature/2'` commit) without conflicts.
 
 ---
 
-## Playbook 2: Conflict Injection & Resolution (`git brx resolve` / `git brx reset`)
+## Playbook 2: Issue Branch Linear Rebase & Conflict Resolution (`git brx resolve` / `git brx reset`)
 
 ### Objective
-Simulate a merge conflict between concurrent edits on the same lines, and verify diagnostic exit codes (Exit 5) and resolution workflows.
+Simulate a concurrent modification conflict during an `issue/` branch linear rebase, and verify diagnostic exit codes (Exit 5) and resolution workflows.
 
 ### Steps:
-1. **[User]** On `feature/3` in `git-brx-sandbox/me`, modify line 4 of `config.json` to `"retries": 5`. Commit the change.
+1. **[User]** In `git-brx-sandbox/me`, create branch for seeded Issue #3 (bug):
+   ```bash
+   git checkout main && git pull origin main
+   git brx create issue/3 -y
+   ```
+   Modify line 4 of `config.json` to `"retries": 5`. Commit the change:
+   ```bash
+   git commit -am "fix(#3): update retry limit to 5"
+   ```
 2. **[Colleague (Alex)]** On `main` in `git-brx-sandbox/colleague`, modify line 4 of `config.json` to `"retries": 10`, commit, and push directly to `origin/main`.
    - Alex reports: *"Pushed conflicting config change to origin/main. Run 'git brx sync' to observe the conflict!"*
 3. **[User]** In `git-brx-sandbox/me`, run:
    ```bash
    git brx sync
    ```
+   - Because `issue/` branches use the **rebase** sync strategy, `git-brx sync` attempts a linear rebase over `main`.
    - Verify `git-brx sync` stops with Exit code 5 (`ExitConflict`).
    - Verify diagnostic hint: `"Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort"`.
 4. **[Resolution Verification]**:
@@ -145,12 +170,13 @@ review:
 ### Steps:
 
 #### Scenario A: Primary Developer touches docs (routes to Alex Varnai)
-1. **[User]** In `git-brx-sandbox/me`, create a branch, add/edit a doc file, commit, and publish:
+1. **[User]** In `git-brx-sandbox/me`, ensure clean main, create branch for seeded Issue #5, commit docs, and publish:
    ```bash
-   git brx create feature/1 -y
+   git checkout main && git pull origin main
+   git brx create feature/5 -y
    mkdir -p docs && echo "# Architecture" > docs/architecture.md
    git add docs/architecture.md
-   git commit -m "docs(#1): add architecture documentation"
+   git commit -m "docs(#5): add architecture documentation"
    git brx publish
    ```
 2. **[User]** Submit for review:
@@ -165,12 +191,13 @@ review:
 
 #### Scenario B: Colleague Alex touches code (cascades to Lead bvarnai)
 1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
-   - Checks out a branch, modifies code (`calc.go`), commits as `Alex Varnai`, and publishes:
+   - Checks out branch for seeded Issue #6, modifies code (`calc.go`), commits as `Alex Varnai`, and publishes:
      ```bash
      source ~/workspace/git-brx-sandbox/env-colleague.sh
-     git brx create feature/2 -y
+     git checkout main && git pull origin main
+     git brx create feature/6 -y
      # Edit calc.go
-     git commit -am "feat(#2): add divide calculation"
+     git commit -am "feat(#6): add power exponent calculation"
      git brx publish
      ```
    - Submits the review using Alex's own PAT:
@@ -180,15 +207,68 @@ review:
 2. **Verification:**
    - `git-brx review` inspects `calc.go`, finds no match under `mapping.paths`, and falls back to `mapping.default` (`bvarnai`).
    - PR is opened on GitHub requesting `bvarnai` (Lead) as reviewer.
-   - Alex reports: *"Opened PR for feature/2 on GitHub. Review requested from lead bvarnai!"*
+   - Alex reports: *"Opened PR for feature/6 on GitHub. Review requested from lead bvarnai!"*
 
 #### Scenario C: Author Exclusion (Alex touches docs)
 1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
-   - Modifies `docs/architecture.md`, commits, publishes, and submits review.
+   - On `feature/6`, modifies `docs/architecture.md`, commits, publishes, and submits review.
 2. **Verification:**
    - `mapping.paths` matches `docs/**` $\to$ candidate `alexvarnai`.
    - **Author Exclusion:** `alexvarnai` is detected as the PR author and is excluded.
    - Cascades to `mapping.default` (`bvarnai`).
    - PR is opened with lead `bvarnai` requested as reviewer, avoiding self-assignment.
+
+---
+
+## Playbook 6: Non-Squash PR Merge Strategy (`merge` commit / `rebase`)
+
+### Objective
+Verify that `git brx review` renders explicit merge instructions when a PR requires a non-squash strategy (e.g., preserving full constituent commit history via a true merge commit or linear rebase), and confirm that downstream `git brx sync` correctly handles the resulting non-squashed upstream history.
+
+### Built-in Convention & Mental Model
+Under `git-brx`'s opinionated convention-over-configuration philosophy, single-ticket branches (`issue/*`, `feature/*`) default to **Squash & Merge**, while major multi-commit initiatives (`epic/*`, `release/*`) automatically resolve to a **true Merge Commit** via built-in engine conventions without requiring custom merge configuration.
+
+Seeded Issue #7 is labeled `epic`, mapping to `epic/7`. When `git brx review` is executed on `epic/7`, `git-brx` recognizes the `epic/*` prefix and automatically commands a merge commit.
+
+### Steps:
+
+#### Step 1: Primary Developer opens a PR for an epic requiring a merge commit
+1. **[User]** In `git-brx-sandbox/me`, create a multi-commit branch for seeded Issue #7 and publish:
+   ```bash
+   git checkout main && git pull origin main
+   git brx create epic/7 -y
+   echo "step 1" >> pipeline.txt && git add pipeline.txt && git commit -m "feat(#7): implement step 1"
+   echo "step 2" >> pipeline.txt && git add pipeline.txt && git commit -m "feat(#7): implement step 2"
+   git brx publish
+   ```
+2. **[User]** Submit for review:
+   ```bash
+   git brx review
+   ```
+3. **Verification in PR Description:**
+   Inspect the opened PR on GitHub. Verify that the generated description includes:
+   ```markdown
+   ### Merge instructions
+   - **Strategy:** Create a merge commit
+     - **Commit:** `Merge branch 'epic/7' into main` (merge commit preserving all constituent commits)
+   - **Branch cleanup:** Delete source branch `epic/7` after merging
+   ```
+
+#### Step 2: Colleague Alex reviews & merges using a Merge Commit
+1. **[Colleague (Alex Varnai)]** In `git-brx-sandbox/colleague`:
+   - Alex reviews the PR, observes the instruction to create a merge commit instead of squash, and merges via GitHub UI using **"Create a merge commit"** (or command line equivalent).
+   - Deletes the remote branch `epic/7`.
+   - Alex reports: *"Merged PR for epic/7 into main with a merge commit, preserving constituent commits. Run 'git brx sync' on your other branches to test upstream rebase over a merge commit!"*
+
+#### Step 3: Upstream Synchronization over a Merge Commit
+1. **[User]** On another active topic branch in `git-brx-sandbox/me`:
+   ```bash
+   git brx sync
+   ```
+2. **Verification:**
+   - Verify `git-brx sync` fetches the new merge commit and its constituent commits on `origin/main`.
+   - Verify the local branch rebases smoothly on top of `origin/main` without duplicate commit conflicts.
+
+
 
 

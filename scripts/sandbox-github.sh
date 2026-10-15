@@ -40,9 +40,9 @@ Commands:
   --delete-repo               Delete GitHub sandbox repository (uses ADMIN token)
   --invite-collaborator <usr> Add collaborator and auto-accept if ALEX token set
   --accept-invitations        Accept pending invitations using ALEX token
-  --seed-issues               Seed initial test issues (#1..#4)
-  --create-issue <title>      Create an ad-hoc issue on GitHub
-      [--type bug|story]      Issue type / label (default: story)
+  --seed-issues               Seed initial test issues (#1..#7) (uses ADMIN token)
+  --create-issue <title>      Create an ad-hoc issue on GitHub (uses ADMIN token)
+      [--type bug|story|epic] Issue type / label (default: story)
       [--body <description>]  Optional issue description
   --help                      Show this help message
 EOF
@@ -72,11 +72,12 @@ api_request_with_token() {
 }
 
 admin_api_request() {
-    if [[ -z "$ADMIN_GITHUB_TOKEN" ]]; then
+    local token="${ADMIN_GITHUB_TOKEN:-${ME_GITHUB_TOKEN:-}}"
+    if [[ -z "$token" ]]; then
         echo "Error: ADMIN_GITHUB_TOKEN is required for this operation." >&2
         exit 1
     fi
-    api_request_with_token "$ADMIN_GITHUB_TOKEN" "$@"
+    api_request_with_token "$token" "$@"
 }
 
 alex_api_request() {
@@ -88,7 +89,7 @@ alex_api_request() {
 }
 
 api_request() {
-    local token="${ME_GITHUB_TOKEN:-${ADMIN_GITHUB_TOKEN:-}}"
+    local token="${ADMIN_GITHUB_TOKEN:-${ME_GITHUB_TOKEN:-}}"
     if [[ -z "$token" ]]; then
         echo "Error: GITHUB_TOKEN is not set." >&2
         exit 1
@@ -207,6 +208,8 @@ create_issue() {
     local label="enhancement"
     if [[ "$issue_type" == "bug" ]]; then
         label="bug"
+    elif [[ "$issue_type" == "epic" ]]; then
+        label="epic"
     fi
 
     echo "==> Creating issue: '${title}' (type: ${issue_type}, label: ${label})..."
@@ -218,7 +221,7 @@ create_issue() {
         '{title: $t, body: $b, labels: [$l]}')
 
     local resp
-    resp=$(api_request "POST" "repos/${REPO_OWNER}/${REPO_NAME}/issues" "$payload")
+    resp=$(admin_api_request "POST" "repos/${REPO_OWNER}/${REPO_NAME}/issues" "$payload")
     local code
     code=$(echo "$resp" | tail -n1)
 
@@ -237,7 +240,7 @@ create_issue() {
 seed_issues() {
     echo "==> [GitHub Sandbox] Checking for existing issues in ${REPO_OWNER}/${REPO_NAME}..."
     local list_resp
-    list_resp=$(api_request "GET" "repos/${REPO_OWNER}/${REPO_NAME}/issues?state=all&per_page=1")
+    list_resp=$(admin_api_request "GET" "repos/${REPO_OWNER}/${REPO_NAME}/issues?state=all&per_page=1")
     local code
     code=$(echo "$list_resp" | tail -n1)
 
@@ -254,7 +257,7 @@ seed_issues() {
         return 0
     fi
 
-    echo "    No issues found. Seeding initial collaborative scenario issues (#1..#4)..."
+    echo "    No issues found. Seeding initial collaborative scenario issues (#1..#7)..."
     create_issue "feat: Add subtract calculation function" \
         "Implement a Subtract function in calc.go for basic arithmetic calculations." "story"
 
@@ -267,7 +270,16 @@ seed_issues() {
     create_issue "feat: Implement shared pipeline stages" \
         "Add multi-step pipeline processing for calculation batch tasks." "story"
 
-    echo "==> Seeding complete. Issues #1, #2, #3, and #4 created."
+    create_issue "docs: Add architecture and component guidelines" \
+        "Add architecture documentation in docs/architecture.md to verify reviewer routing." "story"
+
+    create_issue "feat: Add power exponent calculation" \
+        "Implement power exponent calculation in calc.go to verify lead review cascade." "story"
+
+    create_issue "epic: Multi-stage batch processing pipeline" \
+        "Implement multi-stage batch calculation pipeline requiring merge commit preservation." "epic"
+
+    echo "==> Seeding complete. Issues #1 through #7 created."
 }
 
 # CLI Argument Parsing

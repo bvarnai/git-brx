@@ -39,7 +39,7 @@ Run the automated provisioning script from the `git-brx` root:
 ```bash
 ADMIN_GITHUB_TOKEN="ghp_..." \
 ME_GITHUB_TOKEN="github_pat_..." \
-ALEX_GITHUB_TOKEN="github_pat_..." \
+ALEX_GITHUB_TOKEN="ghp_..." \
 ./scripts/setup-sandbox.sh
 ```
 
@@ -49,9 +49,14 @@ The simulation environment uses a 3-token least-privilege architecture:
 
 | Token Role | Environment Variable | Account | Recommended Scope / Permissions | Why It's Needed |
 | :--- | :--- | :--- | :--- | :--- |
-| **Admin Token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained | Repository lifecycle provisioning & deletion (`git-brx-sandbox`), inviting `alexvarnai` as collaborator. |
+| **Admin Token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained | Repository lifecycle provisioning & deletion (`git-brx-sandbox`), inviting `alexvarnai` as collaborator, and seeding scenario issues. |
 | **Primary Developer** | `ME_GITHUB_TOKEN` | Primary (`bvarnai`) | **Fine-grained PAT** (All repos or `git-brx-sandbox`):<br>• **Contents:** `Read-only` *(Required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` *(required)* | Injected into `env.sh` for developer operations in `git-brx-sandbox/me` (`create`, `publish`, `review`, `delete`). |
-| **Colleague** | `ALEX_GITHUB_TOKEN` | Colleague (`alexvarnai`) | **Fine-grained PAT** (All repos or `git-brx-sandbox`):<br>• **Contents:** `Read-only` *(Required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` *(required)* | Injected into `env-colleague.sh` for Alex's operations in `git-brx-sandbox/colleague`. |
+| **Colleague** | `ALEX_GITHUB_TOKEN` | Colleague (`alexvarnai`) | **Classic PAT** (`repo` scope) *(Mandatory for personal repos)*<br>or Fine-grained PAT *(Organizations only)* | Injected into `env-colleague.sh` for Alex's operations in `git-brx-sandbox/colleague`. |
+
+> [!NOTE]
+> **GitHub Platform Rule: Personal Repositories vs Organizations:**
+> * **Personal Repositories (Sandbox Simulation):** GitHub strictly prevents fine-grained personal access tokens (`github_pat_...`) from accessing private repositories owned by another individual personal user account (`bvarnai`), even when added as an accepted collaborator (GitHub returns `404 Not Found`). When collaborating on private personal repos, the collaborator token (`ALEX_GITHUB_TOKEN`) must be a **Classic PAT (`ghp_...`)** with the `repo` scope.
+> * **Organizations (Enterprise / Team Environments):** In production organizations (e.g. `github.com/my-org/service`), fine-grained PATs are fully supported for all organization members and can be granularly scoped to individual repositories and least-privilege permissions without issue.
 
 > [!IMPORTANT]
 > **Why `Contents: Read-only` is required on Private Repositories:**
@@ -62,7 +67,7 @@ The simulation environment uses a 3-token least-privilege architecture:
 ### What the setup script does:
 1. Dynamically detects your authenticated GitHub account and ensures `git-brx-sandbox` exists.
 2. Invites `alexvarnai` as a collaborator with write (`push`) permissions.
-3. Seeds test issues (#1..#4) for turnkey scenario execution.
+3. Seeds test issues (#1..#7) for turnkey scenario execution.
 4. Clones the repository into `~/workspace/git-brx-sandbox/me` and `~/workspace/git-brx-sandbox/colleague`.
 5. Pre-configures `.git-brx.yaml` with the documentation and lead reviewer mapping.
 6. Generates `~/workspace/git-brx-sandbox/env.sh` (for you) and `env-colleague.sh` (for Alex) with injected PATs and permissions secured (`chmod 700`).
@@ -114,28 +119,28 @@ sequenceDiagram
 
 ## 4. Example message flows
 
-### Example Flow A: Simulating an upstream merge & rebase sync (`git brx sync`)
+### Example Flow A: Collaborative feature branch upstream sync (`git brx sync`)
 
 #### Prompt to Antigravity:
-> *"Alex, I am starting work on `feature/1` in `git-brx-sandbox/me`. While I work on this, please implement a new function in `calc.go`, commit it, and merge it directly into `main` on origin."*
+> *"Alex, I am starting work on `feature/2` in `git-brx-sandbox/me`. While I work on this, please implement a new function in `calc.go`, commit it, and merge it directly into `main` on origin."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
-> I switched to `main` in `~/workspace/git-brx-sandbox/colleague`, implemented `func Subtract(a, b int) int` in `calc.go`, and pushed commit `7f21a9c` directly to `origin/main`.
+> I switched to `main` in `~/workspace/git-brx-sandbox/colleague`, implemented `func Subtract(a, b int) int` in `calc.go`, and pushed commit `e434c2f` directly to `origin/main`.
 >
 > **Your Turn:**
 > Switch to `~/workspace/git-brx-sandbox/me` and run:
 > ```bash
 > git brx sync
 > ```
-> `git-brx` will fetch `origin/main`, detect that `main` is ahead by 1 commit, and cleanly rebase your `feature/1` branch on top of my new commit!
+> `git-brx` will fetch `origin/main`, detect that `main` is ahead by 1 commit, and cleanly merge `main` into your `feature/2` branch (as standard for collaborative feature branches)!
 
 ---
 
-### Example Flow B: Injecting a merge conflict (`git brx resolve` / `git brx reset`)
+### Example Flow B: Issue branch linear rebase conflict (`git brx resolve` / `git brx reset`)
 
 #### Prompt to Antigravity:
-> *"Alex, let's simulate a merge conflict. I just changed line 4 of `config.json` on my branch to `"retries": 5`. Please push a conflicting change on `origin/main`."*
+> *"Alex, let's simulate a merge conflict on `issue/3`. I just changed line 4 of `config.json` on my branch to `"retries": 5`. Please push a conflicting change on `origin/main`."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
@@ -146,7 +151,7 @@ sequenceDiagram
 > ```bash
 > git brx sync
 > ```
-> Expected behavior:
+> Because `issue/` branches use linear rebase by default, `git-brx` will attempt to rebase your commit over `origin/main`:
 > 1. `git-brx` halts with Exit code 5 (`ExitConflict`).
 > 2. You will see the hint: `Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort`.
 > 3. You can either fix the conflict markers in `config.json` and run `git brx resolve`, or abort cleanly with `git brx reset`.
@@ -178,24 +183,56 @@ sequenceDiagram
 - **Lead / Default**: All other changes routed to `bvarnai`
 
 #### Prompt to Antigravity:
-> *"Alex, please create a feature branch in `git-brx-sandbox/colleague`, edit `calc.go`, and submit a review using your PAT. Verify that `bvarnai` is assigned as reviewer rather than you."*
+> *"Alex, please create a feature branch for seeded Issue #6 in `git-brx-sandbox/colleague`, edit `calc.go`, and submit a review using your PAT. Verify that `bvarnai` is assigned as reviewer rather than you."*
 
 #### Alex's response in Chat:
 > `[Alex Varnai]:`
-> I checked out `feature/2` in `~/workspace/git-brx-sandbox/colleague`, added changes to `calc.go`, and submitted the PR via `git brx review`.
+> I checked out `feature/6` in `~/workspace/git-brx-sandbox/colleague`, added changes to `calc.go`, and submitted the PR via `git brx review`.
 > Since `calc.go` is code rather than documentation, `git-brx` routed the PR to team lead `bvarnai` via `mapping.default`.
 >
 > **Your Turn:**
-> In `~/workspace/git-brx-sandbox/me`, create a branch with documentation in `docs/architecture.md`, publish, and run `git brx review`. `git-brx` will match `docs/**` and request review from `alexvarnai`!
+> In `~/workspace/git-brx-sandbox/me`, ensure clean main, create branch `feature/5` for seeded Issue #5 with documentation in `docs/architecture.md`, publish, and run `git brx review`. `git-brx` will match `docs/**` and request review from `alexvarnai`!
+
+---
+
+### Example Flow E: Non-Squash PR Merge Strategy (`merge` commit / `rebase`)
+
+#### Policy / Convention:
+- `git-brx` automatically commands a **Merge commit** for `epic/*` or `release/*` branches under its built-in conventions, without requiring manual merge configuration. Seeded Issue #7 is labeled `epic`, mapping to `epic/7`.
+
+#### Prompt to Antigravity:
+> *"Alex, I just created a multi-commit branch `epic/7` (seeded Issue #7) in `git-brx-sandbox/me` and opened a review with `git brx review`. Please review the PR, verify that the description instructs to use a merge commit instead of squashing, and merge it to `main` preserving all commits."*
+
+#### Alex's response in Chat:
+> `[Alex Varnai]:`
+> I reviewed PR for `epic/7` on GitHub. The description explicitly states:
+> ```markdown
+> ### Merge instructions
+> - **Strategy:** Create a merge commit
+>   - **Commit:** `Merge branch 'epic/7' into main` (merge commit preserving all constituent commits)
+> - **Branch cleanup:** Delete source branch `epic/7` after merging
+> ```
+> I merged the PR on GitHub using **Create a merge commit** (commit `9d31f0e`) and deleted the remote branch.
+>
+> **Your Turn:**
+> Switch back to `~/workspace/git-brx-sandbox/me` on your active work branch and run:
+> ```bash
+> git brx sync
+> ```
+> `git-brx` will fetch the new merge commit from `origin/main` and rebase your topic branch cleanly over it!
 
 ---
 
 ## 5. Resetting the sandbox environment
 
-If you want to wipe local changes and start completely fresh from GitHub `origin/main`:
+If you want to wipe local changes and start fresh from GitHub `origin/main`:
 
 ```bash
 ./scripts/setup-sandbox.sh --reset
 ```
 
-This cleans both `git-brx-sandbox/me` and `git-brx-sandbox/colleague` and re-clones a pristine copy from `origin/main`.
+If you want to delete the remote GitHub repository completely and re-provision everything from scratch:
+
+```bash
+./scripts/setup-sandbox.sh --recreate
+```
