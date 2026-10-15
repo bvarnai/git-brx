@@ -42,13 +42,19 @@
      - Log actionable hint: `[git-brx] Hint: Use 'git-brx resolve' to resolve conflicts or 'git-brx reset' to abort`
      - Terminate with Exit Code `5`.
 6. **Completion:**
-   - Log informational success: `[git-brx] Current branch '<branch>' is up to date`.
+   - Log informational success:
+     - If `delta.BehindCount == 0`:
+       `[git-brx] Branch '<branch>' is already up to date with 'origin/<branch>'`
+     - If `delta.BehindCount > 0` and `delta.AheadCount == 0`:
+       `[git-brx] Fast-forwarded '<branch>' to match 'origin/<branch>' (<N> new commit/commits)`
+     - If `delta.BehindCount > 0` and `delta.AheadCount > 0`:
+       `[git-brx] Rebased '<branch>' onto 'origin/<branch>' (<N> new commit/commits)`
    - Terminate with Exit Code `0`.
 
 ## 4. Error Handling & Exit Codes
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
-| `0` | Branch successfully updated and rebased onto remote tip. | `[git-brx] Current branch '<branch>' is up to date` | None. |
+| `0` | Branch successfully updated and rebased onto remote tip. | `[git-brx] Fast-forwarded ...` / `[git-brx] Rebased ...` / `[git-brx] Branch ... is already up to date with ...` | None. |
 | `2` | Positional arguments or unknown flags supplied. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Outside repository or detached HEAD. | `[git-brx] Error: You are in detached HEAD state, this means you are not on any branch` | None. |
 | `4` | Origin missing, unreachable, or branch not published on remote. | `[git-brx] Error: Your repository has no remote origin` / `[git-brx] Error: Branch not found on remote` | None. |

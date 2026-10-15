@@ -40,7 +40,7 @@ func TestUpdateIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Current branch 'issue/VSB-200' is up to date")
+		assert.Contains(t, stderr.String(), "Rebased 'issue/VSB-200' onto 'origin/issue/VSB-200' (1 new commit)")
 
 		// Verify rebase: colleague commit is now in history
 		log := h.Git("log", "--oneline")
@@ -134,7 +134,7 @@ func TestUpdateIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update", "-a"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Current branch 'issue/VSB-202' is up to date")
+		assert.Contains(t, stderr.String(), "Fast-forwarded 'issue/VSB-202' to match 'origin/issue/VSB-202' (1 new commit)")
 
 		// Verify unstaged edit was preserved after autostash pop
 		content, err := os.ReadFile(trackedPath)
@@ -168,5 +168,46 @@ func TestUpdateIntegration(t *testing.T) {
 
 		currSha := strings.TrimSpace(h.Git("rev-parse", "HEAD"))
 		assert.Equal(t, origSha, currSha, "dry run must not change HEAD commit")
+	})
+
+	t.Run("AlreadyUpToDateDoesNotRebase", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/VSB-204")
+		h.CommitFile("work.txt", "work", "Commit")
+		h.Git("push", "-u", "origin", "issue/VSB-204")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Branch 'issue/VSB-204' is already up to date with 'origin/issue/VSB-204'")
+	})
+
+	t.Run("MultipleCommitsFastForwardPluralizes", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteBare := h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/VSB-205")
+		h.CommitFile("init_branch.txt", "branch", "Branch commit")
+		h.Git("push", "-u", "origin", "issue/VSB-205")
+
+		// Colleague pushes 2 commits
+		h2 := CloneHarness(t, remoteBare)
+		h2.Git("checkout", "issue/VSB-205")
+		h2.CommitFile("c1.txt", "c1", "Commit 1")
+		h2.CommitFile("c2.txt", "c2", "Commit 2")
+		h2.Git("push", "origin", "issue/VSB-205")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Fast-forwarded 'issue/VSB-205' to match 'origin/issue/VSB-205' (2 new commits)")
 	})
 }
