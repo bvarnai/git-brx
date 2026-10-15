@@ -288,12 +288,7 @@ friction points, and edge cases using `git-brx`.
 MD_EOF
 
         cat <<'YAML_EOF' > .git-brx.yaml
-branch:
-  template: ^(issue|feature|epic)/[1-9][0-9]*$
-  mapping:
-    enhancement: "feature"
-    bug: "issue"
-    epic: "epic"
+platform: github
 
 review:
   merge:
@@ -314,16 +309,11 @@ YAML_EOF
             (cd "${COLLEAGUE_DIR}" && git pull origin main)
         fi
     else
-        # Ensure .git-brx.yaml in existing sandboxes is updated with proper branch template and mapping
-        if ! grep -q 'epic: "epic"' .git-brx.yaml 2>/dev/null; then
-            echo "==> Updating .git-brx.yaml branch mapping and template in existing sandbox..."
+        # Ensure .git-brx.yaml in existing sandboxes is aligned with github platform preset
+        if grep -q 'enhancement: "feature"' .git-brx.yaml 2>/dev/null || ! grep -q 'platform: github' .git-brx.yaml 2>/dev/null; then
+            echo "==> Updating .git-brx.yaml to use GitHub preset defaults in existing sandbox..."
             cat <<'YAML_EOF' > .git-brx.yaml
-branch:
-  template: ^(issue|feature|epic)/[1-9][0-9]*$
-  mapping:
-    enhancement: "feature"
-    bug: "issue"
-    epic: "epic"
+platform: github
 
 review:
   merge:
@@ -334,7 +324,7 @@ review:
     default: [bvarnai]
 YAML_EOF
             git add .git-brx.yaml
-            if git commit -m "fix: update branch mapping to include epic convention"; then
+            if git commit -m "fix: update sandbox config to rely on github preset"; then
                 git push origin main
                 (cd "${COLLEAGUE_DIR}" && git pull origin main)
             fi
