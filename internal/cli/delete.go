@@ -136,7 +136,7 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 
 	baseBranch := a.Inspector.DefaultBranch(ctx, rootDir)
 	if baseBranch == "" {
-		baseBranch = "master"
+		baseBranch = "main"
 	}
 
 	if a.Opts.DryRun {

@@ -21,7 +21,7 @@ This bypasses remote network calls and allows full offline productivity.
 **A:** No. `git-brx` never mutates your global Git configuration. It respects your existing credentials, diff tools, and git settings natively.
 
 ### Q: What is the difference between `sync` and `update`?
-- **`git brx sync`**: Brings in new work from your **base branch** (e.g. `master` ➔ `issue/TASK-101`).
+- **`git brx sync`**: Brings in new work from your **base branch** (e.g. `main` ➔ `issue/TASK-101`).
 - **`git brx update`**: Pulls remote commits on your **own branch** (e.g. `origin/issue/TASK-101` ➔ `issue/TASK-101`).
 
 ---
@@ -32,11 +32,11 @@ This bypasses remote network calls and allows full offline productivity.
 - **Cause:** Someone pushed commits to `origin/<your-branch>` since you last fetched, or you rebased locally without updating from remote first.
 - **Solution:** Run `git brx update` to rebase your local commits on top of the remote changes, then re-run `git brx publish`.
 
-### 2. `! Sync branch 'master' is not up-to-date`
-- **Cause:** Your local `master` branch has diverged from `origin/master` (it is either behind or contains local unpushed commits).
+### 2. `! Sync branch 'main' is not up-to-date`
+- **Cause:** Your local `main` branch has diverged from `origin/main` (it is either behind or contains local unpushed commits).
 - **Solution:**
   ```bash
-  git brx select master
+  git brx select main
   git brx update
   git brx select issue/TASK-101
   git brx sync

@@ -14,13 +14,13 @@
 | `name` | `name.sh` | Prints the current active branch name. |
 | `history` | `history.sh` | Renders a formatted commit graph / DAG. |
 | `update` | `update.sh` | Pulls remote changes using rebase onto the local branch. |
-| `select` | `select.sh` | Fetches remotes and switches working tree to target branch (default: `master`). |
+| `select` | `select.sh` | Fetches remotes and switches working tree to target branch (default: `main`). |
 | `sync` | `sync.sh` | Synchronizes branch with target base (rebase for issues, merge for features). |
 | `reset` | `reset.sh` | Aborts active merges/rebases and hard-resets working copy to remote tracking ref. |
 | `resolve` | `resolve.sh` | Launches interactive merge tool and continues in-flight rebase or merge. |
 | `create` | `create.sh` / `create.groovy` | Validates against issue tracker (JIRA) and provisions local topic branch. |
 | `publish` | `publish.sh` | Pushes branch to remote with lease and configures upstream tracking. |
-| `delete` | `delete.sh` | Validates remote branch deletion, switches to `master`, and deletes local branch. |
+| `delete` | `delete.sh` | Validates remote branch deletion, switches to `main`, and deletes local branch. |
 | `review` | `review.sh` | Creates a pull request on configured SCM platform (Bitbucket, GitHub) via REST API with reviewer mapping. |
 | `config` | *N/A (Go native)* | Prints the effective resolved cascading configuration and source provenance in YAML format. |
 

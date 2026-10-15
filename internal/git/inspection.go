@@ -263,16 +263,16 @@ func (i *Inspector) IsDirty(ctx context.Context, dir string) (bool, error) {
 	return strings.TrimSpace(out) != "", nil
 }
 
-// DefaultBranch inspects repository references to determine the primary default branch ('master', 'main', or origin HEAD).
+// DefaultBranch inspects repository references to determine the primary default branch ('main', 'master', or origin HEAD).
 func (i *Inspector) DefaultBranch(ctx context.Context, dir string) string {
-	localMaster, remoteMaster, _ := i.BranchExists(ctx, dir, "master")
-	if localMaster || remoteMaster {
-		return "master"
-	}
-
 	localMain, remoteMain, _ := i.BranchExists(ctx, dir, "main")
 	if localMain || remoteMain {
 		return "main"
+	}
+
+	localMaster, remoteMaster, _ := i.BranchExists(ctx, dir, "master")
+	if localMaster || remoteMaster {
+		return "master"
 	}
 
 	out, err := i.runner.Run(ctx, dir, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
@@ -284,7 +284,7 @@ func (i *Inspector) DefaultBranch(ctx context.Context, dir string) string {
 		}
 	}
 
-	return "master"
+	return "main"
 }
 
 // ListAllBranchNames returns all deduplicated local and remote branch names.

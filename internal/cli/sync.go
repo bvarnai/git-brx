@@ -90,12 +90,12 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 	}
 
 	// Target base branch resolution
-	baseBranch := "master"
+	baseBranch := "main"
 	isDefaultBase := false
 	if len(args) == 1 && args[0] != "" {
 		baseBranch = args[0]
 	} else {
-		// If base is omitted, use master (or default branch if master not found)
+		// If base is omitted, use main (or default branch)
 		defBranch := a.Inspector.DefaultBranch(ctx, rootDir)
 		if defBranch != "" {
 			baseBranch = defBranch

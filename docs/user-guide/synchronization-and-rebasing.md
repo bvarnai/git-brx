@@ -6,12 +6,12 @@ Keeping topic branches up to date with the mainline codebase is one of the most 
 
 ## 1. Synchronizing with base (`git brx sync`)
 
-While you work on a feature or bugfix, your teammates are continually merging changes into `master` (or `main`). If your branch sits un-synchronized for days, divergence grows, leading to painful merge conflicts later.
+While you work on a feature or bugfix, your teammates are continually merging changes into `main` (or `master`). If your branch sits un-synchronized for days, divergence grows, leading to painful merge conflicts later.
 
 Use `git brx sync` to bring in changes from your base branch:
 
 ```bash
-# Sync with the default base branch (master or main):
+# Sync with the default base branch (main or master):
 git brx sync
 
 # Or sync with a custom base branch (e.g. develop or a release branch):
@@ -20,7 +20,7 @@ git brx sync develop
 
 ### Intelligent Strategy Resolution
 `git-brx sync` automatically chooses the correct synchronization strategy based on your branch prefix:
-- **`issue/*` branches ➔ Rebase:** Replays your local commits cleanly on top of the newest `master` commits. This produces a linear commit history ready for Squash & Merge.
+- **`issue/*` branches ➔ Rebase:** Replays your local commits cleanly on top of the newest `main` commits. This produces a linear commit history ready for Squash & Merge.
 - **`feature/*` and `epic/*` branches ➔ Merge:** Performs a standard 3-way merge commit into your feature branch to preserve ongoing parallel sub-histories.
 
 ### Explicit strategy overrides
@@ -34,7 +34,7 @@ git brx sync -r
 ```
 
 ### Automatic base branch fast-forwarding
-When collaborating with teammates, new commits are frequently merged into `master` (or `main`) on the remote repository. If your local base branch is purely behind `origin` (`ahead: 0, behind > 0`), `git brx sync` automatically fast-forwards your local base branch in-place without checking it out or requiring manual branch switching:
+When collaborating with teammates, new commits are frequently merged into `main` (or `master`) on the remote repository. If your local base branch is purely behind `origin` (`ahead: 0, behind > 0`), `git brx sync` automatically fast-forwards your local base branch in-place without checking it out or requiring manual branch switching:
 
 ```text
 [git-brx] Syncing with 'main' base branch by default

@@ -16,8 +16,8 @@
   - Must be inside a Git working tree (`git rev-parse --is-inside-work-tree` == `true`).
   - Remote `origin` must be configured (`git remote get-url origin`).
   - If deleting current branch (no argument): Must NOT be in a detached HEAD state (`git symbolic-ref -q HEAD`).
-  - Target branch MUST be a deletable topic branch (`issue/*`, `feature/*`, or `epic/*`). Deletion of `master`, `main`, or `release/*` is strictly forbidden.
-  - If checked out on target branch: Working tree must be clean enough to permit switching back to default branch (`master`/`main`).
+  - Target branch MUST be a deletable topic branch (`issue/*`, `feature/*`, or `epic/*`). Deletion of `main`, `master`, or `release/*` is strictly forbidden.
+  - If checked out on target branch: Working tree must be clean enough to permit switching back to default branch (`main`/`master`).
 
 ## 3. Core Execution Flow
 1. **Repository & Working Tree Assertions:**
@@ -57,7 +57,7 @@
        - Log: `[git-brx] Hint: Use '--force' to bypass remote check if you intend to delete an unpublished branch`
        - Fail with Exit Code `3`.
 4. **Dry-Run Check:**
-   - Resolve base branch (`master` or `main`).
+   - Resolve base branch (`main` or `master`).
    - Determine if branch switch is required (true if currently on target branch).
    - If `--dry-run` is active:
      - If switch required: Log `[git-brx] Would checkout branch '<base_branch>'`.
@@ -91,11 +91,11 @@
 ## 4. Error Handling & Exit Codes
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
-| `0` | Switched to `master`, deleted local branch, and pruned origin. | `[git-brx] Deleted local branch '<branch>' and pruned origin` | None. |
+| `0` | Switched to `main` (or default branch), deleted local branch, and pruned origin. | `[git-brx] Deleted local branch '<branch>' and pruned origin` | None. |
 | `2` | Positional arguments or unknown flags supplied. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
-| `3` | On `master`, detached HEAD, or remote branch still exists on server. | `[git-brx] Error: Branch must be deleted on remote first` | None. |
+| `3` | On `main`/`master`, detached HEAD, or remote branch still exists on server. | `[git-brx] Error: Branch must be deleted on remote first` | None. |
 | `4` | Remote unreachable during remote existence check. | `[git-brx] Error: Unable to reach remote; are you offline?` | None. |
-| `5` | Switching to `master` failed or `git branch -D` failed. | `[git-brx] Error: Unable to switch to 'master' branch` | None. |
+| `5` | Switching to base branch failed or `git branch -D` failed. | `[git-brx] Error: Unable to switch to '<base_branch>' branch` | None. |
 
 ## 5. Discrepancies & Edge Cases Discovered
 - **Typo in Legacy Error Message:** In `legacy/delete.sh` line 34:
