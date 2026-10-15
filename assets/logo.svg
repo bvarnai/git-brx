@@ -1,60 +1,117 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <!-- Background Gradient -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e222b"/>
-      <stop offset="100%" stop-color="#12151c"/>
+    <!-- Cylindrical Button Radial Lighting -->
+    <radialGradient id="btnRimShade" cx="48%" cy="46%" r="52%">
+      <stop offset="0%" stop-color="#2d3138" />
+      <stop offset="65%" stop-color="#181a1f" />
+      <stop offset="100%" stop-color="#0a0b0d" />
+    </radialGradient>
+
+    <!-- Recessed Stepped Rings -->
+    <linearGradient id="grooveDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#050607" />
+      <stop offset="100%" stop-color="#16181d" />
     </linearGradient>
 
-    <!-- Caliper & Brake Arc Gradient -->
-    <linearGradient id="caliperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F05032"/>
-      <stop offset="100%" stop-color="#E24329"/>
-    </linearGradient>
+    <!-- Cap Face Gradient -->
+    <radialGradient id="capFace" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#252930" />
+      <stop offset="72%" stop-color="#15171b" />
+      <stop offset="100%" stop-color="#0d0e11" />
+    </radialGradient>
 
-    <!-- Branch Path Glow / Gradient -->
-    <linearGradient id="branchGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00ADD8"/>
-      <stop offset="100%" stop-color="#00E5FF"/>
-    </linearGradient>
+    <!-- Neon Glow Stack -->
+    <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur1" />
+      <feGaussianBlur stdDeviation="14" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
 
-    <!-- Drop Shadow Filter for Depth -->
-    <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    <filter id="coreGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
     </filter>
   </defs>
 
-  <!-- Base Icon Container (Rounded Hex-Shield) -->
-  <rect x="12" y="12" width="176" height="176" rx="42" fill="url(#bgGrad)" stroke="#2b313e" stroke-width="2.5" filter="url(#subtleShadow)"/>
+  <style>
+    .led-glow {
+      stroke: #ff4714;
+      fill: none;
+      stroke-linecap: round;
+      filter: url(#neonGlow);
+      opacity: 0.95;
+    }
+    .led-core {
+      stroke: #ffa688;
+      fill: none;
+      stroke-linecap: round;
+      filter: url(#coreGlow);
+    }
+    .txt-glow {
+      font-family: ui-monospace, SFMono-Regular, "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-weight: 900;
+      font-size: 52px;
+      letter-spacing: 4px;
+      text-anchor: middle;
+      dominant-baseline: central;
+      fill: #ff440a;
+      filter: url(#neonGlow);
+    }
+    .txt-core {
+      font-family: ui-monospace, SFMono-Regular, "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-weight: 900;
+      font-size: 52px;
+      letter-spacing: 4px;
+      text-anchor: middle;
+      dominant-baseline: central;
+      fill: #ffd1c2;
+      filter: url(#coreGlow);
+    }
+  </style>
 
-  <!-- Disc Brake Rotor Elements (Perforations & Inner Track) -->
-  <circle cx="100" cy="100" r="70" fill="none" stroke="#252a36" stroke-width="1.5" stroke-dasharray="4, 6"/>
-  <circle cx="100" cy="100" r="54" fill="none" stroke="#1f2430" stroke-width="1.5" stroke-dasharray="3, 8"/>
+  <!-- Fully Circular Base Assembly without Outer Drop Shadow -->
+  <g id="circularBase">
+    <!-- Base Outer Edge (R=252 with 4px border, precisely filling the 512x512 circle) -->
+    <circle cx="256" cy="256" r="252" fill="url(#btnRimShade)" stroke="#0b0c0e" stroke-width="4" />
+    
+    <!-- Outer Inset Bevel -->
+    <circle cx="256" cy="256" r="232" fill="url(#grooveDark)" stroke="#1a1c22" stroke-width="1.5" />
+    <circle cx="256" cy="256" r="214" fill="#0c0d10" stroke="#000000" stroke-width="3" />
 
-  <!-- High-Performance Brake Caliper Arc (Surrounding Guardrail) -->
-  <path d="M 50,60 A 70,70 0 0,1 150,60" fill="none" stroke="url(#caliperGrad)" stroke-width="8" stroke-linecap="round"/>
-  <!-- Caliper Pistons / Grip Accents -->
-  <circle cx="70" cy="40" r="2.5" fill="#ffffff" opacity="0.8"/>
-  <circle cx="100" cy="30" r="2.5" fill="#ffffff" opacity="0.8"/>
-  <circle cx="130" cy="40" r="2.5" fill="#ffffff" opacity="0.8"/>
+    <!-- Intermediate Stepped Rim Structure -->
+    <circle cx="256" cy="256" r="196" fill="url(#btnRimShade)" stroke="#07080a" stroke-width="2" />
+    <circle cx="256" cy="256" r="180" fill="#0a0b0d" stroke="#1f2228" stroke-width="1" />
 
-  <!-- Git Branching Network Topology -->
-  <!-- Base Trunk Path (Vertical) -->
-  <line x1="82" y1="145" x2="82" y2="70" stroke="#717c91" stroke-width="5" stroke-linecap="round"/>
+    <!-- Raised Center Core Cap -->
+    <circle cx="256" cy="256" r="166" fill="url(#capFace)" stroke="#2d323a" stroke-width="2" />
+  </g>
 
-  <!-- Diverging Topic Branch Path (Curving to the right and up) -->
-  <path d="M 82,125 C 82,98 126,110 126,85 L 126,70" fill="none" stroke="url(#branchGrad)" stroke-width="5" stroke-linecap="round"/>
+  <!-- Ambient Internal Spill Reflection -->
+  <circle cx="256" cy="256" r="88" stroke="#ff3800" stroke-width="28" fill="none" opacity="0.12" filter="url(#neonGlow)" />
 
-  <!-- Base Trunk Nodes -->
-  <!-- Root Commit Node -->
-  <circle cx="82" cy="145" r="9" fill="#1e222b" stroke="#717c91" stroke-width="4.5"/>
-  <!-- Main Trunk Head Node -->
-  <circle cx="82" cy="68" r="9" fill="#1e222b" stroke="#717c91" stroke-width="4.5"/>
+  <!-- Caliper Arcs (Radius 124, span: ~90 deg symmetrically) -->
+  <g>
+    <!-- Diffuse Glow -->
+    <path d="M 161 176.3 A 124 124 0 0 0 161 335.7" class="led-glow" stroke-width="15" />
+    <path d="M 351 176.3 A 124 124 0 0 1 351 335.7" class="led-glow" stroke-width="15" />
 
-  <!-- Topic Branch Head Node (The Active, Guardrailed Target) -->
-  <circle cx="126" cy="68" r="9.5" fill="#00E5FF" stroke="#12151c" stroke-width="3"/>
-  <circle cx="126" cy="68" r="4" fill="#ffffff"/>
+    <!-- Sharp Center Line -->
+    <path d="M 161 176.3 A 124 124 0 0 0 161 335.7" class="led-core" stroke-width="6.5" />
+    <path d="M 351 176.3 A 124 124 0 0 1 351 335.7" class="led-core" stroke-width="6.5" />
+  </g>
 
-  <!-- Sleek Speed Accent / Guardrail Notch -->
-  <path d="M 148,135 A 70,70 0 0,1 115,165" fill="none" stroke="#F05032" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+  <!-- Central Indicator Ring -->
+  <circle cx="256" cy="256" r="88" class="led-glow" stroke-width="15" />
+  <circle cx="256" cy="256" r="88" class="led-core" stroke-width="6.5" />
+
+  <!-- Central "BRX" Inscription -->
+  <text x="258" y="257" class="txt-glow">BRX</text>
+  <text x="258" y="257" class="txt-core">BRX</text>
 </svg>
