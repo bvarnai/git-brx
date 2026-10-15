@@ -89,7 +89,7 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 	}
 
 	// Rebase onto remote tracking ref
-	if rebaseErr := a.Operations.Rebase(ctx, rootDir, remoteRef, opts.Autostash, false); rebaseErr != nil {
+	if _, rebaseErr := a.Operations.Rebase(ctx, rootDir, remoteRef, opts.Autostash, false); rebaseErr != nil {
 		if strings.Contains(rebaseErr.Error(), "conflict") || isRebaseConflict(ctx, a.Inspector, rootDir) {
 			return domain.NewError(domain.ExitConflict, "Update failed due to conflicts").
 				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")

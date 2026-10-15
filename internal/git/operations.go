@@ -55,7 +55,7 @@ func (o *Operations) Push(ctx context.Context, dir, remote, branch string, setUp
 }
 
 // Rebase runs git rebase against the specified upstream ref.
-func (o *Operations) Rebase(ctx context.Context, dir, upstream string, autostash, interactive bool) error {
+func (o *Operations) Rebase(ctx context.Context, dir, upstream string, autostash, interactive bool) (string, error) {
 	args := []string{"rebase"}
 	if autostash {
 		args = append(args, "--autostash")
@@ -64,19 +64,17 @@ func (o *Operations) Rebase(ctx context.Context, dir, upstream string, autostash
 		args = append(args, "--interactive")
 	}
 	args = append(args, upstream)
-	_, err := o.runner.Run(ctx, dir, args...)
-	return err
+	return o.runner.Run(ctx, dir, args...)
 }
 
 // Merge runs git merge with a commit message merging upstream into current branch.
-func (o *Operations) Merge(ctx context.Context, dir, upstream, message string) error {
+func (o *Operations) Merge(ctx context.Context, dir, upstream, message string) (string, error) {
 	args := []string{"merge"}
 	if message != "" {
 		args = append(args, "-m", message)
 	}
 	args = append(args, upstream)
-	_, err := o.runner.Run(ctx, dir, args...)
-	return err
+	return o.runner.Run(ctx, dir, args...)
 }
 
 // AbortMerge runs git merge --abort.

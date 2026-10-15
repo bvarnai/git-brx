@@ -39,9 +39,11 @@
    - Apply CLI overrides:
      - If both `--merge` and `--rebase` are supplied, fail with Exit Code `2` (`Multiple override sync strategies specified`).
      - If resolved strategy is `merge` and either `--autostash` or `--interactive` is set, fail with Exit Code `2` (`Flags --autostash and --interactive are only supported with rebase strategy`).
-3. **Target Base Branch Resolution:**
+3. **Target Base Branch Resolution & Strategy Logging:**
    - If positional argument `<branch>` is omitted, default to repository base branch (e.g. `master`) and log:
-     `[git-brx] Syncing with '<base>' base branch by default`.
+     `[git-brx] Syncing '<current_branch>' with '<base>' base branch by default (strategy: <strategy>)`.
+   - If positional argument `<branch>` is explicitly supplied, log:
+     `[git-brx] Syncing '<current_branch>' with '<base>' (strategy: <strategy>)`.
 4. **Remote Fetch & Upstream Delta Verification:**
    - Execute `git fetch origin`.
    - Calculate ahead/behind count for the base branch against its upstream tracking ref via:
@@ -77,12 +79,18 @@
      ```bash
      git merge -m "Merge branch <with_branch> into <current_branch>" <with_branch>
      ```
-7. **Conflict Interception:**
+7. **Post-Operation Completion & Conflict Interception:**
    - If rebase or merge fails due to conflicts:
      - Log: `[git-brx] Error: Sync failed due to merge conflicts`
      - Log: `[git-brx] Hint: Use 'git-brx resolve' in case of merge conflicts or 'git-brx reset' to abort`
      - Exit with Exit Code `5`.
-   - Otherwise, log success and exit with Exit Code `0`.
+   - If branch is already up to date:
+     - Log: `[git-brx] Branch '<current_branch>' is already up to date with '<base>'`
+     - Exit with Exit Code `0`.
+   - Otherwise, on successful completion:
+     - Rebase: Log `[git-brx] Successfully rebased '<current_branch>' onto '<base>'`
+     - Merge: Log `[git-brx] Successfully merged '<base>' into '<current_branch>'`
+     - Exit with Exit Code `0`.
 
 ## 4. Error Handling & Exit Codes
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
