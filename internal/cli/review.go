@@ -250,7 +250,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		return err
 	}
 
-	a.UI.Log("Created pull-request %s", result.URL)
+	a.UI.Log("Created pull-request:")
 	a.UI.Out("%s", result.URL)
 
 	return nil
