@@ -36,7 +36,15 @@ func TestSyncIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Syncing with 'master' base branch by default")
+		assert.Contains(t, stderr.String(), "Syncing 'issue/VSB-101' with 'master' base branch by default (strategy: rebase)")
+		assert.Contains(t, stderr.String(), "Successfully rebased 'issue/VSB-101' onto 'master'")
+
+		// Sync again when already up to date
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Branch 'issue/VSB-101' is already up to date with 'master'")
 
 		// Verify rebase happened: issue branch should contain both master.txt and issue.txt
 		log := h.Git("log", "--oneline")
@@ -66,7 +74,15 @@ func TestSyncIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Syncing with 'master' base branch by default")
+		assert.Contains(t, stderr.String(), "Syncing 'feature/user-auth' with 'master' base branch by default (strategy: merge)")
+		assert.Contains(t, stderr.String(), "Successfully merged 'master' into 'feature/user-auth'")
+
+		// Sync again when already up to date
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Branch 'feature/user-auth' is already up to date with 'master'")
 
 		// Verify merge commit exists
 		log := h.Git("log", "--oneline")
@@ -92,6 +108,8 @@ func TestSyncIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "-m"}, &stdout, &stderr)
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Syncing 'issue/VSB-102' with 'master' base branch by default (strategy: merge)")
+		assert.Contains(t, stderr.String(), "Successfully merged 'master' into 'issue/VSB-102'")
 		log := h.Git("log", "--oneline")
 		assert.Contains(t, log, "Merge branch 'master' into 'issue/VSB-102'")
 	})
@@ -113,6 +131,10 @@ func TestSyncIntegration(t *testing.T) {
 
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "-r"}, &stdout, &stderr)
+
+		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Syncing 'feature/payment' with 'master' base branch by default (strategy: rebase)")
+		assert.Contains(t, stderr.String(), "Successfully rebased 'feature/payment' onto 'master'")
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
 		log := h.Git("log", "--oneline")

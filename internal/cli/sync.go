@@ -91,6 +91,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 
 	// Target base branch resolution
 	baseBranch := "master"
+	isDefaultBase := false
 	if len(args) == 1 && args[0] != "" {
 		baseBranch = args[0]
 	} else {
@@ -99,7 +100,13 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 		if defBranch != "" {
 			baseBranch = defBranch
 		}
-		a.UI.Log("Syncing with '%s' base branch by default", baseBranch)
+		isDefaultBase = true
+	}
+
+	if isDefaultBase {
+		a.UI.Log("Syncing '%s' with '%s' base branch by default (strategy: %s)", currBranch.Name, baseBranch, strategy)
+	} else {
+		a.UI.Log("Syncing '%s' with '%s' (strategy: %s)", currBranch.Name, baseBranch, strategy)
 	}
 
 	if currBranch.Name == baseBranch {
@@ -172,15 +179,27 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 
 	// Execution
 	if strategy == "rebase" {
-		if rebaseErr := a.Operations.Rebase(ctx, rootDir, baseBranch, opts.Autostash, opts.Interactive); rebaseErr != nil {
+		out, rebaseErr := a.Operations.Rebase(ctx, rootDir, baseBranch, opts.Autostash, opts.Interactive)
+		if rebaseErr != nil {
 			return domain.NewError(domain.ExitConflict, "Sync failed due to merge conflicts").
 				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 		}
+		if strings.Contains(strings.ToLower(out), "up to date") {
+			a.UI.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, baseBranch)
+		} else {
+			a.UI.Log("Successfully rebased '%s' onto '%s'", currBranch.Name, baseBranch)
+		}
 	} else {
 		mergeMsg := fmt.Sprintf("Merge branch '%s' into '%s'", baseBranch, currBranch.Name)
-		if mergeErr := a.Operations.Merge(ctx, rootDir, baseBranch, mergeMsg); mergeErr != nil {
+		out, mergeErr := a.Operations.Merge(ctx, rootDir, baseBranch, mergeMsg)
+		if mergeErr != nil {
 			return domain.NewError(domain.ExitConflict, "Sync failed due to merge conflicts").
 				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
+		}
+		if strings.Contains(strings.ToLower(out), "already up to date") {
+			a.UI.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, baseBranch)
+		} else {
+			a.UI.Log("Successfully merged '%s' into '%s'", baseBranch, currBranch.Name)
 		}
 	}
 
