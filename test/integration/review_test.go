@@ -143,8 +143,9 @@ scm:
 
 		assert.Equal(t, int(domain.ExitSuccess), code)
 		assert.True(t, prCreated, "PR must have been submitted to mock server")
-		assert.Contains(t, stderr.String(), "Created pull-request https://github.com/test-org/test-repo/pull/12")
-		assert.Contains(t, stdout.String(), "https://github.com/test-org/test-repo/pull/12")
+		assert.Contains(t, stderr.String(), "Created pull-request:")
+		assert.NotContains(t, stderr.String(), "Created pull-request https://github.com/test-org/test-repo/pull/12")
+		assert.Equal(t, "https://github.com/test-org/test-repo/pull/12\n", stdout.String())
 	})
 
 	t.Run("ReviewSuppressesMergeInstructionsViaFlag", func(t *testing.T) {

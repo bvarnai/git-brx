@@ -98,7 +98,7 @@
      - `reviewers`: List of resolved reviewer user handles.
 9. **Response Handling:**
    - If HTTP 201 Created:
-     - Log: `[git-brx] Created pull-request <links.self.href>`.
+     - Log: `[git-brx] Created pull-request:` (to stderr).
      - Emit URL to stdout for machine consumption.
      - Exit with Exit Code `0`.
    - If HTTP 409 Conflict (e.g., open pull request already exists):
@@ -111,7 +111,7 @@
 ## 4. Error Handling & Exit Codes
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
-| `0` | Pull request created successfully. | `[git-brx] Created pull-request <url>` | None. |
+| `0` | Pull request created successfully. | `[git-brx] Created pull-request:` (URL emitted to stdout) | None. |
 | `2` | Excess positional arguments or unknown flags. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Detached HEAD or unpermitted branch type (e.g. running on `master`). | `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch` | None. |
 | `4` | Source branch not published on remote origin. | `[git-brx] Error: Branch '<branch>' has not been pushed to remote origin` | None. |
