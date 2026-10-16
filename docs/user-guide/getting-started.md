@@ -218,3 +218,48 @@ For Atlassian enterprise servers, define:
 export GIT_BRX_TOKEN="your_personal_access_token"
 ```
 `git-brx` uses HTTP Bearer tokens or Basic Authentication negotiated safely in-memory.
+
+---
+
+## 6. AI Agent Integration (Antigravity & Coding Assistants)
+
+When pair-programming with AI coding assistants (such as Google Antigravity), agents might default to raw Git operations (`git checkout -b`, `git push -f`) instead of using `git-brx`. You can configure your repository so that AI agents automatically follow the `git-brx` branch lifecycle.
+
+`git-brx` provides ready-to-use templates in the `templates/` directory:
+
+### Step 1: Add the `git-brx` Skill to your project
+Add the workflow runbook to your workspace customization directory:
+
+```bash
+mkdir -p .agents/skills/git-brx
+cp templates/skills/git-brx/SKILL.md .agents/skills/git-brx/SKILL.md
+```
+
+This skill teaches the agent:
+- The complete issue-to-branch command sequence (`create` -> `sync`/`update` -> `publish` -> `review` -> `delete`).
+- Built-in flags (like `-y` for non-interactive execution).
+- Guidance on exit codes and conflict recovery (`resolve` / `reset`).
+
+### Step 2: Enforce the workflow via Repository Rules
+To prevent the agent from attempting manual Git branch operations, append the rules from `templates/rules/git-brx.md` to your project's `GEMINI.md` or `AGENTS.md`:
+
+```markdown
+# Git Workflow Policy
+- Always use `git-brx` (or `git brx`) CLI commands for Git branch operations:
+  - Creating topic branches: `git brx create <branch> -y`
+  - Upstream synchronization: `git brx sync`
+  - Pulling collaborator commits: `git brx update`
+  - Pushing branches: `git brx publish`
+  - Submitting PRs: `git brx review`
+  - Cleaning merged branches: `git brx delete <branch>`
+- Do not run manual `git checkout -b`, `git push -f`, or raw API scripts for PR creation.
+```
+
+### Optional: Global Installation for All Projects
+If you use Antigravity across multiple local repositories and want `git-brx` enabled globally without copying files into every repository, copy the skill to your global Antigravity config directory:
+
+```bash
+mkdir -p ~/.gemini/config/skills/git-brx
+cp templates/skills/git-brx/SKILL.md ~/.gemini/config/skills/git-brx/SKILL.md
+```
+
