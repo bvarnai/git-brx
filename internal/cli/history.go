@@ -99,7 +99,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 		logArgs = append(logArgs, "-p")
 	}
 
-	if !a.Logger.UseColor() {
+	if a.Opts.NoColor {
 		logArgs = append(logArgs, "--no-color")
 	}
 
