@@ -1,6 +1,6 @@
 module github.com/bvarnai/git-brx
 
-go 1.26.5
+go 1.22
 
 require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
