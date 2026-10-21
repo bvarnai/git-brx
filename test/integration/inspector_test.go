@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/domain"
@@ -22,7 +23,7 @@ func TestHarnessAndInspector(t *testing.T) {
 	// Repo Root Check
 	root, err := inspector.RepoRoot(ctx, h.RepoDir)
 	require.NoError(t, err)
-	assert.Equal(t, h.RepoDir, root)
+	assert.Equal(t, filepath.Clean(h.RepoDir), filepath.Clean(root))
 
 	// Assert Current Branch
 	rec, err := inspector.CurrentBranch(ctx, h.RepoDir)
