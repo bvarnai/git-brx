@@ -68,7 +68,7 @@ The following flags are accepted across the root binary and all subcommands:
     4. Terminal Capability (`TERM`): If `TERM=dumb`, colorization is disabled.
     5. TTY Auto-Detection: ANSI colors are enabled if and only if standard error is connected to an interactive character terminal (`isatty`).
   - **Color Palette:**
-    - Errors (`!`): Bold Red (`\033[31;1m`).
+    - Errors: Bold Red (`\033[31;1m`).
     - Warnings: Yellow (`\033[33m`).
     - Hints: Cyan (`\033[36m`).
     - Debug: Magenta (`\033[35m`).
