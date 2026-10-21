@@ -132,7 +132,7 @@ func TestCreateCommand_UnitTable(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			app := cli.NewApp(&stdout, &stderr, runner)
 			if tt.stdin != "" {
-				app.UI.SetStdin(strings.NewReader(tt.stdin))
+				app.Logger.SetStdin(strings.NewReader(tt.stdin))
 			}
 			app.RootCmd.SetArgs(tt.args)
 

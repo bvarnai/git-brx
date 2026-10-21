@@ -57,3 +57,22 @@ func TestCliRunHelp(t *testing.T) {
 		assert.Empty(t, stderr.String())
 	})
 }
+
+func TestCliRunVerboseQuietConflict(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	ctx := context.Background()
+
+	code := cli.Run(ctx, []string{"-v", "-q", "name"}, &stdout, &stderr)
+	assert.Equal(t, int(domain.ExitUsageError), code)
+	assert.Contains(t, stderr.String(), "cannot specify both --verbose and --quiet")
+	assert.Contains(t, stderr.String(), "Hint: Choose either verbose or quiet output mode, not both.")
+}
+
+func TestCliRunInterrupted(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // pre-cancel context
+
+	code := cli.Run(ctx, []string{"name"}, &stdout, &stderr)
+	assert.Equal(t, int(domain.ExitInterrupted), code)
+}

@@ -16,7 +16,7 @@ func TestHarnessAndInspector(t *testing.T) {
 	h := integration.NewHarness(t)
 	h.CommitFile("README.md", "# Test Repo", "Initial commit")
 
-	runner := git.NewExecRunner(nil)
+	runner := git.NewExecRunner()
 	inspector := git.NewInspector(runner)
 	ctx := context.Background()
 

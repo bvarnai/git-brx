@@ -80,6 +80,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	if err := checks.HasCommits(ctx, a.Inspector, rootDir); err != nil {
 		return err
@@ -121,8 +122,9 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		if targetBranch == "" {
 			targetBranch = "main"
 		}
-		a.UI.Log("Selecting '%s' target branch by default", targetBranch)
+		a.Logger.Log("Selecting '%s' target branch by default", targetBranch)
 	}
+	a.Logger.Debug("Review branches: source=%s, target=%s", currBranch.Name, targetBranch)
 
 	// 4. Configuration & Issue Loading
 	cfg, err := config.Load(rootDir, originURL)
@@ -223,12 +225,12 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 
 	// 7. Dry-Run Check
 	if a.Opts.DryRun {
-		a.UI.Log("Would create pull request on %s", scm.Name())
-		a.UI.Log("  Source:    %s", currBranch.Name)
-		a.UI.Log("  Target:    %s", targetBranch)
-		a.UI.Log("  Title:     %s", prTitle)
+		a.Logger.Log("Would create pull request on %s", scm.Name())
+		a.Logger.Log("  Source:    %s", currBranch.Name)
+		a.Logger.Log("  Target:    %s", targetBranch)
+		a.Logger.Log("  Title:     %s", prTitle)
 		if len(reviewers) > 0 {
-			a.UI.Log("  Reviewers: %s", strings.Join(reviewers, ", "))
+			a.Logger.Log("  Reviewers: %s", strings.Join(reviewers, ", "))
 		}
 		return nil
 	}
@@ -250,8 +252,8 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		return err
 	}
 
-	a.UI.Log("Created pull-request:")
-	a.UI.Out("%s", result.URL)
+	a.Logger.Log("Created pull-request:")
+	a.Logger.Out("%s", result.URL)
 
 	return nil
 }

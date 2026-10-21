@@ -38,18 +38,20 @@ func (a *App) runName(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Resolved repository root: %s", rootDir)
 
 	curr, err := a.Inspector.CurrentBranch(ctx, rootDir)
 	if err != nil {
 		return domain.WrapError(domain.ExitGeneralError, err, "failed to resolve branch name")
 	}
+	a.Logger.Debug("Resolved active branch: %s (detached: %v)", curr.Name, curr.IsDetached)
 
 	if curr.IsDetached {
-		a.UI.Warn("HEAD is detached at %s", curr.CommitHash)
-		a.UI.Out("%s", curr.CommitHash)
+		a.Logger.Warn("HEAD is detached at %s", curr.CommitHash)
+		a.Logger.Out("%s", curr.CommitHash)
 		return nil
 	}
 
-	a.UI.Out("%s", curr.Name)
+	a.Logger.Out("%s", curr.Name)
 	return nil
 }

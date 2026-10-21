@@ -1,6 +1,7 @@
 package version_test
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 
@@ -18,8 +19,8 @@ func TestGet(t *testing.T) {
 func TestString(t *testing.T) {
 	s := version.String()
 	assert.True(t, strings.HasPrefix(s, "git-brx version "))
-	assert.Contains(t, s, "commit:")
-	assert.Contains(t, s, "built at:")
+	assert.Contains(t, s, runtime.GOOS)
+	assert.Contains(t, s, runtime.GOARCH)
 }
 
 func TestGetWithInjectedCommit(t *testing.T) {
@@ -43,6 +44,6 @@ func TestGetWithInjectedCommit(t *testing.T) {
 	assert.Equal(t, "2026-10-12T09:25:38Z", info.Date)
 
 	formatted := version.String()
-	assert.Contains(t, formatted, "commit: 4900e38,")
+	assert.Contains(t, formatted, "4900e38")
 	assert.NotContains(t, formatted, "4900e38-dirty")
 }

@@ -48,6 +48,7 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	if err := checks.HasOrigin(ctx, a.Inspector, rootDir); err != nil {
 		return err
@@ -55,14 +56,15 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 
 	// Abort in-flight operations first so that any detached HEAD due to rebase is restored
 	op, active := a.Inspector.ActiveOperation(ctx, rootDir)
+	a.Logger.Debug("Active in-flight operation: %s (active: %v)", op, active)
 	if active {
 		if op == "merge" {
-			a.UI.Log("Aborting in-progress merge")
+			a.Logger.Log("Aborting in-progress merge")
 			if abortErr := a.Operations.AbortMerge(ctx, rootDir); abortErr != nil {
 				return domain.WrapError(domain.ExitConflict, abortErr, "Reset failed: unable to abort merge")
 			}
 		} else if op == "rebase" {
-			a.UI.Log("Aborting in-progress rebase")
+			a.Logger.Log("Aborting in-progress rebase")
 			if abortErr := a.Operations.AbortRebase(ctx, rootDir); abortErr != nil {
 				return domain.WrapError(domain.ExitConflict, abortErr, "Reset failed: unable to abort rebase")
 			}
@@ -76,6 +78,7 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 
 	// Verify remote tracking reference exists
 	remoteRef := "origin/" + currBranch.Name
+	a.Logger.Debug("Active branch: %s, target remoteRef: %s (clean=%v)", currBranch.Name, remoteRef, opts.Clean)
 	_, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, currBranch.Name)
 	if !remoteExists {
 		return domain.NewError(domain.ExitPreconditionRemote, "Reset failed: remote reference '%s' does not exist", remoteRef).
@@ -84,9 +87,9 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 
 	// Dry run mode
 	if a.Opts.DryRun {
-		a.UI.Log("Would execute: git reset --hard %s", remoteRef)
+		a.Logger.Log("Would execute: git reset --hard %s", remoteRef)
 		if opts.Clean {
-			a.UI.Log("Would execute: git clean -fd")
+			a.Logger.Log("Would execute: git clean -fd")
 		}
 		return nil
 	}
@@ -103,6 +106,6 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 		}
 	}
 
-	a.UI.Log("Working tree successfully reset to '%s'", remoteRef)
+	a.Logger.Log("Working tree successfully reset to '%s'", remoteRef)
 	return nil
 }

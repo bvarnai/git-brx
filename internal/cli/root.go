@@ -7,7 +7,7 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/git"
-	"github.com/bvarnai/git-brx/internal/ui"
+	"github.com/bvarnai/git-brx/internal/term"
 	"github.com/bvarnai/git-brx/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +24,7 @@ type GlobalOptions struct {
 type App struct {
 	WorkingDir string
 	RootCmd    *cobra.Command
-	UI         *ui.UI
+	Logger     *term.Logger
 	Runner     git.Runner
 	Inspector  *git.Inspector
 	Operations *git.Operations
@@ -35,17 +35,22 @@ type App struct {
 func NewApp(stdout, stderr io.Writer, runner git.Runner) *App {
 	opts := GlobalOptions{}
 
+	logger := term.New(term.Options{
+		Stdout:      stdout,
+		Stderr:      stderr,
+		Verbose:     false,
+		Quiet:       false,
+		NoColorFlag: false,
+		IsTTY:       term.IsStreamTTY(stderr),
+	})
+
 	app := &App{
-		Opts: opts,
-		UI:   ui.New(stdout, stderr, false, false, false),
+		Opts:   opts,
+		Logger: logger,
 	}
 
 	if runner == nil {
-		runner = git.NewExecRunner(func(gitCmd string) {
-			if app.UI != nil {
-				app.UI.Debug("executing: %s", gitCmd)
-			}
-		})
+		runner = git.NewExecRunner()
 	}
 	app.Runner = runner
 	app.Inspector = git.NewInspector(runner)
@@ -59,8 +64,20 @@ func NewApp(stdout, stderr io.Writer, runner git.Runner) *App {
 for local branch lifecycles, upstream synchronization, clean rebasing, and code reviews.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			app.UI = ui.New(stdout, stderr, app.Opts.NoColor, app.Opts.Quiet, app.Opts.Verbose)
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if app.Opts.Verbose && app.Opts.Quiet {
+				return domain.NewError(domain.ExitUsageError, "cannot specify both --verbose and --quiet").
+					WithHint("Choose either verbose or quiet output mode, not both.")
+			}
+			app.Logger = term.New(term.Options{
+				Stdout:      stdout,
+				Stderr:      stderr,
+				Verbose:     app.Opts.Verbose,
+				Quiet:       app.Opts.Quiet,
+				NoColorFlag: app.Opts.NoColor,
+				IsTTY:       term.IsStreamTTY(stderr),
+			})
+			return nil
 		},
 	}
 
@@ -100,7 +117,7 @@ func (a *App) Execute(ctx context.Context) error {
 }
 
 // Run is the top-level application runner called by main.go.
-// It executes the command tree, formats errors to stderr via UI, and returns an exit code.
+// It executes the command tree, formats errors to stderr via Logger, and returns an exit code.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	return RunInDir(ctx, "", args, stdout, stderr)
 }
@@ -116,21 +133,25 @@ func RunInDir(ctx context.Context, dir string, args []string, stdout, stderr io.
 		return int(domain.ExitSuccess)
 	}
 
+	if errors.Is(err, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) {
+		return int(domain.ExitInterrupted)
+	}
+
 	var appErr *domain.AppError
 	if errors.As(err, &appErr) {
 		if appErr.Code == domain.ExitUserAborted {
 			if appErr.Message != "" {
-				app.UI.Log("%s", appErr.Message)
+				app.Logger.Log("%s", appErr.Message)
 			}
 			return int(appErr.Code)
 		}
-		app.UI.Error("%s", appErr.Message)
+		app.Logger.Error("%s", appErr.Message)
 		if appErr.Hint != "" {
-			app.UI.Hint("%s", appErr.Hint)
+			app.Logger.HintAlways("%s", appErr.Hint)
 		}
 		return int(appErr.Code)
 	}
 
-	app.UI.Error("%v", err)
+	app.Logger.Error("%v", err)
 	return int(domain.ExitUsageError)
 }
