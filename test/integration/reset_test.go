@@ -176,29 +176,4 @@ func TestResetIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "Reset failed: remote reference 'origin/feature/unpublished-reset' does not exist")
 		assert.Contains(t, stderr.String(), "Use 'git-brx publish' to publish it")
 	})
-
-	t.Run("DryRunModeDoesNotModifyRefsOrFiles", func(t *testing.T) {
-		h := NewHarness(t)
-		h.CommitFile("init.txt", "init", "Initial commit")
-		h.SetupRemoteBare()
-		h.Git("push", "-u", "origin", "master")
-
-		h.CreateBranch("feature/dry-run-reset")
-		h.CommitFile("feat.txt", "feat", "Feature commit")
-		h.Git("push", "-u", "origin", "feature/dry-run-reset")
-
-		// Create local commit
-		h.CommitFile("unwanted.txt", "unwanted", "Unwanted commit")
-		currSha := strings.TrimSpace(h.Git("rev-parse", "HEAD"))
-
-		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset", "--dry-run", "-c"}, &stdout, &stderr)
-
-		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Would execute: git reset --hard origin/feature/dry-run-reset")
-		assert.Contains(t, stderr.String(), "Would execute: git clean -fd")
-
-		postSha := strings.TrimSpace(h.Git("rev-parse", "HEAD"))
-		assert.Equal(t, currSha, postSha, "dry-run must not modify HEAD")
-	})
 }

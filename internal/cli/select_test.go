@@ -110,17 +110,17 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 			expectStderr: "[git-brx] Error: Branch 'non-existent' not found",
 		},
 		{
-			name: "dry run logs planned checkout without executing checkout",
-			args: []string{"select", "--dry-run", "-o", "feature/test"},
+			name: "switches to local branch in offline mode",
+			args: []string{"select", "-o", "feature/test"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                            {out: "true"},
 				"rev-parse --show-toplevel":                                  {out: "/repo"},
 				"rev-parse --git-dir":                                        {out: "/repo/.git"},
 				"show-ref --verify --quiet refs/heads/feature/test":          {out: ""},
 				"show-ref --verify --quiet refs/remotes/origin/feature/test": {err: errors.New("not found")},
+				"checkout feature/test":                                      {out: ""},
 			},
 			expectedCode: int(domain.ExitSuccess),
-			expectStderr: "[git-brx] Would checkout branch 'feature/test'",
 		},
 	}
 
@@ -156,10 +156,8 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 			if tc.expectStdout != "" {
 				assert.Contains(t, stdout.String(), tc.expectStdout)
 			}
-			if tc.name == "dry run logs planned checkout without executing checkout" {
-				for _, execCmd := range runner.executed {
-					require.False(t, strings.HasPrefix(execCmd, "checkout"), "checkout should not be called in dry run")
-				}
+			if tc.name == "switches to local branch in offline mode" {
+				require.Contains(t, runner.executed, "checkout feature/test")
 			}
 		})
 	}

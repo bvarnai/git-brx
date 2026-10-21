@@ -34,7 +34,6 @@ The following flags are accepted across the root binary and all subcommands:
 | :--- | :--- | :--- | :--- | :--- |
 | `--verbose` | `-v` | bool | `false` | Enables verbose domain-level diagnostic output on stderr. Mutually exclusive with `--quiet`. |
 | `--quiet` | `-q` | bool | `false` | Suppresses informational notices, hints, and progress indicators. Mutually exclusive with `--verbose`. |
-| `--dry-run` | `-n` | bool | `false` | Runs mutating subcommands in simulation mode without modifying Git references, working tree, or remote services. |
 | `--no-color` | | bool | `false` | Explicitly disables ANSI color styling across all output streams. Overrides all environment settings. |
 | `--help` | `-h` | bool | `false` | Prints concise help, usage syntax, and available options for the command. |
 | `--version` | | bool | `false` | Prints canonical version string (`git-brx version <semver> (<commit> <os>/<arch>)`). |
@@ -169,15 +168,6 @@ The Go implementation must adhere to a strict, application-wide exit code contra
   - Upon receiving an interruption signal, the parent process waits up to 2 seconds for child Git operations to gracefully close open file handles and release `.git/index.lock`.
   - If a mutating operation (e.g., `git checkout -b` or branch rename) was interrupted mid-flight, diagnostic cleanup instructions are logged to `stderr`.
 - **No Orphan Temporary Artifacts:** All IPC and delta computations occur in memory; no residual temp files remain on disk.
-
-### Dry-Run Guarantees
-
-When `--dry-run` (`-n`) is specified:
-
-- **No Local Ref Mutations:** Zero invocations of `git checkout -b`, `git branch -D`, `git reset --hard`, `git merge`, or `git rebase`.
-- **No Working Tree Touches:** Zero staging (`git add`), unstaging, or checkout overwrites.
-- **No Remote Network Mutations:** Zero executions of `git push`, and zero mutating HTTP requests (POST, PUT, DELETE) against Bitbucket Server or JIRA.
-- **Predictive Output:** Logs the exact sequence of Git plumbing commands and external API requests that would be executed in live mode.
 
 ### Repository Inspection vs. Preflight Checks Strategy
 

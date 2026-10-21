@@ -81,8 +81,8 @@ func TestResetCommand_UnitTable(t *testing.T) {
 			errSubstr:    "Reset failed: remote reference 'origin/feature/unpublished' does not exist",
 		},
 		{
-			name: "dry run logs planned hard reset without touching refs",
-			args: []string{"reset", "--dry-run"},
+			name: "resets hard to remote ref cleanly",
+			args: []string{"reset"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                             {out: "true"},
 				"rev-parse --show-toplevel":                                   {out: "/repo"},
@@ -92,6 +92,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				"remote get-url origin":                                       {out: "https://remote.example.com/repo.git"},
 				"show-ref --verify --quiet refs/heads/feature/ready":          {out: ""},
 				"show-ref --verify --quiet refs/remotes/origin/feature/ready": {out: ""},
+				"reset --hard origin/feature/ready":                           {out: ""},
 			},
 			expectedCode: int(domain.ExitSuccess),
 		},

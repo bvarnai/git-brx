@@ -5,7 +5,7 @@
 - **Arguments:**
   - `[<branch>]` (optional): Name of the topic branch to delete. Defaults to the current active branch if omitted.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Override flag: `--force` (`-f`): Skip verification that the remote branch has already been deleted on origin.
 
 ## 2. Prerequisites & Environment
@@ -56,15 +56,8 @@
        - Log: `[git-brx] Error: Branch must be deleted on remote first (e.g., after merging pull request)`
        - Log: `[git-brx] Hint: Use '--force' to bypass remote check if you intend to delete an unpublished branch`
        - Fail with Exit Code `3`.
-4. **Dry-Run Check:**
+4. **Switch to Base Branch (if currently on target branch):**
    - Resolve base branch (`main` or `master`).
-   - Determine if branch switch is required (true if currently on target branch).
-   - If `--dry-run` is active:
-     - If switch required: Log `[git-brx] Would checkout branch '<base_branch>'`.
-     - Log `[git-brx] Would delete local branch '<target_branch>'`.
-     - Log `[git-brx] Would prune stale tracking references from origin`.
-     - Exit with Exit Code `0`.
-5. **Switch to Base Branch (if currently on target branch):**
    - If currently checked out on target branch:
      - Execute:
        ```bash
@@ -73,17 +66,17 @@
      - If checkout fails (e.g., uncommitted local edits collide with base branch):
        - Log: `[git-brx] Error: Unable to switch to '<base_branch>' branch`
        - Fail with Exit Code `5`.
-6. **Delete Local Branch:**
+5. **Delete Local Branch:**
    - Force delete the local branch reference:
      ```bash
      git branch -D <target_branch>
      ```
-7. **Remote Tracking Reference Pruning:**
+6. **Remote Tracking Reference Pruning:**
    - Prune stale remote tracking refs:
      ```bash
      git remote prune origin
      ```
-8. **Completion & Advice:**
+7. **Completion & Advice:**
    - Log: `[git-brx] Deleted local branch '<target_branch>' and pruned origin`.
    - Log: `[git-brx] Hint: Your local '<base_branch>' may not be up-to-date. Use 'git-brx update' to update changes`.
    - Exit with Exit Code `0`.

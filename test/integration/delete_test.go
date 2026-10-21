@@ -88,30 +88,6 @@ func TestDeleteIntegration(t *testing.T) {
 		assert.Equal(t, "master", h.CurrentBranch())
 	})
 
-	t.Run("DryRunLeavesBranchIntact", func(t *testing.T) {
-		h := NewHarness(t)
-		h.CommitFile("init.txt", "init", "Initial commit")
-
-		originDir := t.TempDir()
-		h.Git("init", "--bare", originDir)
-		h.Git("remote", "add", "origin", originDir)
-		h.Git("push", "-u", "origin", "master")
-
-		h.CreateBranch("epic/billing")
-		h.CommitFile("bill.go", "package bill", "Billing commit")
-
-		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "--dry-run", "--no-color"}, &stdout, &stderr)
-
-		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Would checkout branch 'master'")
-		assert.Contains(t, stderr.String(), "Would delete local branch 'epic/billing'")
-		assert.Contains(t, stderr.String(), "Would prune stale tracking references from origin")
-
-		// Branch must still be current and present
-		assert.Equal(t, "epic/billing", h.CurrentBranch())
-	})
-
 	t.Run("RejectsDeletionOfMasterBranch", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")

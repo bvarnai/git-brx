@@ -4,7 +4,7 @@
 - **Usage:** `git-brx publish [flags]`
 - **Arguments:** None.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Safety override: `--no-force`: Push with standard fast-forward constraints without `--force-with-lease`.
 
 ## 2. Prerequisites & Environment
@@ -30,9 +30,7 @@
      git for-each-ref --format='%(upstream:short)' refs/heads/<branch>
      ```
    - Determine if upstream tracking matches `origin/<branch>`.
-3. **Dry-Run Check:**
-   - If `--dry-run` is active: Run `git push --dry-run [args]`, log planned ref updates, and exit with Exit Code `0`.
-4. **Push Execution:**
+3. **Push Execution:**
    - **Case A: Upstream already configured as `origin/<branch>`:**
      ```bash
      git push origin <branch> --force-with-lease
@@ -41,7 +39,7 @@
      ```bash
      git push --set-upstream origin <branch> --force-with-lease
      ```
-5. **Lease Failure Interception:**
+4. **Lease Failure Interception:**
    - If push is rejected due to stale lease (non-fast-forward / lease mismatch):
      - Log: `[git-brx] Error: Publish rejected: remote has newer commits`
      - Log: `[git-brx] Hint: Run 'git-brx update' to incorporate remote changes before publishing`
@@ -49,7 +47,7 @@
    - If push fails due to network or authentication failure:
      - Log: `[git-brx] Error: Publish failed: unable to reach remote or authentication rejected`
      - Fail with Exit Code `4`.
-6. **Completion:**
+5. **Completion:**
    - Log: `[git-brx] Branch '<branch>' successfully published to origin`.
    - Exit with Exit Code `0`.
 

@@ -12,7 +12,6 @@ The following flags are accepted across all commands:
 | :--- | :--- | :--- |
 | `--verbose` | `-v` | Enables verbose diagnostic output to `stderr` (e.g. raw Git commands, HTTP requests). |
 | `--quiet` | `-q` | Suppresses informational notices and hints; only errors and primary stdout data are printed. |
-| `--dry-run` | `-n` | Simulates execution without mutating Git references, working tree, or remote services. |
 | `--no-color` | | Explicitly disables ANSI color formatting. |
 | `--help` | `-h` | Displays usage and help text for the command. |
 | `--version` | | (Root only) Displays semantic version, commit hash, build date, and compiler runtime. |
@@ -101,7 +100,7 @@ Pushes current branch to remote origin with `--force-with-lease` and establishes
 ### Examples:
 ```bash
 git brx publish
-git brx publish --dry-run
+git brx publish --no-force
 ```
 
 ---
@@ -120,7 +119,6 @@ Creates a pull request / code review on the configured SCM platform (GitHub, Bit
 git brx review
 git brx review develop
 git brx review -r alice
-git brx review --dry-run
 ```
 
 ---

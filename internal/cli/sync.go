@@ -149,35 +149,13 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 						commitUnit = "commit"
 					}
 
-					if a.Opts.DryRun {
-						a.Logger.Log("Would fast-forward local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
-					} else {
-						if err := a.Operations.FetchRef(ctx, rootDir, "origin", fmt.Sprintf("%s:%s", baseBranch, baseBranch)); err != nil {
-							return domain.WrapError(domain.ExitConflict, err, "Failed to fast-forward local base branch '%s'", baseBranch)
-						}
-						a.Logger.Log("Fast-forwarded local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
+					if err := a.Operations.FetchRef(ctx, rootDir, "origin", fmt.Sprintf("%s:%s", baseBranch, baseBranch)); err != nil {
+						return domain.WrapError(domain.ExitConflict, err, "Failed to fast-forward local base branch '%s'", baseBranch)
 					}
+					a.Logger.Log("Fast-forwarded local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
 				}
 			}
 		}
-	}
-
-	// Dry run mode
-	if a.Opts.DryRun {
-		if strategy == "rebase" {
-			rebaseArgs := []string{"git", "rebase"}
-			if opts.Autostash {
-				rebaseArgs = append(rebaseArgs, "--autostash")
-			}
-			if opts.Interactive {
-				rebaseArgs = append(rebaseArgs, "--interactive")
-			}
-			rebaseArgs = append(rebaseArgs, baseBranch)
-			a.Logger.Log("Would execute: %s", strings.Join(rebaseArgs, " "))
-		} else {
-			a.Logger.Log("Would execute: git merge -m \"Merge branch '%s' into '%s'\" %s", baseBranch, currBranch.Name, baseBranch)
-		}
-		return nil
 	}
 
 	// Execution

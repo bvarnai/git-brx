@@ -5,7 +5,7 @@
 - **Arguments:**
   - `<branch>` *(optional)*: Target branch to switch to. Defaults to `main` (or repository default) if omitted.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flags:
     - `--offline` (`-o`): Skip remote fetch and switch between existing local references only.
 
@@ -39,9 +39,7 @@
    - If `--offline` is not specified:
      - Execute `git fetch origin`.
      - *Note:* If remote fetch fails due to network outage, log warning `[git-brx] Warning: Unable to reach remote; falling back to local references` and continue if the branch exists locally, or fail with Exit Code `4` if the branch exists only remotely.
-5. **Dry-Run Check:**
-   - If `--dry-run` is active: Validate branch existence locally or on remote, verify working tree safety, log planned switch, and exit with Exit Code `0`.
-6. **Branch Checkout Execution:**
+5. **Branch Checkout Execution:**
    - Verify branch existence:
      - Check local heads: `git show-ref --verify --quiet refs/heads/<branch>`.
      - Check remote tracking: `git show-ref --verify --quiet refs/remotes/origin/<branch>`.
@@ -54,7 +52,7 @@
      ```bash
      git checkout <branch>
      ```
-7. **Post-Checkout Verification:**
+6. **Post-Checkout Verification:**
    - If checkout fails due to uncommitted working tree conflicts:
      - Log: `[git-brx] Error: Select failed: local modifications would be overwritten by checkout`
      - Log: `[git-brx] Hint: Commit or stash your changes before switching branches`

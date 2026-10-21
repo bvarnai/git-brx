@@ -5,7 +5,7 @@
 - **Arguments:**
   - `<branch>` *(mandatory)*: Name of the topic branch to create (e.g., `issue/VSB-1234`, `feature/VSB-5678`).
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flags:
     - `-o`, `--offline`: Skip JIRA issue validation and remote Git availability checks.
     - `-y`, `--yes`: Automatically accept confirmation prompts without interactive input.
@@ -67,7 +67,6 @@
        `Create branch '<branch>' [Y/n]?` (defaults to Yes on Enter).
        - If rejected (`n` / `N`), exit with Exit Code `7`.
 6. **Branch Provisioning:**
-   - If `--dry-run` is active: Log planned creation and exit with Exit Code `0`.
    - Execute checkout to new branch:
      ```bash
      git checkout -b <branchPath>/<issueKey>

@@ -119,23 +119,6 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 			expectedCode: int(domain.ExitPreconditionRemote),
 			errSubstr:    "Branch 'issue/VSB-101' has not been pushed to remote origin",
 		},
-		{
-			name: "dry run formats planned review without API calls",
-			args: []string{"review", "--dry-run"},
-			mockResponses: map[string]mockGitResponse{
-				"rev-parse --is-inside-work-tree":                             {out: "true"},
-				"rev-parse --show-toplevel":                                   {out: "/mock/repo"},
-				"rev-parse --verify -q HEAD":                                  {out: "abc1234"},
-				"remote get-url origin":                                       {out: "git@github.com:org/repo.git"},
-				"symbolic-ref --short -q HEAD":                                {out: "issue/42"},
-				"rev-parse --short HEAD":                                      {out: "abc1234"},
-				"for-each-ref --format=%(upstream:short) refs/heads/issue/42": {out: "origin/issue/42"},
-				"ls-remote --heads origin issue/42":                           {out: "abc1234 refs/heads/issue/42\n"},
-				"show-ref --verify --quiet refs/heads/master":                 {out: ""},
-			},
-			expectedCode: int(domain.ExitSuccess),
-			expectStderr: "Would create pull request",
-		},
 	}
 
 	for _, tt := range tests {

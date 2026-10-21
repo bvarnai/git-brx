@@ -168,12 +168,6 @@ git brx review
      ```
 5. **PR submission:** Calls the GitHub or Bitbucket Server REST API, prints the clickable PR URL to `stdout`, and logs confirmation to `stderr`
 
-**Dry-run mode:**
-Want to preview the generated PR description and assigned reviewers before creating it?
-```bash
-git brx review --dry-run
-```
-
 ---
 
 ## 6. Safe post-merge deletion (`git brx delete`)

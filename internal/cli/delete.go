@@ -141,15 +141,6 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 		baseBranch = "main"
 	}
 
-	if a.Opts.DryRun {
-		if shouldSwitch {
-			a.Logger.Log("Would checkout branch '%s'", baseBranch)
-		}
-		a.Logger.Log("Would delete local branch '%s'", targetBranch)
-		a.Logger.Log("Would prune stale tracking references from origin")
-		return nil
-	}
-
 	if shouldSwitch {
 		checkoutErr := a.Operations.Checkout(ctx, rootDir, baseBranch)
 		if checkoutErr != nil {

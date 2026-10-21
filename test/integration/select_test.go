@@ -164,21 +164,6 @@ func TestSelectIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Commit or stash your changes before switching branches")
 	})
 
-	t.Run("DryRunMode", func(t *testing.T) {
-		h := NewHarness(t)
-		h.CommitFile("init.txt", "init", "Initial commit")
-		h.CreateBranch("feature/dry")
-		h.Git("checkout", "master")
-
-		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "--dry-run", "-o", "feature/dry"}, &stdout, &stderr)
-
-		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "[git-brx] Would checkout branch 'feature/dry'")
-		currentBranch := strings.TrimSpace(h.Git("rev-parse", "--abbrev-ref", "HEAD"))
-		assert.Equal(t, "master", currentBranch)
-	})
-
 	t.Run("ExcessArguments", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")

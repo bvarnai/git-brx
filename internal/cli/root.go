@@ -16,7 +16,6 @@ import (
 type GlobalOptions struct {
 	Verbose bool
 	Quiet   bool
-	DryRun  bool
 	NoColor bool
 }
 
@@ -89,7 +88,6 @@ for local branch lifecycles, upstream synchronization, clean rebasing, and code 
 	// Persistent global flags
 	rootCmd.PersistentFlags().BoolVarP(&app.Opts.Verbose, "verbose", "v", false, "Enable verbose diagnostic output")
 	rootCmd.PersistentFlags().BoolVarP(&app.Opts.Quiet, "quiet", "q", false, "Suppress informational notices and hints")
-	rootCmd.PersistentFlags().BoolVarP(&app.Opts.DryRun, "dry-run", "n", false, "Simulate execution without modifying Git state or remote services")
 	rootCmd.PersistentFlags().BoolVar(&app.Opts.NoColor, "no-color", false, "Disable ANSI color styling")
 
 	// Register subcommands

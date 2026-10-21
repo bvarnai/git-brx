@@ -85,15 +85,6 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 			WithHint("Your branch may not have been published yet. Use 'git-brx publish' to publish it")
 	}
 
-	// Dry run mode
-	if a.Opts.DryRun {
-		a.Logger.Log("Would execute: git reset --hard %s", remoteRef)
-		if opts.Clean {
-			a.Logger.Log("Would execute: git clean -fd")
-		}
-		return nil
-	}
-
 	// Hard reset to remote ref
 	if resetErr := a.Operations.ResetHard(ctx, rootDir, remoteRef); resetErr != nil {
 		return domain.WrapError(domain.ExitGeneralError, resetErr, "Reset failed: unable to reset working copy to '%s'", remoteRef)

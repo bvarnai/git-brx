@@ -108,15 +108,6 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 	localExists, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
 	a.Logger.Debug("Target branch %s presence: local=%v, remote=%v", targetBranch, localExists, remoteExists)
 
-	// Dry run mode
-	if a.Opts.DryRun {
-		if !localExists && !remoteExists {
-			return a.branchNotFoundError(ctx, rootDir, targetBranch)
-		}
-		a.Logger.Log("Would checkout branch '%s'", targetBranch)
-		return nil
-	}
-
 	if !localExists && !remoteExists {
 		return a.branchNotFoundError(ctx, rootDir, targetBranch)
 	}

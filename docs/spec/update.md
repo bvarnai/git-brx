@@ -4,7 +4,7 @@
 - **Usage:** `git-brx update [flags]`
 - **Arguments:** None.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flag: `--autostash` (`-a`): Automatically stash unstaged/staged changes before rebasing and pop stash afterwards.
 
 ## 2. Prerequisites & Environment
@@ -27,21 +27,19 @@
 2. **Remote Reference Verification:**
    - Verify that the current branch exists on `origin` via `git ls-remote --heads origin <branch>`.
    - If not found on remote, emit warning: `[git-brx] Error: Branch '<branch>' has not been published to origin yet` with hint `[git-brx] Hint: Use 'git-brx publish' to publish your branch first` and exit with Exit Code `4`.
-3. **Dry-Run Check:**
-   - If `--dry-run` is active: Perform `git fetch --dry-run origin <branch>`, compute commit delta, log planned rebase actions, and exit with Exit Code `0`.
-4. **Fetch & Rebase Execution:**
+3. **Fetch & Rebase Execution:**
    - Fetch latest remote changes: `git fetch origin <branch>`.
    - Execute rebase:
      ```bash
      git rebase origin/<branch>
      ```
      *(If `--autostash` is enabled, append `--autostash`).*
-5. **Conflict Interception:**
+4. **Conflict Interception:**
    - If `git rebase` exits with a non-zero code due to merge conflicts:
      - Log diagnostic message: `[git-brx] Error: Update failed due to conflicts`
      - Log actionable hint: `[git-brx] Hint: Use 'git-brx resolve' to resolve conflicts or 'git-brx reset' to abort`
      - Terminate with Exit Code `5`.
-6. **Completion:**
+5. **Completion:**
    - Log informational success:
      - If `delta.BehindCount == 0`:
        `[git-brx] Branch '<branch>' is already up to date with 'origin/<branch>'`
