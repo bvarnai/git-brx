@@ -185,22 +185,6 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 			expectStderr: "Deleted local branch 'issue/VSB-101' and pruned origin",
 		},
 		{
-			name: "dry run logs planned actions without deleting",
-			args: []string{"delete", "--dry-run", "--force"},
-			mockResponses: map[string]mockGitResponse{
-				"rev-parse --is-inside-work-tree":                                  {out: "true"},
-				"rev-parse --show-toplevel":                                        {out: "/mock/repo"},
-				"rev-parse --verify -q HEAD":                                       {out: "abc1234"},
-				"remote get-url origin":                                            {out: "git@github.com:org/repo.git"},
-				"symbolic-ref --short -q HEAD":                                     {out: "feature/login"},
-				"rev-parse --short HEAD":                                           {out: "abc1234"},
-				"for-each-ref --format=%(upstream:short) refs/heads/feature/login": {out: "origin/feature/login"},
-				"show-ref --verify --quiet refs/heads/master":                      {out: ""},
-			},
-			expectedCode: int(domain.ExitSuccess),
-			expectStderr: "Would checkout branch 'master'",
-		},
-		{
 			name: "clean deletion when branch already absent on remote",
 			args: []string{"delete"},
 			mockResponses: map[string]mockGitResponse{

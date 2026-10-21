@@ -39,11 +39,8 @@ func (o *Operations) CreateAndCheckout(ctx context.Context, dir, branch string) 
 }
 
 // Push pushes commits for the given branch to remote with optional upstream tracking and leased force.
-func (o *Operations) Push(ctx context.Context, dir, remote, branch string, setUpstream, forceWithLease, dryRun bool) (string, error) {
+func (o *Operations) Push(ctx context.Context, dir, remote, branch string, setUpstream, forceWithLease bool) (string, error) {
 	args := []string{"push"}
-	if dryRun {
-		args = append(args, "--dry-run")
-	}
 	if setUpstream {
 		args = append(args, "--set-upstream")
 	}

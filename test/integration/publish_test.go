@@ -62,26 +62,6 @@ func TestPublishIntegration(t *testing.T) {
 		assert.Contains(t, stderr2.String(), "[git-brx] Branch 'issue/subsequent-publish' successfully published to origin")
 	})
 
-	t.Run("DryRunModeDoesNotPushRefToOrigin", func(t *testing.T) {
-		h := NewHarness(t)
-		h.CommitFile("init.txt", "init", "Initial commit")
-		h.SetupRemoteBare()
-		h.Git("push", "-u", "origin", "master")
-
-		h.CreateBranch("issue/dry-run-publish")
-		h.CommitFile("dry.txt", "dry content", "Dry commit")
-
-		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"publish", "--dry-run"}, &stdout, &stderr)
-
-		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "[git-brx] Would publish branch 'issue/dry-run-publish' to origin")
-
-		// Remote should NOT have this branch
-		out := h.Git("ls-remote", "--heads", "origin", "issue/dry-run-publish")
-		assert.Empty(t, strings.TrimSpace(out))
-	})
-
 	t.Run("RefuseForcePushLeaseOnMaster", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")

@@ -5,7 +5,7 @@
 - **Arguments:**
   - `<branch>` *(optional)*: Base branch to synchronize changes from. Defaults to `main` (or repository default) if omitted.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Strategy flags:
     - `-m`, `--merge`: Force merge strategy regardless of branch type default.
     - `-r`, `--rebase`: Force rebase strategy regardless of branch type default.
@@ -59,8 +59,6 @@
        - Log: `[git-brx] Error: Base branch '<with_branch>' is not up-to-date with 'origin/<with_branch>'`
        - Log: `[git-brx] Hint: Switch to '<with_branch>' and run 'git-brx update' first`
        - Fail with Exit Code `5`.
-     - In `--dry-run` mode:
-       - Log: `[git-brx] Would fast-forward local '<with_branch>' to match 'origin/<with_branch>' (<behind> commit(s) behind)`.
      - Otherwise:
        - Fast-forward local base ref without checking it out:
          ```bash
@@ -68,9 +66,7 @@
          ```
        - Log: `[git-brx] Fast-forwarded local '<with_branch>' to match 'origin/<with_branch>' (<behind> commit(s) behind)`.
        - Proceed with synchronization.
-5. **Dry-Run Check:**
-   - If `--dry-run` is active: Emit planned rebase or merge command string and exit with Exit Code `0`.
-6. **Execution (Rebase vs Merge):**
+5. **Execution (Rebase vs Merge):**
    - **Rebase Path:**
      ```bash
      git rebase [--autostash] [--interactive] <with_branch>
@@ -79,7 +75,7 @@
      ```bash
      git merge -m "Merge branch <with_branch> into <current_branch>" <with_branch>
      ```
-7. **Post-Operation Completion & Conflict Interception:**
+6. **Post-Operation Completion & Conflict Interception:**
    - If rebase or merge fails due to conflicts:
      - Log: `[git-brx] Error: Sync failed due to merge conflicts`
      - Log: `[git-brx] Hint: Use 'git-brx resolve' in case of merge conflicts or 'git-brx reset' to abort`

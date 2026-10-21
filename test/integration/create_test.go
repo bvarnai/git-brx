@@ -82,24 +82,6 @@ func TestCreateIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "doesn't match pattern")
 	})
 
-	t.Run("DryRunModeDoesNotModifyRefs", func(t *testing.T) {
-		h := NewHarness(t)
-		h.CommitFile("init.txt", "init", "Initial commit")
-		h.Git("remote", "add", "origin", "git@github.com:myorg/myrepo.git")
-
-		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--offline", "--dry-run", "issue/99"}, &stdout, &stderr)
-
-		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "[git-brx] Would create branch 'issue/99'")
-
-		currentBranch := strings.TrimSpace(h.Git("rev-parse", "--abbrev-ref", "HEAD"))
-		assert.Equal(t, "master", currentBranch)
-
-		_, err := h.GitAllowError("show-ref", "--verify", "refs/heads/issue/99")
-		require.Error(t, err)
-	})
-
 	t.Run("OnlineModeWithMockGitHubServer", func(t *testing.T) {
 		// Mock GitHub API server
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

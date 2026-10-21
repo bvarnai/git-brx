@@ -288,32 +288,6 @@ func TestSyncIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 	})
 
-	t.Run("DryRunModeDoesNotModifyRefs", func(t *testing.T) {
-		h := NewHarness(t)
-		h.CommitFile("init.txt", "init", "Initial commit")
-		h.SetupRemoteBare()
-		h.Git("push", "-u", "origin", "master")
-
-		h.CreateBranch("issue/VSB-104")
-		h.CommitFile("issue4.txt", "issue4", "Commit 4")
-		origSha := strings.TrimSpace(h.Git("rev-parse", "HEAD"))
-
-		h.Git("checkout", "master")
-		h.CommitFile("master4.txt", "master4", "Master commit 4")
-		h.Git("push", "origin", "master")
-
-		h.Git("checkout", "issue/VSB-104")
-
-		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "--dry-run"}, &stdout, &stderr)
-
-		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Would execute: git rebase master")
-
-		currSha := strings.TrimSpace(h.Git("rev-parse", "HEAD"))
-		assert.Equal(t, origSha, currSha, "dry run must not change HEAD commit")
-	})
-
 	t.Run("ActiveRebaseBlocksSync", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")

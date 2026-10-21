@@ -165,7 +165,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 
 	var issue *domain.Issue
 	tracker, _ := a.resolveTracker(cfg)
-	if tracker != nil && issueKey != "" && !a.Opts.DryRun {
+	if tracker != nil && issueKey != "" {
 		fetchedIssue, issueErr := tracker.GetIssue(ctx, issueKey)
 		if issueErr != nil {
 			return issueErr
@@ -223,19 +223,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 
 	prBody := a.ComposeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch, prTitle, mergeStrategy)
 
-	// 7. Dry-Run Check
-	if a.Opts.DryRun {
-		a.Logger.Log("Would create pull request on %s", scm.Name())
-		a.Logger.Log("  Source:    %s", currBranch.Name)
-		a.Logger.Log("  Target:    %s", targetBranch)
-		a.Logger.Log("  Title:     %s", prTitle)
-		if len(reviewers) > 0 {
-			a.Logger.Log("  Reviewers: %s", strings.Join(reviewers, ", "))
-		}
-		return nil
-	}
-
-	// 8. Pull Request Submission
+	// 7. Pull Request Submission
 	req := domain.PullRequestRequest{
 		Title:        prTitle,
 		Description:  prBody,

@@ -5,7 +5,7 @@
 - **Arguments:**
   - `<target_branch>` *(optional)*: Target branch to merge into. Defaults to repository default branch (`main` or `master`) if omitted.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flags:
     - `--reviewer` (`-r` `<username>`): Explicitly assign a designated reviewer instead of automated component mapping.
     - `--title` (`-t` `<title>`): Override default pull request title.
@@ -86,9 +86,7 @@
                  "epic/*": merge
                  "release/*": merge
          ```
-7. **Dry-Run Check:**
-   - If `--dry-run` is active: Format and print the pull request request payload and reviewer assignment without making API calls, then exit with Exit Code `0`.
-8. **Pull Request Submission:**
+7. **Pull Request Submission:**
    - Submit PR via the configured `SCMProvider` (GitHub Pull Requests API, Bitbucket Server REST API, etc.).
    - Standard payload fields:
      - `title`: `<type>(#<issueKey>): <summary>` (Conventional Commits scope format, or `<branch>` if unlinked, or custom `--title`)
@@ -96,7 +94,7 @@
      - `sourceBranch`: `<branch>`
      - `targetBranch`: `<targetBranch>`
      - `reviewers`: List of resolved reviewer user handles.
-9. **Response Handling:**
+8. **Response Handling:**
    - If HTTP 201 Created:
      - Log: `[git-brx] Created pull-request:` (to stderr).
      - Emit URL to stdout for machine consumption.

@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
@@ -74,16 +73,6 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 
 	remoteRef := "origin/" + currBranch.Name
 	a.Logger.Debug("Updating branch %s against remote tracking ref %s (autostash=%v)", currBranch.Name, remoteRef, opts.Autostash)
-
-	// Dry run mode
-	if a.Opts.DryRun {
-		cmdStr := fmt.Sprintf("git rebase %s", remoteRef)
-		if opts.Autostash {
-			cmdStr = fmt.Sprintf("git rebase --autostash %s", remoteRef)
-		}
-		a.Logger.Log("Would fetch 'origin/%s' and execute: %s", currBranch.Name, cmdStr)
-		return nil
-	}
 
 	// Fetch remote reference
 	if fetchErr := a.Operations.FetchRef(ctx, rootDir, "origin", currBranch.Name); fetchErr != nil {

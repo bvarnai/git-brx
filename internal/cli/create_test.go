@@ -98,19 +98,6 @@ func TestCreateCommand_UnitTable(t *testing.T) {
 			errSubstr:    "doesn't match pattern",
 		},
 		{
-			name: "offline mode successfully provisions branch with dry-run",
-			args: []string{"create", "--offline", "--dry-run", "issue/42"},
-			mockResponses: map[string]mockGitResponse{
-				"rev-parse --is-inside-work-tree":               {out: "true"},
-				"rev-parse --show-toplevel":                     {out: "/repo"},
-				"rev-parse --git-dir":                           {out: "/repo/.git"},
-				"show-ref --verify --quiet refs/heads/issue/42": {out: "", err: errors.New("not found")},
-				"remote get-url origin":                         {out: "https://github.com/org/repo.git"},
-			},
-			expectedCode: int(domain.ExitSuccess),
-			outSubstr:    "Would create branch 'issue/42'",
-		},
-		{
 			name: "offline mode provisions branch cleanly",
 			args: []string{"create", "--offline", "issue/42"},
 			mockResponses: map[string]mockGitResponse{

@@ -5,7 +5,7 @@
 - **Arguments:**
   - `[<path>]` (Optional): Scope history to a specific file or directory path. Automatically passes `--follow` for regular files to track commits across renames.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Extension flags:
     - `--limit` (`-l` `<int>`): Limit the number of commits rendered in the graph (default: unconstrained or pager-governed).
     - `--branch` (`-b` `<string>`): Scope history to a specific named branch.

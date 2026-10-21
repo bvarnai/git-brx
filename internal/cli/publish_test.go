@@ -143,23 +143,6 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 			errSubstr:    "Publish rejected: remote has newer commits",
 		},
 		{
-			name: "dry run simulation",
-			args: []string{"publish", "--dry-run"},
-			mockResponses: map[string]mockGitResponse{
-				"rev-parse --is-inside-work-tree":                                {out: "true"},
-				"rev-parse --show-toplevel":                                      {out: "/repo"},
-				"rev-parse --is-shallow-repository":                              {out: "false"},
-				"rev-parse --git-dir":                                            {out: "/repo/.git"},
-				"symbolic-ref --short -q HEAD":                                   {out: "issue/VSB-1"},
-				"rev-parse --short HEAD":                                         {out: "abc1234"},
-				"for-each-ref --format=%(upstream:short) refs/heads/issue/VSB-1": {out: "origin/issue/VSB-1"},
-				"remote get-url origin":                                          {out: "https://github.com/org/repo.git"},
-				"push --dry-run origin issue/VSB-1 --force-with-lease":           {out: ""},
-			},
-			expectedCode: int(domain.ExitSuccess),
-			outSubstr:    "Would publish branch 'issue/VSB-1' to origin",
-		},
-		{
 			name: "publish with --no-force pushes without lease",
 			args: []string{"publish", "--no-force"},
 			mockResponses: map[string]mockGitResponse{

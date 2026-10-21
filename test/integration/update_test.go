@@ -5,7 +5,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
@@ -140,34 +139,6 @@ func TestUpdateIntegration(t *testing.T) {
 		content, err := os.ReadFile(trackedPath)
 		require.NoError(t, err)
 		assert.Equal(t, "unstaged edit", string(content))
-	})
-
-	t.Run("DryRunModeDoesNotModifyRefs", func(t *testing.T) {
-		h := NewHarness(t)
-		h.CommitFile("init.txt", "init", "Initial commit")
-		remoteBare := h.SetupRemoteBare()
-		h.Git("push", "-u", "origin", "master")
-
-		h.CreateBranch("issue/VSB-203")
-		h.CommitFile("tracked.txt", "tracked", "Tracked commit")
-		h.Git("push", "-u", "origin", "issue/VSB-203")
-
-		origSha := strings.TrimSpace(h.Git("rev-parse", "HEAD"))
-
-		// Colleague pushes
-		h2 := CloneHarness(t, remoteBare)
-		h2.Git("checkout", "issue/VSB-203")
-		h2.CommitFile("other.txt", "other content", "Other file commit")
-		h2.Git("push", "origin", "issue/VSB-203")
-
-		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update", "--dry-run"}, &stdout, &stderr)
-
-		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Would fetch 'origin/issue/VSB-203' and execute: git rebase origin/issue/VSB-203")
-
-		currSha := strings.TrimSpace(h.Git("rev-parse", "HEAD"))
-		assert.Equal(t, origSha, currSha, "dry run must not change HEAD commit")
 	})
 
 	t.Run("AlreadyUpToDateDoesNotRebase", func(t *testing.T) {

@@ -78,20 +78,10 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 	setUpstream := currBranch.UpstreamRef != expectedUpstream
 
 	forceWithLease := !opts.NoForce
-	a.Logger.Debug("Publishing branch %s (setUpstream=%v, forceWithLease=%v, dryRun=%v)", currBranch.Name, setUpstream, forceWithLease, a.Opts.DryRun)
-
-	// Dry run mode
-	if a.Opts.DryRun {
-		_, pushErr := a.Operations.Push(ctx, rootDir, "origin", currBranch.Name, setUpstream, forceWithLease, true)
-		if pushErr != nil {
-			return a.handlePushError(pushErr)
-		}
-		a.Logger.Log("Would publish branch '%s' to origin", currBranch.Name)
-		return nil
-	}
+	a.Logger.Debug("Publishing branch %s (setUpstream=%v, forceWithLease=%v)", currBranch.Name, setUpstream, forceWithLease)
 
 	// Execute push
-	_, pushErr := a.Operations.Push(ctx, rootDir, "origin", currBranch.Name, setUpstream, forceWithLease, false)
+	_, pushErr := a.Operations.Push(ctx, rootDir, "origin", currBranch.Name, setUpstream, forceWithLease)
 	if pushErr != nil {
 		return a.handlePushError(pushErr)
 	}

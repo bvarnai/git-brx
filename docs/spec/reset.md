@@ -4,7 +4,7 @@
 - **Usage:** `git-brx reset [flags]`
 - **Arguments:** None.
 - **Flags:**
-  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--dry-run` (`-n`), `--no-color`.
+  - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flag: `--clean` (`-c`): Also remove untracked files and directories via `git clean -fd`.
 
 ## 2. Prerequisites & Environment
@@ -39,9 +39,7 @@
      - Log: `[git-brx] Error: Reset failed: remote reference 'origin/<branch>' does not exist`
      - Log: `[git-brx] Hint: Your branch may not have been published yet. Use 'git-brx publish' to publish it`
      - Fail with Exit Code `4`.
-4. **Dry-Run Check:**
-   - If `--dry-run` is active: Log intended `git reset --hard origin/<branch>` (and optional `git clean -fd`), then exit with Exit Code `0`.
-5. **Hard Reset Execution:**
+4. **Hard Reset Execution:**
    - Execute:
      ```bash
      git reset --hard origin/<branch>
@@ -50,7 +48,7 @@
      ```bash
      git clean -fd
      ```
-6. **Completion:**
+5. **Completion:**
    - Log: `[git-brx] Working tree successfully reset to 'origin/<branch>'`.
    - Exit with Exit Code `0`.
 

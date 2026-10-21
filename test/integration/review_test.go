@@ -18,38 +18,6 @@ import (
 )
 
 func TestReviewIntegration(t *testing.T) {
-	t.Run("DryRunFormatsReviewPayload", func(t *testing.T) {
-		h := NewHarness(t)
-		h.CommitFile("init.txt", "init", "Initial commit")
-
-		originDir := t.TempDir()
-		h.Git("init", "--bare", originDir)
-		h.Git("remote", "add", "origin", originDir)
-		h.Git("push", "-u", "origin", "master")
-
-		h.CreateBranch("issue/42")
-		h.CommitFile("feature.go", "package main", "Add feature")
-		h.Git("push", "-u", "origin", "issue/42")
-
-		configContent := []byte(`
-platform: github
-scm:
-  provider: github
-  owner: test-org
-  repo: test-repo
-`)
-		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644)
-		require.NoError(t, err)
-
-		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--dry-run", "--no-color"}, &stdout, &stderr)
-
-		assert.Equal(t, int(domain.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Would create pull request")
-		assert.Contains(t, stderr.String(), "Source:    issue/42")
-		assert.Contains(t, stderr.String(), "Target:    master")
-	})
-
 	t.Run("RejectsUnpublishedBranch", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")

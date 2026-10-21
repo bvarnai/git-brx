@@ -66,7 +66,7 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 	}
 
 	a.Logger.Debug("Repository root: %s", rootDir)
-	a.Logger.Debug("Target branch to create: %s (offline=%v, dryRun=%v)", targetBranch, opts.Offline, a.Opts.DryRun)
+	a.Logger.Debug("Target branch to create: %s (offline=%v)", targetBranch, opts.Offline)
 
 	// 2. Local Branch Collision Check
 	localExists, _, _ := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
@@ -237,11 +237,6 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 	}
 
 	// 6. Branch Provisioning
-	if a.Opts.DryRun {
-		a.Logger.Log("Would create branch '%s'", targetBranch)
-		return nil
-	}
-
 	a.Logger.Log("Creating branch '%s'", targetBranch)
 	if err := a.Operations.CreateAndCheckout(ctx, rootDir, targetBranch); err != nil {
 		return domain.WrapError(domain.ExitGeneralError, err, "Failed to create branch '%s'", targetBranch)

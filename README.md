@@ -120,7 +120,7 @@ When installed in your `PATH`, `git-brx` is automatically available as a native 
 | [`git brx config`](docs/user-guide/command-reference.md#git-brx-config) | Displays the effective cascading configuration and source provenance in YAML format. |
 | [`git brx completion`](docs/spec/completion.md) | Generates shell autocompletion script (`bash`, `zsh`, `fish`, `powershell`). |
 
-All commands support `--help`, `-h`, and `--dry-run` (`-n`) for safe previewing.
+All commands support `--help` (`-h`), `--verbose` (`-v`), and `--quiet` (`-q`).
 
 ---
 
