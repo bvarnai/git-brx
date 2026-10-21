@@ -29,6 +29,7 @@
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
 | `0` | Help catalog or subcommand documentation displayed cleanly. | None. | None. |
+| `2` | Unknown subcommand or unexpected arguments passed. | `[git-brx] Error: unknown command "<name>" for "git-brx"` | None. |
 
 ## 5. Architectural Context
 - **Git Plugin Help Interception:** When running `git <subcommand> --help`, Git's external command wrapper intercepts `--help` before launching the plugin and searches Git's internal documentation directory (e.g., `git-doc/git-brx.html` or `man git-brx`).

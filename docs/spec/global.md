@@ -23,17 +23,24 @@
 | `delete` | Validates remote branch deletion, switches to `main`, and deletes local branch. |
 | `review` | Creates a pull request on configured SCM platform (Bitbucket, GitHub) via REST API with reviewer mapping. |
 | `config` | Prints the effective resolved cascading configuration and source provenance in YAML format. |
+| `completion` | Generates shell autocompletion script (`bash`, `zsh`, `fish`, `powershell`). |
+| `help` | Displays help catalog or detailed command documentation for a specific subcommand. |
 
 ### Global Flags
 
-The following flags must be accepted across the root binary and all subcommands:
+The following flags are accepted across the root binary and all subcommands:
 
-- `--verbose`, `-v`: Enables debug and diagnostic output on standard error. Logs all raw Git commands executed, HTTP request/response metadata, and path resolution calculations.
-- `--quiet`, `-q`: Suppresses all informational notices, hints, and progress indicators. Only functional stdout data and fatal errors are emitted.
-- `--dry-run`, `-n`: Runs mutating subcommands in simulation mode. Validates preconditions, computes changes, and prints planned mutations without modifying Git references, working tree files, or external services.
-- `--no-color`: Explicitly disables ANSI color escapes across all output streams.
-- `--help`, `-h`: Prints concise help, usage syntax, and available options for the command.
-- `--version`: Prints semantic version, build commit, build date, and compiler runtime information.
+| Flag | Short | Type | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `--verbose` | `-v` | bool | `false` | Enables verbose domain-level diagnostic output on stderr. Mutually exclusive with `--quiet`. |
+| `--quiet` | `-q` | bool | `false` | Suppresses informational notices, hints, and progress indicators. Mutually exclusive with `--verbose`. |
+| `--dry-run` | `-n` | bool | `false` | Runs mutating subcommands in simulation mode without modifying Git references, working tree, or remote services. |
+| `--no-color` | | bool | `false` | Explicitly disables ANSI color styling across all output streams. Overrides all environment settings. |
+| `--help` | `-h` | bool | `false` | Prints concise help, usage syntax, and available options for the command. |
+| `--version` | | bool | `false` | Prints canonical version string (`git-brx version <semver> (<commit> <os>/<arch>)`). |
+
+> [!NOTE]
+> `--verbose` (`-v`) and `--quiet` (`-q`) are mutually exclusive. Passing both flags simultaneously terminates execution immediately with Exit Code `2` (`ExitUsageError`).
 
 ### Output Protocols
 
@@ -48,14 +55,23 @@ The following flags must be accepted across the root binary and all subcommands:
     - Warnings: `[git-brx] Warning: <message>`
     - Errors: `[git-brx] Error: <message>`
     - Actionable hints: `[git-brx] Hint: <message>`
+    - Debug diagnostics: `[git-brx] Debug: <message>`
 - **Terminal Color Handling:**
-  - **TTY Auto-Detection:** ANSI color sequences are enabled by default if and only if standard error is connected to an interactive terminal (`isatty`).
-  - **`NO_COLOR` Standard:** If the environment variable `NO_COLOR` is defined (regardless of value, per `no-color.org`), colorization is disabled.
-  - **CLI Override:** Passing `--no-color` unconditionally forces monochromatic plain text output.
+  - **Policy Resolution Hierarchy:** Color output is resolved in strict order of precedence:
+    1. CLI Override: `--no-color` flag unconditionally disables ANSI colors across all streams.
+    2. Environment Variable `GIT_BRX_COLOR`:
+       - `always`, `true`, `1`: Forces ANSI color output even on non-TTY streams.
+       - `never`, `false`, `0`: Forces plain monochrome output.
+       - `auto`: Falls back to standard TTY and environment detection.
+       - Any invalid value emits a warning to stderr (`[git-brx] Warning: Invalid GIT_BRX_COLOR value "..."; falling back to "auto"`) and falls back to `auto`.
+    3. `NO_COLOR` Standard: If `NO_COLOR` is present in the environment (regardless of value), colorization is disabled.
+    4. Terminal Capability (`TERM`): If `TERM=dumb`, colorization is disabled.
+    5. TTY Auto-Detection: ANSI colors are enabled if and only if standard error is connected to an interactive character terminal (`isatty`).
   - **Color Palette:**
-    - Errors (`!`): Bright Red (`\033[31;1m`).
+    - Errors (`!`): Bold Red (`\033[31;1m`).
     - Warnings: Yellow (`\033[33m`).
     - Hints: Cyan (`\033[36m`).
+    - Debug: Magenta (`\033[35m`).
     - Reset: Plain text reset (`\033[0m`).
 
 ---
@@ -75,7 +91,9 @@ The following flags must be accepted across the root binary and all subcommands:
 
 | Variable | Purpose | Default / Fallback | Validation Rules |
 | :--- | :--- | :--- | :--- |
-| `NO_COLOR` | Disables ANSI escape coloring. | Unset (color auto-detection enabled). | Any non-empty value disables colors. |
+| `GIT_BRX_COLOR` | Controls ANSI color styling policy (`auto`, `always`/`true`/`1`, `never`/`false`/`0`). | `auto` | Unrecognized value falls back to `auto` with warning. |
+| `NO_COLOR` | Disables ANSI escape coloring across all streams. | Unset (color auto-detection enabled). | Any non-empty value disables colors. |
+| `TERM` | Terminal type identifier. | Unset. | `TERM=dumb` disables ANSI color styling. |
 | `CI` / `VSB_CI` | Identifies execution within a CI environment. | Unset. | Disables interactive prompts; fails if confirmation required. |
 | `GIT_PREFIX` | Relative offset when invoked from repository subdirectories. | Empty string (root). | Set automatically by Git during plugin/alias dispatch. |
 | `GIT_DIR` | Override path to `.git` repository metadata. | Auto-detected via Git plumbing. | Must point to a valid Git directory structure. |
@@ -87,10 +105,12 @@ The following flags must be accepted across the root binary and all subcommands:
 
 ### Environment Variables Injected / Propagated
 
-When spawning child Git processes, `git-brx` injects:
+When spawning child Git processes, `git-brx` uses `BuildSanitizedEnv` to strip existing conflicting variables from the process environment before injecting:
 
-- `LC_ALL=C`: Injected across all child Git plumbing executions to prevent locale-dependent output parsing failures and guarantee invariant English formatting.
-- `GIT_TERMINAL_PROMPT=0`: Injected during automated non-interactive checks (e.g., `git ls-remote`) to prevent background worker hangs on missing credentials.
+- `LC_ALL=C` and `LANG=C`: Injected across all child Git plumbing executions to prevent locale-dependent output parsing failures and guarantee invariant English formatting.
+- `GIT_TERMINAL_PROMPT=0`: Injected during automated non-interactive operations to prevent background worker hangs on missing credentials.
+- `GIT_ADVICE=0`: Suppresses unwanted interactive Git advice messages.
+- `-c gc.auto=0`: Prevents automatic background garbage collection during automated commands.
 
 ### Git Context & Path Resolution
 
@@ -119,8 +139,9 @@ The Go implementation must adhere to a strict, application-wide exit code contra
 | `4` | Remote / Network Precondition Failure | Remote `origin` not configured, remote unreachable (DNS/timeout), network down without `--offline`. |
 | `5` | Git State / Merge Conflict Encountered | In-flight rebase or merge already detected, or merge conflicts triggered during `sync` or `update`. |
 | `6` | External Service / API Failure | JIRA or Bitbucket API returned HTTP 401, 403, 404, or 409, or schema validation failed. |
-| `7` | User Aborted / Canceled | User declined interactive confirmation (`[y/N]`), aborted credential entry, or sent `SIGINT`. |
+| `7` | User Aborted / Canceled | User declined interactive confirmation (`[y/N]`) or aborted credential entry. |
 | `8` | Configuration / Validation Error | Missing or unreadable configuration file (`.git-brx.yaml`), malformed YAML, or branch name fails regex naming contract. |
+| `130` | Process Interrupted | Subprocess or command terminated early due to `SIGINT` (Ctrl+C), `SIGTERM`, or context cancellation. |
 
 ---
 
@@ -177,11 +198,45 @@ To maintain strict boundary separation, testability, and clean diagnostics acros
      - `InsideWorkTree(ctx, inspector, dir) (string, error)` (Exit Code 3)
      - `NoActiveOperation(ctx, inspector, rootDir) error` (Exit Code 5)
      - `NoOrphanedCommits(ctx, inspector, rootDir) error` (Exit Code 5)
-   - **Command-Specific UX Notices:** Non-fatal UX guidance and warnings (e.g., behind upstream sync hints or dirty tree carryover warnings) are presented by CLI command handlers using `ui.UI`.
+   - **Command-Specific UX Notices:** Non-fatal UX guidance and warnings (e.g., behind upstream sync hints or dirty tree carryover warnings) are presented by CLI command handlers using `term.Logger`.
 
 ---
 
-## 5. Shared Domain Models
+## 5. Shared Domain Models & Package Architecture
+
+### Target Go Package Layout
+
+The `git-brx` implementation is structured into explicit, decoupled Go packages:
+
+```text
+git-brx/
+├── cmd/
+│   └── git-brx/
+│       └── main.go              # Application entrypoint only
+├── internal/
+│   ├── checks/                  # Repository precondition assertions (InsideWorkTree, NoActiveOperation)
+│   ├── cli/                     # Cobra command definitions, flag binding, and UX flow
+│   ├── config/                  # 4-tier cascading configuration loader, merger, and YAML validator
+│   ├── domain/                  # Core domain models, enums, interfaces, and exit codes
+│   ├── git/                     # Git execution boundary (ExecRunner, Inspector, Operations)
+│   ├── github/                  # GitHub REST API client (issues, pull requests, reviewers)
+│   ├── suggest/                 # Levenshtein distance string matching for branch typo suggestions
+│   ├── term/                    # Thread-safe terminal logger, ANSI color policy, spinner, timer, prompt
+│   └── version/                 # Semantic version resolution from build ldflags / VCS info
+├── test/
+│   └── integration/             # End-to-end integration test harness and test suites
+├── docs/                        # Specifications and user guides
+├── go.mod
+└── go.sum
+```
+
+- **Package Dependency Boundaries:**
+  - `internal/domain` depends exclusively on the Go standard library.
+  - `internal/term` depends only on the standard library and provides structured logging, coloring, and interactive prompts.
+  - `internal/git`, `internal/checks`, `internal/config`, `internal/github`, and `internal/suggest` depend on `internal/domain` and `internal/term`, never on `internal/cli`.
+  - `internal/cli` wires flags and orchestrates domain/runner interfaces, enabling full unit testability via dependency injection.
+
+### Domain Entities
 
 The following domain entities define the core data models shared across all subcommands:
 
