@@ -43,7 +43,7 @@
 | `3` | Outside Git repository or empty repository without commits. | `[git-brx] Error: Not a git repository` / `[git-brx] Error: Repository has no commits yet` | None. |
 | `1` | Subprocess execution or pager pipe failure. | `[git-brx] Error: Failed to retrieve commit history` | None. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Empty / Unborn Repositories:** Legacy `history.sh` blindly executed `git log`, which fails abruptly with `fatal: your current branch 'master' does not have any commits yet` if invoked on a newly initialized repository before the first commit. Modern Go implementation explicitly checks for valid commits before attempting to format the log.
-- **Argument Discard Bug:** Legacy script accepted extra arguments, logged a discard notice to `stdout`, and dropped them. Modern Go parser must enforce strict CLI contracts (Exit Code `2`).
-- **Terminal Width & Pager Discrepancy:** On large repositories, legacy Bash scripts had no pager interception, flooding terminal buffers. Modern implementation respects standard pager settings when stdout is an interactive TTY.
+## 5. Edge Cases & Behavioral Notes
+- **Empty / Unborn Repositories:** When invoked on a newly initialized repository before the first commit, `history` cleanly detects the unborn branch state and returns exit code `3` with an informative error rather than failing abruptly with raw Git log errors.
+- **Strict Argument Handling:** Extra or unrecognized positional arguments are strictly rejected with Exit Code `2` and logged to `stderr`.
+- **Terminal Width & Pager Awareness:** Terminal output respects standard pager settings when stdout is connected to an interactive TTY, and strips formatting/styling when redirected or piped.

@@ -101,14 +101,7 @@
 | `4` | Fetch from origin failed. | `[git-brx] Error: Sync failed (git fetch failed)` | None. |
 | `5` | In-flight rebase/merge active, base branch not up to date, or conflicts hit. | `[git-brx] Error: Sync branch '<branch>' is not up-to-date` / `[git-brx] Error: Sync failed due to merge conflicts` | Leave conflicted state for `git-brx resolve`. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Documentation vs Script Discrepancy on Branch Types:** The legacy User's Guide explicitly states in Section 6.8 that `release maintenance` and `master` branches are permitted to sync using the `merge` strategy. However, the legacy Bash script `sync.sh` hardcoded a strict guard:
-  ```bash
-  if [[ "${branch_type}" != "feature" ]] && [[ "${branch_type}" != "issue" ]] && [[ "${branch_type}" != "epic" ]]; then
-      branch::common::err "You must be on 'issue', 'feature' or 'epic' branch"
-      exit 1
-  fi
-  ```
-  This caused `sync.sh` to prematurely abort on `release/*` branches. The Go specification relaxes this to allow `merge` on any branch when explicitly configured or requested.
-- **Race Condition in Delta Calculation:** Legacy script calculated base branch delta by piping to `/tmp/git_upstream_status_delta` and `/tmp/branch_delta`. The modern Go implementation calculates ahead/behind counts purely in-memory via `git rev-list --left-right --count`.
-- **Refspec Parsing Flaw:** Legacy script used `cut -d'/' -f1` to extract branch type, failing if branch names contained nested slashes (e.g. `feature/subsystem/VSB-1`). The Go implementation splits on the first slash delimiter only.
+## 5. Edge Cases & Behavioral Notes
+- **Flexible Branch Type Strategy Resolution:** Permits syncing on any branch type (including `release/*` or custom prefixes) using configured or explicitly requested strategies (`merge` or `rebase`).
+- **In-Memory Upstream Delta Calculation:** Ahead/behind commit counts against upstream and base branches are computed purely in-memory via `git rev-list --left-right --count`, avoiding temporary files and race conditions.
+- **Multi-Slash Refspec Parsing:** Branch types are parsed by splitting strictly on the first slash delimiter (e.g., `feature/subsystem/ticket-1` correctly extracts type `feature`), safely handling hierarchically structured branch names.

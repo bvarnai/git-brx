@@ -118,7 +118,7 @@
 | `6` | JIRA or Bitbucket API failure (HTTP 401, 404, 409 conflict). | `[git-brx] Error: A pull request for branch '<branch>' already exists` / `[git-brx] Error: Request failure` | None. |
 | `8` | Configuration file or review template missing / corrupt. | `[git-brx] Error: Configuration file not found` | None. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Silent Failure on Unpublished Branch:** Legacy `review.sh` never checked if the current branch was published before calling `review.groovy`. Bitbucket Server would return a confusing 400 Bad Request error stating that the ref did not exist. Modern Go explicitly tests remote ref availability first and hints to run `publish`.
-- **Command-Line Security Leak:** Legacy `review.sh` passed basic auth credentials to Groovy via process arguments, exposing secrets to `ps`. The Go rewrite manages all authentication internally within process memory.
-- **Random Reviewer Uniformity:** When multiple reviewers were mapped to a component (e.g. `atnemeth,zkrajovs`), legacy picked one via `java.util.Random`. The Go spec preserves this randomized load-balancing while adding an explicit `--reviewer` flag override.
+## 5. Edge Cases & Behavioral Notes
+- **Pre-flight Remote Branch Verification:** Verifies that the remote tracking branch exists on the remote before submitting pull request creation requests, providing an actionable hint to run `publish` if missing.
+- **Secure In-Memory Credential Handling:** Authentication credentials and tokens are maintained exclusively within process memory for API calls, preventing secrets exposure in process lists.
+- **Randomized Reviewer Load Balancing & Override:** When multiple reviewers match a component in configuration, a reviewer is selected using uniform random distribution, which can be explicitly overridden via `--reviewer`.

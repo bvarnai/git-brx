@@ -31,7 +31,7 @@
 | `2` | Unexpected positional arguments or unknown flags passed. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Invoked outside a valid Git repository or inside `.git`. | `[git-brx] Error: Not a git repository` | None. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Stdout Contamination:** Legacy `name.sh` invoked `branch::common::no_args`, which logged `This command takes no argument(s), input '$*' is discarded` to `stdout`. This broke shell script captures (`NAME=$(git branch-name)`). In the Go rewrite, unexpected arguments must trigger exit code `2` on `stderr`, keeping `stdout` purely machine-readable.
-- **Dependency on Hacked `git-prompt.sh`:** Legacy code sourced a modified `git-prompt.sh` to extract `$GIT_PROMPT_BRANCH`. Replaced with atomic Git plumbing `git symbolic-ref --short -q HEAD`.
-- **Detached HEAD Representation:** Legacy docs state that `git branch-name` "cleanly handles detached HEAD state," but the script printed prompt strings like `((abc1234...))` directly. The modern Go spec emits a clean short SHA or ref identifier without terminal prompt decoration.
+## 5. Edge Cases & Behavioral Notes
+- **Clean Stdout for Automation:** Standard output is strictly reserved for the branch name string followed by a newline, ensuring safe shell capture (`NAME=$(git-brx name)`). All validation diagnostics or unexpected arguments are emitted to `stderr` with exit code `2`.
+- **Atomic Git Plumbing:** Active branch inspection uses atomic Git plumbing (`git symbolic-ref --short -q HEAD`) for fast and reliable resolution.
+- **Clean Detached HEAD Identifier:** When HEAD is detached, `name` emits a clean short commit SHA or ref identifier without terminal prompt decoration or styling artifacts.
