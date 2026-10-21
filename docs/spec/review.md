@@ -15,7 +15,7 @@
 
 ## 2. Prerequisites & Environment
 - **Required host binaries:** `git` (>= 2.20.0).
-- **Environment variables read:** `GIT_DIR`, `GIT_WORK_TREE`, `GIT_PREFIX`, `GIT_BRX_CONFIG`, `GIT_BRX_TOKEN`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_COLOR`.
+- **Environment variables read:** `GIT_DIR`, `GIT_WORK_TREE`, `GIT_PREFIX`, `GIT_BRX_CONFIG`, `GITHUB_TOKEN`, `GH_TOKEN`, `GIT_BRX_TOKEN`, `GIT_BRX_COLOR`, `NO_COLOR`.
 - **Working directory requirements (GIT_PREFIX behavior):** Can be invoked from any repository subdirectory; operations are executed relative to repository root (`git rev-parse --show-toplevel`).
 - **Git state assertions (e.g., dirty working tree check):**
   - Must be inside a Git working tree (`git rev-parse --is-inside-work-tree` == `true`).

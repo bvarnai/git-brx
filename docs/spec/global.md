@@ -94,14 +94,12 @@ The following flags are accepted across the root binary and all subcommands:
 | `GIT_BRX_COLOR` | Controls ANSI color styling policy (`auto`, `always`/`true`/`1`, `never`/`false`/`0`). | `auto` | Unrecognized value falls back to `auto` with warning. |
 | `NO_COLOR` | Disables ANSI escape coloring across all streams. | Unset (color auto-detection enabled). | Any non-empty value disables colors. |
 | `TERM` | Terminal type identifier. | Unset. | `TERM=dumb` disables ANSI color styling. |
-| `CI` / `VSB_CI` | Identifies execution within a CI environment. | Unset. | Disables interactive prompts; fails if confirmation required. |
 | `GIT_PREFIX` | Relative offset when invoked from repository subdirectories. | Empty string (root). | Set automatically by Git during plugin/alias dispatch. |
 | `GIT_DIR` | Override path to `.git` repository metadata. | Auto-detected via Git plumbing. | Must point to a valid Git directory structure. |
 | `GIT_WORK_TREE` | Override path to top-level working directory. | Auto-detected via Git plumbing. | Must point to a valid directory. |
 | `GIT_BRX_CONFIG` | Explicit file path for shared project configuration overlay. | Search standard configuration cascade. | Must be readable file if provided. |
-| `GIT_BRX_TOKEN` | Authentication token for JIRA and Bitbucket REST APIs. | Consult Git credential helper or OS keychain. | Non-empty string. |
-| `HTTP_PROXY` / `HTTPS_PROXY` | Proxy endpoint for outgoing HTTP REST API requests. | System default / direct connection. | Valid URI syntax (`http://host:port`). |
-| `NO_PROXY` | Comma-separated list of host globs to bypass proxy. | Empty string. | Standard proxy exclusion format. |
+| `GITHUB_TOKEN` / `GH_TOKEN` | Authentication token for GitHub REST API (issues, reviews). | Git credential helper (`git credential fill`). | Non-empty string. |
+| `GIT_BRX_TOKEN` | Authentication token for external tracker and SCM REST APIs. | Git credential helper or OS keychain. | Non-empty string. |
 
 ### Environment Variables Injected / Propagated
 
