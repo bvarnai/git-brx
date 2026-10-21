@@ -48,6 +48,7 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	if err := checks.NotShallow(ctx, a.Inspector, rootDir); err != nil {
 		return err
@@ -77,6 +78,7 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 	setUpstream := currBranch.UpstreamRef != expectedUpstream
 
 	forceWithLease := !opts.NoForce
+	a.Logger.Debug("Publishing branch %s (setUpstream=%v, forceWithLease=%v, dryRun=%v)", currBranch.Name, setUpstream, forceWithLease, a.Opts.DryRun)
 
 	// Dry run mode
 	if a.Opts.DryRun {
@@ -84,7 +86,7 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 		if pushErr != nil {
 			return a.handlePushError(pushErr)
 		}
-		a.UI.Log("Would publish branch '%s' to origin", currBranch.Name)
+		a.Logger.Log("Would publish branch '%s' to origin", currBranch.Name)
 		return nil
 	}
 
@@ -94,7 +96,7 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 		return a.handlePushError(pushErr)
 	}
 
-	a.UI.Log("Branch '%s' successfully published to origin", currBranch.Name)
+	a.Logger.Log("Branch '%s' successfully published to origin", currBranch.Name)
 	return nil
 }
 

@@ -47,10 +47,12 @@ func (a *App) runResolve(ctx context.Context, opts ResolveOptions, args []string
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	op, active := a.Inspector.ActiveOperation(ctx, rootDir)
+	a.Logger.Debug("Active operation: %s (active: %v, overrideTool: %q)", op, active, opts.Tool)
 	if !active || (op != "merge" && op != "rebase") {
-		a.UI.Log("No merge or rebase operation is currently in progress")
+		a.Logger.Log("No merge or rebase operation is currently in progress")
 		return nil
 	}
 
@@ -62,7 +64,7 @@ func (a *App) runResolve(ctx context.Context, opts ResolveOptions, args []string
 }
 
 func (a *App) resolveMerge(ctx context.Context, rootDir, tool string) error {
-	a.UI.Log("Resolving merge conflicts...")
+	a.Logger.Log("Resolving merge conflicts...")
 	if err := a.runMergeToolAndStage(ctx, rootDir, tool); err != nil {
 		return err
 	}
@@ -72,7 +74,7 @@ func (a *App) resolveMerge(ctx context.Context, rootDir, tool string) error {
 			WithHint("Use 'git-brx reset' to abort the merge and restore your branch")
 	}
 
-	a.UI.Log("Merge completed")
+	a.Logger.Log("Merge completed")
 	return nil
 }
 
@@ -89,9 +91,9 @@ func (a *App) resolveRebase(ctx context.Context, rootDir, tool string) error {
 
 		progress, _ := a.Inspector.RebaseProgress(ctx, rootDir)
 		if progress != nil && progress.TotalSteps > 0 {
-			a.UI.Log("Resolving rebase conflict at step %d of %d...", progress.CurrentStep, progress.TotalSteps)
+			a.Logger.Log("Resolving rebase conflict at step %d of %d...", progress.CurrentStep, progress.TotalSteps)
 		} else {
-			a.UI.Log("Resolving rebase conflicts...")
+			a.Logger.Log("Resolving rebase conflicts...")
 		}
 
 		if err := a.runMergeToolAndStage(ctx, rootDir, tool); err != nil {
@@ -101,14 +103,14 @@ func (a *App) resolveRebase(ctx context.Context, rootDir, tool string) error {
 		err := a.Operations.RebaseContinue(ctx, rootDir)
 		if err == nil {
 			// Rebase successfully completed
-			a.UI.Log("Rebase completed")
+			a.Logger.Log("Rebase completed")
 			return nil
 		}
 
 		// Check if rebase is still active due to conflicts on subsequent commits
 		op, active := a.Inspector.ActiveOperation(ctx, rootDir)
 		if active && op == "rebase" {
-			a.UI.Log("Conflicts encountered on subsequent commit in rebase series")
+			a.Logger.Log("Conflicts encountered on subsequent commit in rebase series")
 			continue
 		}
 

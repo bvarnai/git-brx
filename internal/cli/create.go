@@ -65,31 +65,34 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 		return err
 	}
 
+	a.Logger.Debug("Repository root: %s", rootDir)
+	a.Logger.Debug("Target branch to create: %s (offline=%v, dryRun=%v)", targetBranch, opts.Offline, a.Opts.DryRun)
+
 	// 2. Local Branch Collision Check
 	localExists, _, _ := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
 	if localExists {
-		a.UI.Log("Branch '%s' found (local)", targetBranch)
-		a.UI.Hint("To select this branch, use 'git-brx select %s' instead", targetBranch)
+		a.Logger.Log("Branch '%s' found (local)", targetBranch)
+		a.Logger.Hint("To select this branch, use 'git-brx select %s' instead", targetBranch)
 		return nil
 	}
 
 	// 3. Remote Branch Collision Check (Online Mode)
 	hasOrigin, originURL, _ := a.Inspector.HasOrigin(ctx, rootDir)
 	if !opts.Offline && hasOrigin {
-		a.UI.Log("Checking for existing branches (remote)")
+		a.Logger.Log("Checking for existing branches (remote)")
 		remoteExists, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, targetBranch)
 		if err != nil {
 			return domain.NewError(domain.ExitPreconditionRemote, "Unable to reach remote").
 				WithHint("Try --offline if working without network access")
 		}
 		if remoteExists {
-			a.UI.Log("Branch '%s' found (remote)", targetBranch)
-			a.UI.Hint("To select this branch, use 'git-brx select %s' instead", targetBranch)
+			a.Logger.Log("Branch '%s' found (remote)", targetBranch)
+			a.Logger.Hint("To select this branch, use 'git-brx select %s' instead", targetBranch)
 			return nil
 		}
-		a.UI.Log("No branch '%s' found (remote)", targetBranch)
+		a.Logger.Log("No branch '%s' found (remote)", targetBranch)
 	} else if opts.Offline {
-		a.UI.Log("Offline mode selected (git remote checks skipped...)")
+		a.Logger.Log("Offline mode selected (git remote checks skipped...)")
 	}
 
 	// 4. Configuration & Template Matching
@@ -193,58 +196,58 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 			if issue.Title != "" {
 				prefix := fmt.Sprintf("Issue #%s: ", issue.Key)
 				indent := strings.Repeat(" ", len(prefix))
-				for _, line := range a.UI.WrapText(prefix, indent, issue.Title, 0) {
-					a.UI.Log("%s", line)
+				for _, line := range a.Logger.WrapText(prefix, indent, issue.Title, 0) {
+					a.Logger.Log("%s", line)
 				}
 			} else {
-				a.UI.Log("Issue #%s", issue.Key)
+				a.Logger.Log("Issue #%s", issue.Key)
 			}
-			a.UI.Log("  Type:     %s", issue.Type)
-			a.UI.Log("  Status:   %s", issue.Status)
-			a.UI.Log("  Assignee: %s", assignee)
+			a.Logger.Log("  Type:     %s", issue.Type)
+			a.Logger.Log("  Status:   %s", issue.Status)
+			a.Logger.Log("  Assignee: %s", assignee)
 			if len(issue.Components) > 0 {
 				prefix := "  Labels:   "
 				indent := "            "
 				labelsStr := strings.Join(issue.Components, ", ")
-				for _, line := range a.UI.WrapText(prefix, indent, labelsStr, 0) {
-					a.UI.Log("%s", line)
+				for _, line := range a.Logger.WrapText(prefix, indent, labelsStr, 0) {
+					a.Logger.Log("%s", line)
 				}
 			}
 			if issue.URL != "" {
-				a.UI.Log("  URL:      %s", a.UI.Hyperlink(issue.URL, issue.URL))
+				a.Logger.Log("  URL:      %s", a.Logger.Hyperlink(issue.URL, issue.URL))
 			}
 
 			// Warn if the issue is closed or resolved
 			st := strings.ToLower(strings.TrimSpace(issue.Status))
 			if st == "closed" || st == "resolved" || st == "done" || st == "completed" {
-				a.UI.Warn("Issue #%s is currently marked as '%s'", issue.Key, issue.Status)
+				a.Logger.Warn("Issue #%s is currently marked as '%s'", issue.Key, issue.Status)
 			}
 
 			// Confirmation prompt unless --yes
 			if !opts.Yes {
 				prompt := fmt.Sprintf("Create branch '%s' [Y/n]?", targetBranch)
-				confirmed, err := a.UI.Confirm(prompt)
+				confirmed, err := a.Logger.Confirm(prompt)
 				if err != nil || !confirmed {
 					return domain.NewError(domain.ExitUserAborted, "Aborted")
 				}
 			}
 		}
 	} else {
-		a.UI.Log("Offline mode selected (issue tracker checks skipped...)")
+		a.Logger.Log("Offline mode selected (issue tracker checks skipped...)")
 	}
 
 	// 6. Branch Provisioning
 	if a.Opts.DryRun {
-		a.UI.Log("Would create branch '%s'", targetBranch)
+		a.Logger.Log("Would create branch '%s'", targetBranch)
 		return nil
 	}
 
-	a.UI.Log("Creating branch '%s'", targetBranch)
+	a.Logger.Log("Creating branch '%s'", targetBranch)
 	if err := a.Operations.CreateAndCheckout(ctx, rootDir, targetBranch); err != nil {
 		return domain.WrapError(domain.ExitGeneralError, err, "Failed to create branch '%s'", targetBranch)
 	}
 
-	a.UI.Hint("Use 'git-brx publish' to publish your new branch")
+	a.Logger.Hint("Use 'git-brx publish' to publish your new branch")
 	return nil
 }
 

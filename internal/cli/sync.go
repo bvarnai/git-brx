@@ -64,6 +64,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	// Invariant checks
 	if err := checks.NotShallow(ctx, a.Inspector, rootDir); err != nil {
@@ -102,11 +103,12 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 		}
 		isDefaultBase = true
 	}
+	a.Logger.Debug("Sync configuration: branch=%s, base=%s, strategy=%s", currBranch.Name, baseBranch, strategy)
 
 	if isDefaultBase {
-		a.UI.Log("Syncing '%s' with '%s' base branch by default (strategy: %s)", currBranch.Name, baseBranch, strategy)
+		a.Logger.Log("Syncing '%s' with '%s' base branch by default (strategy: %s)", currBranch.Name, baseBranch, strategy)
 	} else {
-		a.UI.Log("Syncing '%s' with '%s' (strategy: %s)", currBranch.Name, baseBranch, strategy)
+		a.Logger.Log("Syncing '%s' with '%s' (strategy: %s)", currBranch.Name, baseBranch, strategy)
 	}
 
 	if currBranch.Name == baseBranch {
@@ -131,6 +133,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 		if remoteBaseExists {
 			delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, baseBranch, "origin/"+baseBranch)
 			if deltaErr == nil && delta != nil {
+				a.Logger.Debug("Base branch delta against origin/%s: ahead=%d, behind=%d", baseBranch, delta.AheadCount, delta.BehindCount)
 				if delta.AheadCount > 0 {
 					return domain.NewError(domain.ExitConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
 						WithHint("Switch to '%s' and run 'git-brx update' first", baseBranch)
@@ -147,12 +150,12 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 					}
 
 					if a.Opts.DryRun {
-						a.UI.Log("Would fast-forward local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
+						a.Logger.Log("Would fast-forward local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
 					} else {
 						if err := a.Operations.FetchRef(ctx, rootDir, "origin", fmt.Sprintf("%s:%s", baseBranch, baseBranch)); err != nil {
 							return domain.WrapError(domain.ExitConflict, err, "Failed to fast-forward local base branch '%s'", baseBranch)
 						}
-						a.UI.Log("Fast-forwarded local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
+						a.Logger.Log("Fast-forwarded local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
 					}
 				}
 			}
@@ -170,9 +173,9 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 				rebaseArgs = append(rebaseArgs, "--interactive")
 			}
 			rebaseArgs = append(rebaseArgs, baseBranch)
-			a.UI.Log("Would execute: %s", strings.Join(rebaseArgs, " "))
+			a.Logger.Log("Would execute: %s", strings.Join(rebaseArgs, " "))
 		} else {
-			a.UI.Log("Would execute: git merge -m \"Merge branch '%s' into '%s'\" %s", baseBranch, currBranch.Name, baseBranch)
+			a.Logger.Log("Would execute: git merge -m \"Merge branch '%s' into '%s'\" %s", baseBranch, currBranch.Name, baseBranch)
 		}
 		return nil
 	}
@@ -185,9 +188,9 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 		}
 		if strings.Contains(strings.ToLower(out), "up to date") {
-			a.UI.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, baseBranch)
+			a.Logger.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, baseBranch)
 		} else {
-			a.UI.Log("Successfully rebased '%s' onto '%s'", currBranch.Name, baseBranch)
+			a.Logger.Log("Successfully rebased '%s' onto '%s'", currBranch.Name, baseBranch)
 		}
 	} else {
 		mergeMsg := fmt.Sprintf("Merge branch '%s' into '%s'", baseBranch, currBranch.Name)
@@ -197,9 +200,9 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 		}
 		if strings.Contains(strings.ToLower(out), "already up to date") {
-			a.UI.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, baseBranch)
+			a.Logger.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, baseBranch)
 		} else {
-			a.UI.Log("Successfully merged '%s' into '%s'", baseBranch, currBranch.Name)
+			a.Logger.Log("Successfully merged '%s' into '%s'", baseBranch, currBranch.Name)
 		}
 	}
 

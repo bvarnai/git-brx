@@ -6,15 +6,16 @@ import "fmt"
 type ExitCode int
 
 const (
-	ExitSuccess            ExitCode = 0 // Command completed cleanly
-	ExitGeneralError       ExitCode = 1 // Unhandled runtime error
-	ExitUsageError         ExitCode = 2 // Command-line syntax or flag error
-	ExitPreconditionRepo   ExitCode = 3 // Git repository precondition failure
-	ExitPreconditionRemote ExitCode = 4 // Remote/network precondition failure
-	ExitConflict           ExitCode = 5 // Git state or merge conflict encountered
-	ExitAPIError           ExitCode = 6 // External service/API failure (JIRA/Bitbucket)
-	ExitUserAborted        ExitCode = 7 // User aborted or canceled confirmation
-	ExitConfigError        ExitCode = 8 // Configuration missing or schema validation error
+	ExitSuccess            ExitCode = 0   // Command completed cleanly
+	ExitGeneralError       ExitCode = 1   // Unhandled runtime error
+	ExitUsageError         ExitCode = 2   // Command-line syntax or flag error
+	ExitPreconditionRepo   ExitCode = 3   // Git repository precondition failure
+	ExitPreconditionRemote ExitCode = 4   // Remote/network precondition failure
+	ExitConflict           ExitCode = 5   // Git state or merge conflict encountered
+	ExitAPIError           ExitCode = 6   // External service/API failure (JIRA/Bitbucket)
+	ExitUserAborted        ExitCode = 7   // User aborted or canceled confirmation
+	ExitConfigError        ExitCode = 8   // Configuration missing or schema validation error
+	ExitInterrupted        ExitCode = 130 // Process interrupted (SIGINT / SIGTERM)
 )
 
 // AppError is an error associated with a structured ExitCode.

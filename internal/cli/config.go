@@ -54,6 +54,7 @@ func (a *App) runConfig(ctx context.Context, opts ConfigOptions, args []string) 
 			originURL = url
 		}
 	}
+	a.Logger.Debug("Inspecting configuration for targetDir=%s (origin=%s, sourcesOnly=%v)", targetDir, originURL, opts.Sources)
 
 	report, err := config.Inspect(targetDir, originURL)
 	if err != nil {
@@ -65,6 +66,6 @@ func (a *App) runConfig(ctx context.Context, opts ConfigOptions, args []string) 
 		return domain.WrapError(domain.ExitGeneralError, err, "failed to format configuration report")
 	}
 
-	a.UI.Out("%s", strings.TrimRight(out, "\n"))
+	a.Logger.Out("%s", strings.TrimRight(out, "\n"))
 	return nil
 }

@@ -138,13 +138,13 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 			if err != nil {
 				var appErr *domain.AppError
 				if errors.As(err, &appErr) {
-					app.UI.Error("%s", appErr.Message)
+					app.Logger.Error("%s", appErr.Message)
 					if appErr.Hint != "" {
-						app.UI.Hint("%s", appErr.Hint)
+						app.Logger.Hint("%s", appErr.Hint)
 					}
 					code = int(appErr.Code)
 				} else {
-					app.UI.Error("%v", err)
+					app.Logger.Error("%v", err)
 					code = int(domain.ExitUsageError)
 				}
 			}

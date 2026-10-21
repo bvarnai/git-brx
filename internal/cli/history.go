@@ -69,6 +69,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	if err := checks.HasCommits(ctx, a.Inspector, rootDir); err != nil {
 		return err
@@ -98,7 +99,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 		logArgs = append(logArgs, "-p")
 	}
 
-	if !a.UI.Color {
+	if !a.Logger.UseColor() {
 		logArgs = append(logArgs, "--no-color")
 	}
 
@@ -157,7 +158,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 			} else if currBranch.Name != baseBranch {
 				logArgs = append(logArgs, fmt.Sprintf("%s..%s", baseBranch, currBranch.Name))
 			} else {
-				a.UI.Log("You are on base branch '%s'; there is no topic branch delta to display", baseBranch)
+				a.Logger.Log("You are on base branch '%s'; there is no topic branch delta to display", baseBranch)
 				return nil
 			}
 		}
@@ -171,14 +172,16 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 		}
 	}
 
-	cw := &countingWriter{writer: a.UI.Stdout}
-	err = a.Runner.RunStream(ctx, workDir, cw, a.UI.Stderr, nil, logArgs...)
+	a.Logger.Debug("History command: git %s", strings.Join(logArgs, " "))
+
+	cw := &countingWriter{writer: a.Logger.Stdout()}
+	err = a.Runner.RunStream(ctx, workDir, cw, a.Logger.Stderr(), nil, logArgs...)
 	if err != nil {
 		return domain.WrapError(domain.ExitGeneralError, err, "Failed to retrieve commit history")
 	}
 
 	if cw.bytesWritten == 0 {
-		a.UI.Log("No commits found matching the specified criteria")
+		a.Logger.Log("No commits found matching the specified criteria")
 	}
 
 	return nil

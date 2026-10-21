@@ -65,9 +65,9 @@ func Get() Info {
 	}
 }
 
-// String formats the version info as human- and machine-readable text.
+// String formats the version info per docs/spec/global.md:
+// "git-brx version <semver> (<commit> <os>/<arch>)"
 func String() string {
 	info := Get()
-	return fmt.Sprintf("git-brx version %s (commit: %s, built at: %s, %s, %s)",
-		info.Version, info.Commit, info.Date, info.GoVersion, info.Platform)
+	return fmt.Sprintf("git-brx version %s (%s %s)", info.Version, info.Commit, info.Platform)
 }

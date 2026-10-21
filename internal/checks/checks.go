@@ -2,6 +2,7 @@ package checks
 
 import (
 	"context"
+	"errors"
 
 	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/git"
@@ -9,8 +10,14 @@ import (
 
 // InsideWorkTree ensures the directory is inside a valid Git work tree and returns its root path.
 func InsideWorkTree(ctx context.Context, inspector *git.Inspector, dir string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	root, err := inspector.RepoRoot(ctx, dir)
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) {
+			return "", context.Canceled
+		}
 		return "", domain.NewError(domain.ExitPreconditionRepo, "Not a git repository")
 	}
 	return root, nil

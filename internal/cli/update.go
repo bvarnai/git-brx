@@ -50,6 +50,7 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	if err := checks.NoActiveOperation(ctx, a.Inspector, rootDir); err != nil {
 		return err
@@ -72,6 +73,7 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 	}
 
 	remoteRef := "origin/" + currBranch.Name
+	a.Logger.Debug("Updating branch %s against remote tracking ref %s (autostash=%v)", currBranch.Name, remoteRef, opts.Autostash)
 
 	// Dry run mode
 	if a.Opts.DryRun {
@@ -79,7 +81,7 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 		if opts.Autostash {
 			cmdStr = fmt.Sprintf("git rebase --autostash %s", remoteRef)
 		}
-		a.UI.Log("Would fetch 'origin/%s' and execute: %s", currBranch.Name, cmdStr)
+		a.Logger.Log("Would fetch 'origin/%s' and execute: %s", currBranch.Name, cmdStr)
 		return nil
 	}
 
@@ -89,9 +91,12 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 	}
 
 	delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, currBranch.Name, remoteRef)
-	if deltaErr == nil && delta != nil && delta.BehindCount == 0 {
-		a.UI.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, remoteRef)
-		return nil
+	if deltaErr == nil && delta != nil {
+		a.Logger.Debug("Branch delta against %s: ahead=%d, behind=%d", remoteRef, delta.AheadCount, delta.BehindCount)
+		if delta.BehindCount == 0 {
+			a.Logger.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, remoteRef)
+			return nil
+		}
 	}
 
 	// Rebase onto remote tracking ref
@@ -109,12 +114,12 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 			commitUnit = "commit"
 		}
 		if delta.AheadCount == 0 {
-			a.UI.Log("Fast-forwarded '%s' to match '%s' (%d new %s)", currBranch.Name, remoteRef, delta.BehindCount, commitUnit)
+			a.Logger.Log("Fast-forwarded '%s' to match '%s' (%d new %s)", currBranch.Name, remoteRef, delta.BehindCount, commitUnit)
 		} else {
-			a.UI.Log("Rebased '%s' onto '%s' (%d new %s)", currBranch.Name, remoteRef, delta.BehindCount, commitUnit)
+			a.Logger.Log("Rebased '%s' onto '%s' (%d new %s)", currBranch.Name, remoteRef, delta.BehindCount, commitUnit)
 		}
 	} else {
-		a.UI.Log("Current branch '%s' is up to date", currBranch.Name)
+		a.Logger.Log("Current branch '%s' is up to date", currBranch.Name)
 	}
 
 	return nil

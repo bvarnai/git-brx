@@ -57,6 +57,7 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	if err := checks.HasCommits(ctx, a.Inspector, rootDir); err != nil {
 		return err
@@ -115,6 +116,7 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 		targetBranch = currBranch.Name
 		shouldSwitch = true
 	}
+	a.Logger.Debug("Target branch to delete: %s (shouldSwitch=%v, force=%v)", targetBranch, shouldSwitch, opts.Force)
 
 	if !opts.Force {
 		existsOnServer, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, targetBranch)
@@ -122,7 +124,7 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 			return domain.WrapError(domain.ExitPreconditionRemote, err, "Unable to reach remote; are you offline?")
 		}
 		if existsOnServer {
-			a.UI.Log("Branch '%s' found on remote origin", targetBranch)
+			a.Logger.Log("Branch '%s' found on remote origin", targetBranch)
 
 			// Try SCM diagnostic lookup if configured
 			if scmErr := a.checkSCMPullRequestState(ctx, rootDir, targetBranch); scmErr != nil {
@@ -141,10 +143,10 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 
 	if a.Opts.DryRun {
 		if shouldSwitch {
-			a.UI.Log("Would checkout branch '%s'", baseBranch)
+			a.Logger.Log("Would checkout branch '%s'", baseBranch)
 		}
-		a.UI.Log("Would delete local branch '%s'", targetBranch)
-		a.UI.Log("Would prune stale tracking references from origin")
+		a.Logger.Log("Would delete local branch '%s'", targetBranch)
+		a.Logger.Log("Would prune stale tracking references from origin")
 		return nil
 	}
 
@@ -162,9 +164,9 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 
 	_, _ = a.Runner.Run(ctx, rootDir, "remote", "prune", "origin")
 
-	a.UI.Log("Deleted local branch '%s' and pruned origin", targetBranch)
+	a.Logger.Log("Deleted local branch '%s' and pruned origin", targetBranch)
 	if shouldSwitch {
-		a.UI.Hint("Your local '%s' may not be up-to-date. Use 'git-brx update' to update changes", baseBranch)
+		a.Logger.Hint("Your local '%s' may not be up-to-date. Use 'git-brx update' to update changes", baseBranch)
 	}
 
 	return nil

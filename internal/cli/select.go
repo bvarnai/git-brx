@@ -50,6 +50,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 	if err != nil {
 		return err
 	}
+	a.Logger.Debug("Repository root: %s", rootDir)
 
 	// Preflight checks: ensure no active operations and detached HEAD won't orphan commits
 	if err := checks.NoActiveOperation(ctx, a.Inspector, rootDir); err != nil {
@@ -72,8 +73,9 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 		targetBranch = args[0]
 	} else {
 		targetBranch = a.Inspector.DefaultBranch(ctx, rootDir)
-		a.UI.Log("Selecting '%s' branch by default", targetBranch)
+		a.Logger.Log("Selecting '%s' branch by default", targetBranch)
 	}
+	a.Logger.Debug("Branch switch: prev=%s, target=%s, dirty=%v", prevBranch, targetBranch, wasDirty)
 
 	// Handle case where user is already on the target branch
 	if prevBranch != "" && prevBranch == targetBranch {
@@ -82,7 +84,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 				_ = a.Operations.Fetch(ctx, rootDir, "origin")
 			}
 		}
-		a.UI.Log("Already on '%s'", targetBranch)
+		a.Logger.Log("Already on '%s'", targetBranch)
 		a.hintUpstreamSync(ctx, rootDir, targetBranch)
 		return nil
 	}
@@ -95,7 +97,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 			if fetchErr != nil {
 				localExists, _, _ := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
 				if localExists {
-					a.UI.Warn("Unable to reach remote; falling back to local references")
+					a.Logger.Warn("Unable to reach remote; falling back to local references")
 				} else {
 					return domain.NewError(domain.ExitPreconditionRemote, "Select failed: unable to fetch from origin")
 				}
@@ -104,13 +106,14 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 	}
 
 	localExists, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
+	a.Logger.Debug("Target branch %s presence: local=%v, remote=%v", targetBranch, localExists, remoteExists)
 
 	// Dry run mode
 	if a.Opts.DryRun {
 		if !localExists && !remoteExists {
 			return a.branchNotFoundError(ctx, rootDir, targetBranch)
 		}
-		a.UI.Log("Would checkout branch '%s'", targetBranch)
+		a.Logger.Log("Would checkout branch '%s'", targetBranch)
 		return nil
 	}
 
@@ -135,8 +138,8 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 
 func (a *App) warnDirtyWorktree(wasDirty bool, prevBranch, newBranch string) {
 	if wasDirty && prevBranch != "" && newBranch != "" && prevBranch != newBranch {
-		a.UI.Warn("You have uncommitted local changes that were carried over to '%s'.", newBranch)
-		a.UI.Hint("If this was unintentional, run 'git-brx select %s' and commit or stash first.", prevBranch)
+		a.Logger.Warn("You have uncommitted local changes that were carried over to '%s'.", newBranch)
+		a.Logger.Hint("If this was unintentional, run 'git-brx select %s' and commit or stash first.", prevBranch)
 	}
 }
 
@@ -150,9 +153,9 @@ func (a *App) hintUpstreamSync(ctx context.Context, rootDir, branch string) {
 	if err == nil && delta != nil && delta.BehindCount > 0 {
 		isBase := branch == "main" || branch == "master" || branch == a.Inspector.DefaultBranch(ctx, rootDir)
 		if isBase {
-			a.UI.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx update' to update.", branch, delta.BehindCount)
+			a.Logger.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx update' to update.", branch, delta.BehindCount)
 		} else {
-			a.UI.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx sync' to update.", branch, delta.BehindCount)
+			a.Logger.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx sync' to update.", branch, delta.BehindCount)
 		}
 	}
 }
