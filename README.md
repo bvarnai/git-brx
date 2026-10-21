@@ -8,7 +8,7 @@
 
 [![CI](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/bvarnai/git-brx?color=blue)](https://github.com/bvarnai/git-brx/releases)
-[![Scoop](https://img.shields.io/badge/Scoop-bvarnai--bucket-orange.svg)](https://github.com/bvarnai/scoop-bucket)
+[![Scoop](https://img.shields.io/badge/Scoop-bvarnai-orange.svg)](https://github.com/bvarnai/scoop-bucket)
 [![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?style=flat&logo=go)](go.mod)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/bvarnai/git-brx/releases)
@@ -118,6 +118,7 @@ When installed in your `PATH`, `git-brx` is automatically available as a native 
 | [`git brx history`](docs/user-guide/command-reference.md#git-brx-history) | Renders a formatted commit graph (with `--topic` delta filtering). |
 | [`git brx name`](docs/user-guide/command-reference.md#git-brx-name) | Prints the active branch name (plumbing-safe for scripts). |
 | [`git brx config`](docs/user-guide/command-reference.md#git-brx-config) | Displays the effective cascading configuration and source provenance in YAML format. |
+| [`git brx completion`](docs/spec/completion.md) | Generates shell autocompletion script (`bash`, `zsh`, `fish`, `powershell`). |
 
 All commands support `--help`, `-h`, and `--dry-run` (`-n`) for safe previewing.
 
@@ -141,17 +142,26 @@ See the [Supported platforms & integration matrix](docs/user-guide/multi-platfor
 
 ## Installation
 
-### Pre-built binaries
-Download the latest release for Linux, macOS, or Windows from the [Releases](https://github.com/bvarnai/git-brx/releases) page. Extract and place `git-brx` in your `PATH` (e.g. `/usr/local/bin` or `~/bin`).
+### Precompiled binary (Linux / macOS)
+Download and extract the latest release directly to `/usr/local/bin`:
+```bash
+curl -sSL https://github.com/bvarnai/git-brx/releases/latest/download/git-brx_linux_amd64.tar.gz | tar -xz
+sudo mv git-brx /usr/local/bin/
+```
 
-### Windows (Scoop)
+### Via Scoop (Windows)
 You can install `git-brx` on Windows via [Scoop](https://scoop.sh/):
 ```powershell
-scoop bucket add bvarnai-bucket https://github.com/bvarnai/scoop-bucket
+scoop bucket add bvarnai https://github.com/bvarnai/scoop-bucket
 scoop install git-brx
 ```
 
-### From source (Go >= 1.22)
+### Via Go install (Go 1.22+)
+```bash
+go install github.com/bvarnai/git-brx/cmd/git-brx@latest
+```
+
+### From source
 ```bash
 git clone https://github.com/bvarnai/git-brx.git
 cd git-brx
@@ -161,7 +171,7 @@ go build -o /usr/local/bin/git-brx ./cmd/git-brx
 Verify your installation:
 ```bash
 git brx --version
-# git-brx version v1.0.0 (commit: abc1234, built at: 2026-10-09, linux/amd64)
+# git-brx version v1.2.0 (86d244b linux/amd64)
 ```
 
 ---
@@ -202,6 +212,14 @@ Explore the complete user guide and technical manuals:
 - 🌐 **[Supported platforms & matrix](docs/user-guide/multi-platform.md)**: Compatibility matrix and dedicated guides for [GitHub](docs/user-guide/platforms/github.md) and [Atlassian](docs/user-guide/platforms/atlassian.md).
 - 📚 **[Command reference](docs/user-guide/command-reference.md)**: Comprehensive reference for all commands and flags.
 - 💡 **[Troubleshooting & FAQ](docs/user-guide/troubleshooting-faq.md)**: Common questions and diagnostic solutions.
+- 🤖 **[AI Assistant Rule Template](templates/rules/git-brx.md)**: Drop-in agent rule enforcing `git-brx` workflow policies.
+- 🧠 **[Antigravity / Agent Skill](templates/skills/git-brx/SKILL.md)**: Structured skill for coding assistants and agents.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for our code standards, test guidelines, and branch workflow. All technical specifications reside in [`docs/spec/`](docs/spec/global.md).
 
 ---
 
