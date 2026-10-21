@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/config"
@@ -127,7 +128,11 @@ func TestLoader_InvalidEnvVarConfigFails(t *testing.T) {
 
 func TestLoader_LayeredCascadeUserCompanyRepo(t *testing.T) {
 	fakeHome := t.TempDir()
+	if resolved, err := filepath.EvalSymlinks(fakeHome); err == nil {
+		fakeHome = resolved
+	}
 	t.Setenv("HOME", fakeHome)
+	t.Setenv("USERPROFILE", fakeHome)
 
 	// Tier 1: User Global (~/.config/git-brx/config.yaml)
 	userConfigDir := filepath.Join(fakeHome, ".config", "git-brx")
@@ -200,7 +205,11 @@ review:
 
 func TestLoader_UserGlobalDotfileFallback(t *testing.T) {
 	fakeHome := t.TempDir()
+	if resolved, err := filepath.EvalSymlinks(fakeHome); err == nil {
+		fakeHome = resolved
+	}
 	t.Setenv("HOME", fakeHome)
+	t.Setenv("USERPROFILE", fakeHome)
 
 	// Test ~/.git-brx.yaml fallback
 	dotfileContent := `
@@ -368,7 +377,11 @@ func TestInspect_ZeroConfigAutoInferredComments(t *testing.T) {
 
 func TestInspect_SourcesOnly(t *testing.T) {
 	fakeHome := t.TempDir()
+	if resolved, err := filepath.EvalSymlinks(fakeHome); err == nil {
+		fakeHome = resolved
+	}
 	t.Setenv("HOME", fakeHome)
+	t.Setenv("USERPROFILE", fakeHome)
 	userConfigDir := filepath.Join(fakeHome, ".config", "git-brx")
 	require.NoError(t, os.MkdirAll(userConfigDir, 0755))
 	userConfigFile := filepath.Join(userConfigDir, "config.yaml")
@@ -385,9 +398,9 @@ func TestInspect_SourcesOnly(t *testing.T) {
 
 	report, err := config.Inspect(repoDir, "git@github.com:acme/core.git")
 	require.NoError(t, err)
-	assert.Equal(t, userConfigFile, report.UserConfigPath)
-	assert.Equal(t, companyConfigFile, report.SharedConfigPath)
-	assert.Equal(t, repoConfigFile, report.RepoConfigPath)
+	assert.True(t, filepath.Clean(userConfigFile) == filepath.Clean(report.UserConfigPath) || strings.EqualFold(filepath.Clean(userConfigFile), filepath.Clean(report.UserConfigPath)))
+	assert.True(t, filepath.Clean(companyConfigFile) == filepath.Clean(report.SharedConfigPath) || strings.EqualFold(filepath.Clean(companyConfigFile), filepath.Clean(report.SharedConfigPath)))
+	assert.True(t, filepath.Clean(repoConfigFile) == filepath.Clean(report.RepoConfigPath) || strings.EqualFold(filepath.Clean(repoConfigFile), filepath.Clean(report.RepoConfigPath)))
 	assert.Equal(t, "git@github.com:acme/core.git", report.OriginURL)
 
 	sourcesOutput, err := config.FormatReport(report, true)

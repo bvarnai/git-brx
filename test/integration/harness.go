@@ -21,6 +21,9 @@ type Harness struct {
 func NewHarness(t *testing.T) *Harness {
 	t.Helper()
 	repoDir := t.TempDir()
+	if resolved, err := filepath.EvalSymlinks(repoDir); err == nil {
+		repoDir = resolved
+	}
 
 	h := &Harness{
 		T:       t,
@@ -76,6 +79,9 @@ func (h *Harness) CommitFile(relPath, content, commitMsg string) {
 func (h *Harness) SetupRemoteBare() string {
 	h.T.Helper()
 	remoteDir := h.T.TempDir()
+	if resolved, err := filepath.EvalSymlinks(remoteDir); err == nil {
+		remoteDir = resolved
+	}
 
 	cmd := exec.Command("git", "init", "--bare", remoteDir)
 	cmd.Env = append(os.Environ(), "LC_ALL=C")
@@ -102,7 +108,11 @@ func (h *Harness) CurrentBranch() string {
 // CloneHarness provisions a second clone from a remote URL.
 func CloneHarness(t *testing.T, remoteURL string) *Harness {
 	t.Helper()
-	cloneDir := filepath.Join(t.TempDir(), "clone")
+	tempDir := t.TempDir()
+	if resolved, err := filepath.EvalSymlinks(tempDir); err == nil {
+		tempDir = resolved
+	}
+	cloneDir := filepath.Join(tempDir, "clone")
 
 	cmd := exec.Command("git", "clone", remoteURL, cloneDir)
 	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
