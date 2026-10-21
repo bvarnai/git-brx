@@ -86,7 +86,7 @@
 | `7` | User aborted creation during interactive confirmation. | `[git-brx] Aborted` | None. |
 | `8` | Configuration file missing or branch name fails regex naming contract. | `[git-brx] Error: Configuration file not found` / `[git-brx] Error: Branch name doesn't match pattern` | None. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Credential Leak via Process Table:** In legacy `create.sh`, the script invoked Groovy by passing base64-encoded credentials on the command-line: `groovy -cp ... create.groovy "$1" "$offline" "$TOOLS_CREDENTIALS" ...`. Any local user could inspect these credentials via `ps aux`. The Go binary eliminates this by keeping credentials entirely in-memory within the single binary process.
-- **Pre-existing Branch Exit Code Convention:** When the branch already exists locally or remotely, legacy exited with status `0` while outputting a hint to use `select`. Modern Go preserves this user-friendly idempotent pattern.
-- **Subdirectory Invocation Failure:** Legacy `create.sh` computed project configuration via `pwd | cut -d _ -f 1`. Invoking the command from a subfolder caused config loading to fail. Modern Go dynamically locates the repository root and project configuration.
+## 5. Edge Cases & Behavioral Notes
+- **In-Memory Credential Safety:** Tracker credentials are kept strictly in-memory within the process and never passed via command-line arguments or process environments, preventing exposure via `ps aux` or process table inspection.
+- **Pre-existing Branch Idempotency:** When the branch already exists locally or remotely, `create` outputs a hint to use `select` and exits cleanly with status `0`.
+- **Subdirectory Invocation Support:** Configuration loading and repository root resolution operate relative to the top-level repository root (`git rev-parse --show-toplevel`), allowing invocation from any working subdirectory.

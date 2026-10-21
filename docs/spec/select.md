@@ -73,10 +73,10 @@
 | `4` | Mandatory remote fetch failed and branch not found locally. | `[git-brx] Error: Select failed: unable to fetch from origin` | None. |
 | `5` | Active operation in progress, detached HEAD commit loss risk, or uncommitted collision. | `[git-brx] Error: Cannot switch branches during an active <op>` / `! You are on a detached HEAD...` | None. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Hard Dependency on Network (`git fetch --all`):** Legacy `select.sh` unconditionally executed `git fetch --all`. Modern Go spec introduces `--offline` and network failure fallbacks for local branches.
-- **In-Progress Operations Ignored:** Legacy `select.sh` had no precondition check against in-progress rebases, merges, cherry-picks, or reverts, allowing developers to switch branches and leave orphaned `.git/rebase-*` state behind. Modern spec enforces explicit checks.
-- **Silent Dirty Worktree Pollution:** Standard Git checkout silently carries uncommitted edits across branches if no direct file conflict exists. Modern Go spec emits a prominent warning to protect beginners from accidental commits into wrong branches.
-- **Detached HEAD Orphan Commits:** Switching away from detached HEAD with unreferenced commits leaves dangling commits. Modern Go spec blocks branch switching until the user saves their work into a named branch.
-- **Dynamic Default Branch Resolution:** Instead of hardcoding `master`, dynamically detects `main` or `master` or `origin/HEAD`.
-- **Fuzzy Typo Matching:** Typo in branch names suggests closest existing branch name.
+## 5. Edge Cases & Behavioral Notes
+- **Offline & Network Resiliency:** Supports `--offline` to switch between existing local branches without network roundtrips, and provides automatic graceful fallback when the remote is unreachable.
+- **In-Progress Operation Guards:** Inspects repository state before checkout to prevent switching branches during active rebases, merges, cherry-picks, or reverts.
+- **Dirty Worktree Warnings:** Emits clear warning diagnostics when uncommitted changes exist in the working directory during checkout to prevent accidental cross-branch edits.
+- **Detached HEAD Protection:** Prevents switching away from detached HEAD when unreferenced commits exist, prompting the user to preserve work in a named branch.
+- **Dynamic Default Branch Resolution:** Dynamically detects repository default branch (`main`, `master`, or `origin/HEAD`) rather than assuming hardcoded defaults.
+- **Fuzzy Branch Name Suggestions:** Suggests closest matching existing branch names when a typo occurs.

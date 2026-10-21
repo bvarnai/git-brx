@@ -60,7 +60,7 @@
 | `4` | Origin missing, unreachable, or branch not published on remote. | `[git-brx] Error: Your repository has no remote origin` / `[git-brx] Error: Branch not found on remote` | None. |
 | `5` | Active rebase/merge already in progress or conflicts hit during rebase. | `[git-brx] Error: You are in a middle of a rebase/merge` / `[git-brx] Error: Update failed due to conflicts` | Leave in conflicted rebase state for `resolve`. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Unpublished Branch Trap:** Legacy `update.sh` executed `git pull --rebase origin`. When invoked on a freshly created local branch that was never pushed, Git output confusing refspec errors. Modern spec explicitly verifies remote branch existence beforehand with an actionable hint to use `publish`.
-- **Implicit Upstream Rebase Assumption:** Legacy executed `git pull --rebase origin`, relying on Git's default upstream mapping or pulling HEAD refspec, which occasionally pulled from the remote's default branch rather than the tracking topic branch. Modern Go implementation explicitly targets `origin/<current_branch>`.
-- **Dirty Working Tree Conflicts:** Legacy offered no autostash option, causing `git pull --rebase` to fail destructively if local files were modified. The Go spec supports `--autostash` to safely preserve uncommitted edits.
+## 5. Edge Cases & Behavioral Notes
+- **Unpublished Branch Verification:** Verifies remote tracking branch existence before attempting rebase pull, emitting an actionable hint to run `publish` if the branch has not been pushed yet.
+- **Explicit Upstream Target Refspec:** Explicitly targets `origin/<current_branch>` during pull operations to prevent unintentional rebasing against default remote heads.
+- **Safe Working Tree Autostash:** Supports `--autostash` to automatically stash uncommitted changes before rebasing and re-apply them after completion.

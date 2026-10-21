@@ -97,10 +97,8 @@
 | `4` | Remote unreachable during remote existence check. | `[git-brx] Error: Unable to reach remote; are you offline?` | None. |
 | `5` | Switching to base branch failed or `git branch -D` failed. | `[git-brx] Error: Unable to switch to '<base_branch>' branch` | None. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Typo in Legacy Error Message:** In `legacy/delete.sh` line 34:
-  `branch::common::err "Unable to reach remote, are you offline? (gitish: 'git ls-remote origin -D ${GIT_PROMPT_BRANCH}' failed)"`
-  The string contains a phantom `-D` flag that does not exist in `git ls-remote`. Fixed in modern spec.
-- **Master Divergence After Deletion:** Legacy deletes the branch and switches to `master`, but does not pull latest `master` commits, leaving `master` out-of-date after a PR squash. The spec emits a clear hint to run `update`.
-- **Recursive Command Dispatch:** Legacy executed `git branch-select master` (invoking another shell script via Git alias) rather than invoking `git checkout master` directly. Modern Go calls internal Git checkout logic directly.
-- **SCM Pull Request Context:** Legacy script gave an unhelpful generic error if the remote branch still existed. Modern Go queries the SCM provider API (GitHub, Bitbucket) and advises whether the PR is already merged, still open, or closed, guiding the user to cleanly delete the remote branch or use `--force`.
+## 5. Edge Cases & Behavioral Notes
+- **Accurate Remote Verification:** Remote branch existence and accessibility are verified using standard `git ls-remote --heads origin <branch>`, emitting clean diagnostic messages if unreachable or offline.
+- **Default Branch Divergence Hint:** After deleting the topic branch and switching to default (`main` / `master`), `delete` emits a clear hint suggesting running `git-brx update` to fast-forward any newly squashed/merged remote commits.
+- **Direct Git Branch Switching:** Switching to the default branch is performed directly through internal Git operations rather than indirect command dispatch.
+- **SCM Pull Request Context Awareness:** If the remote branch still exists on the server, `delete` queries the SCM provider API (GitHub, Bitbucket) and advises whether the pull request is merged, still open, or closed, guiding the user to cleanly delete the remote branch or use `--force`.

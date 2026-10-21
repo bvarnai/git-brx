@@ -63,7 +63,7 @@
 | `4` | Origin missing or `origin/<branch>` does not exist. | `[git-brx] Error: Reset failed: remote reference 'origin/<branch>' does not exist` | None. |
 | `5` | `git merge --abort` or `git rebase --abort` failed. | `[git-brx] Error: Reset failed (git merge --abort failed)` | None. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Untracked File Persistence:** Legacy documentation states that `reset` "discards current working changes," but `git reset --hard` leaves untracked local files untouched. The Go specification introduces the `--clean` flag to optionally remove untracked artifacts.
-- **Unpublished Branch Crash:** Legacy `reset.sh` directly executed `git reset --hard origin/${BRANCH_NAME}` without first checking if the ref existed, producing a generic Git error. The Go spec adds a pre-check with a helpful suggestion to use `publish`.
-- **Subshell Nesting in Git Alias:** Legacy `install.sh` defined `branch-reset` as `!f() { ( $BRANCH_HOME/reset.sh $@ ); }; f`, invoking multiple nested subshells. Modern Go binary executes directly with zero subshell overhead.
+## 5. Edge Cases & Behavioral Notes
+- **Untracked File Management (`--clean`):** Standard `reset` restores tracked files via `git reset --hard`. To discard untracked working copy artifacts as well, the `--clean` flag may be explicitly passed (`git clean -fd`).
+- **Unpublished Branch Pre-Check:** Before attempting a hard reset against `origin/<branch>`, `reset` verifies the existence of the remote tracking branch and suggests running `publish` if it does not yet exist.
+- **Direct In-Process Execution:** Executes directly within the compiled binary without nested subshell invocations or wrapper script overhead.

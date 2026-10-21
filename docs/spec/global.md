@@ -5,24 +5,24 @@
 - **Binary Name:** `git-brx`
   - **Direct Invocation:** Executed directly from terminal or automation scripts as `git-brx <subcommand> [flags] [arguments]`.
   - **Git Plugin Dispatch:** Automatically available as a native Git subcommand `git brx <subcommand> [flags] [arguments]` whenever `git-brx` resides in the host `PATH` (utilizing Git's standard `git-<name>` binary execution resolution).
-  - **Legacy Alias Deprecation:** Replaces legacy standalone Git aliases (`branch-create`, `branch-publish`, `branch-sync`, etc.) with unified subcommand routing under `git-brx`.
+  - **Unified Subcommand Routing:** Provides cohesive subcommand routing under `git-brx` (e.g. `create`, `publish`, `sync`).
 
 ### Available Subcommands
 
-| Subcommand | Legacy Equivalent | Primary Purpose |
-| :--- | :--- | :--- |
-| `name` | `name.sh` | Prints the current active branch name. |
-| `history` | `history.sh` | Renders a formatted commit graph / DAG. |
-| `update` | `update.sh` | Pulls remote changes using rebase onto the local branch. |
-| `select` | `select.sh` | Fetches remotes and switches working tree to target branch (default: `main`). |
-| `sync` | `sync.sh` | Synchronizes branch with target base (rebase for issues, merge for features). |
-| `reset` | `reset.sh` | Aborts active merges/rebases and hard-resets working copy to remote tracking ref. |
-| `resolve` | `resolve.sh` | Launches interactive merge tool and continues in-flight rebase or merge. |
-| `create` | `create.sh` / `create.groovy` | Validates against issue tracker (JIRA) and provisions local topic branch. |
-| `publish` | `publish.sh` | Pushes branch to remote with lease and configures upstream tracking. |
-| `delete` | `delete.sh` | Validates remote branch deletion, switches to `main`, and deletes local branch. |
-| `review` | `review.sh` | Creates a pull request on configured SCM platform (Bitbucket, GitHub) via REST API with reviewer mapping. |
-| `config` | *N/A (Go native)* | Prints the effective resolved cascading configuration and source provenance in YAML format. |
+| Subcommand | Primary Purpose |
+| :--- | :--- |
+| `name` | Prints the current active branch name. |
+| `history` | Renders a formatted commit graph / DAG. |
+| `update` | Pulls remote changes using rebase onto the local branch. |
+| `select` | Fetches remotes and switches working tree to target branch (default: `main`). |
+| `sync` | Synchronizes branch with target base (rebase for issues, merge for features). |
+| `reset` | Aborts active merges/rebases and hard-resets working copy to remote tracking ref. |
+| `resolve` | Launches interactive merge tool and continues in-flight rebase or merge. |
+| `create` | Validates against issue tracker (JIRA) and provisions local topic branch. |
+| `publish` | Pushes branch to remote with lease and configures upstream tracking. |
+| `delete` | Validates remote branch deletion, switches to `main`, and deletes local branch. |
+| `review` | Creates a pull request on configured SCM platform (Bitbucket, GitHub) via REST API with reviewer mapping. |
+| `config` | Prints the effective resolved cascading configuration and source provenance in YAML format. |
 
 ### Global Flags
 
@@ -378,62 +378,39 @@ Structured schema parsed from YAML (`.git-brx.yaml` / `.git-brx/config.yaml`):
 
 ---
 
-## 6. Discrepancies, Anti-Patterns & Modernization Notes
+## 6. Architectural Principles & Operational Safeguards
 
-### Legacy Fragility & Anti-Patterns
+1. **In-Memory Concurrency & Zero Temp Files:**
+   - Execute `git rev-list --left-right --count <local>...<remote>` and parse the output directly from memory via standard io/buffer pipes.
+   - Zero temporary filesystem writes are performed, eliminating race conditions, file collision, and permission issues across multi-user or concurrent executions.
 
-1. **Shared `/tmp` Files & Concurrency Race Conditions:**
-   - *Legacy Flaw:* `common.sh` wrote upstream status deltas to hardcoded temporary files:
-     ```bash
-     git rev-list --left-right "${local_branch}...${remote_branch}" -- 2>/dev/null >/tmp/git_upstream_status_delta
-     echo "${local_branch}|${LEFT_AHEAD}|${remote_branch}|${RIGHT_AHEAD}" >/tmp/branch_delta
-     ```
-   - *Failure Mode:* Running multiple commands concurrently or having multi-user shared machines causes file collision, race conditions, permission denial, and data corruption.
-   - *Go Modernization:* Execute `git rev-list --left-right --count <local>...<remote>` and parse the output directly from memory via standard io/buffer pipes. Zero filesystem writes.
-
-2. **Fragile Working Directory & Project Detection:**
-   - *Legacy Flaw:* Project identity was computed by splitting the current working directory name:
-     ```bash
-     PROJECT=$(basename "$(pwd)" | cut -d _ -f 1)
-     BRANCH_CONFIGURATION_PATH="${ENV_ROOT}/../conf/${PROJECT}"
-     ```
-   - *Failure Mode:* If a developer invoked the tool from a subdirectory, or if their repository clone folder did not contain an underscore (`_`), project detection completely failed.
-   - *Go Modernization:* Always resolve the Git root dynamically via `git rev-parse --show-toplevel`. Resolve and layer project configuration through a cascading 4-tier hierarchy with selective scalar overwrites and deep map merging:
+2. **Dynamic Project & Root Resolution:**
+   - Always resolve the Git root dynamically via `git rev-parse --show-toplevel`.
+   - Resolve and layer project configuration through a cascading 4-tier hierarchy with selective scalar overwrites and deep map merging:
      1. Machine / User Global: `~/.config/git-brx/config.yaml`, `~/.git-brx.yaml` (base defaults).
      2. Shared Global: File path specified by `GIT_BRX_CONFIG` environment variable (shared standards overlay).
      3. Repository Local: `.git-brx.yaml`, `.git-brx.yml`, `.git-brx/config.yaml` in repo root (repository-specific overrides).
      4. Dynamic Zero-Config & Partial-Config Fallback: If no config file exists or `platform:` is omitted, auto-detect platform, owner/project, and repository slug directly from `remote.origin.url` (`github.com`, `gitlab.com`, Bitbucket). Setting `platform: none` explicitly opts out of platform presets.
 
-3. **Reliance on Hacked Git Prompt Scripts:**
-   - *Legacy Flaw:* `common.sh` sourced a modified version of `git-prompt.sh` that injected global Bash environment variables (`GIT_PROMPT_BRANCH`, `GIT_PROMPT_REBASE`, `GIT_PROMPT_MERGING`, `GIT_PROMPT_DETACHED`).
-   - *Failure Mode:* Slow prompt execution overhead, dependency on Git internal script conventions, inability to run outside Bash.
-   - *Go Modernization:* Inspect native Git plumbing and filesystem indicators:
+3. **Plumbing-Based Status Inspection:**
+   - Inspect native Git plumbing and filesystem indicators directly:
      - Branch name / detached state: `git symbolic-ref --short -q HEAD`.
      - In-flight rebase: Check existence of `.git/rebase-merge` or `.git/rebase-apply`.
      - In-flight merge: Check existence of `.git/MERGE_HEAD`.
 
-4. **Blind Staging Anti-Pattern in Conflict Resolution:**
-   - *Legacy Flaw:* In `resolve.sh`, the script executed:
-     ```bash
-     git mergetool --no-prompt
-     git add .
-     ```
-   - *Failure Mode:* `git add .` indiscriminately stages *all* files in the repository, including unrelated unstaged changes, editor temp files, and accidental modifications.
-   - *Go Modernization:* Query conflicted paths specifically via `git diff --name-only --diff-filter=U`. After running `mergetool`, verify each formerly conflicted file and stage *only* those specific resolved paths via `git add -- <paths...>`.
+4. **Targeted Conflict Resolution & Staging:**
+   - Query conflicted paths specifically via `git diff --name-only --diff-filter=U`.
+   - After running `mergetool`, verify each formerly conflicted file and stage *only* those specific resolved paths via `git add -- <paths...>`.
+   - Never run indiscriminate staging (`git add .`), preventing unrelated local edits or untracked temporary files from being unintentionally committed.
 
-5. **External Language & Tool Sprawl:**
-   - *Legacy Flaw:* A single workflow required Bash, Groovy, Java, Jansi JARs, and Windows `WinCreds.exe` calling Cygwin `cygpath`.
-   - *Failure Mode:* Extreme startup latency, complex installation steps, brittle environment variables (`BRANCH_HOME`, `ENV_ROOT`, `BASH_HOME`), cross-platform incompatibilities.
-   - *Go Modernization:* Compile to a single, self-contained static Go binary. Use Go standard library `net/http` with built-in connection pooling, TLS, and native JSON marshalling (`encoding/json`).
+5. **Self-Contained Single Binary Architecture:**
+   - Compile to a single, self-contained static Go binary with zero external script or runtime interpreter dependencies.
+   - Use Go standard library `net/http` with built-in connection pooling, TLS, and native JSON marshalling (`encoding/json`).
 
-6. **Credential Management Anti-Pattern:**
-   - *Legacy Flaw:* Invocations called external Windows Credential Manager CLI (`WinCreds`) with manual base64 decoding and console password prompting.
-   - *Go Modernization:* Integrate with native Git credential storage protocols (`git credential fill` / `approve` / `reject`). This honors the developer's existing Git credential helpers across Windows Credential Manager, macOS Keychain, and Linux Secret Service without proprietary CLI wrappers.
+6. **Native Git Credential Helper Integration:**
+   - Integrate directly with standard Git credential storage protocols (`git credential fill` / `approve` / `reject`).
+   - Honors the developer's existing Git credential helpers across Windows Credential Manager, macOS Keychain, and Linux Secret Service without proprietary CLI wrappers or plaintext process arguments.
 
-7. **Unquoted Bash Expansions in Git Aliases:**
-   - *Legacy Flaw:* Git aliases in `install.sh` and `config-example` used:
-     ```bash
-     git config --add alias.branch-publish "!f() { ( \$BRANCH_HOME/publish.sh \$@ ); }; f"
-     ```
-   - *Failure Mode:* `$@` without double quotes causes word splitting on branch names or arguments with spaces.
-   - *Go Modernization:* Native binary argument parsing via standard Go CLI packages with strict flag parsing.
+7. **Strict CLI Contracts & Argument Parsing:**
+   - Native binary argument parsing via Cobra with strict type, argument count, and flag validation.
+   - Keeps standard output machine-readable for automation while routing diagnostics to standard error.

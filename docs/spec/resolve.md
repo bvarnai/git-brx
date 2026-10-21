@@ -77,7 +77,7 @@
 | `3` | Outside repository. | `[git-brx] Error: Not a git repository` | None. |
 | `5` | Mergetool crashed or user failed to resolve conflicts, leaving unmerged files. | `[git-brx] Error: Conflicts remain unresolved; cannot continue` | Preserves in-flight conflict state. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Indiscriminate Staging (`git add .`):** Legacy `resolve.sh` ran `git add .`, which staged any untracked or unrelated files modified elsewhere in the repository. The Go specification isolates and stages *only* the specific files flagged as unmerged (`--diff-filter=U`).
-- **Commit Message Truncation:** Legacy script extracted the merge message with `line=$(head -n 1 .git/MERGE_MSG)` and committed with `-m "${line}"`, truncating multi-line merge details. Modern Go invokes `git commit --no-edit` to preserve the complete message payload.
-- **Infinite Rebase Loop Risk:** Legacy script executed `while ! git rebase --continue; do git mergetool --no-prompt; git add .; done`. If the user cancelled the mergetool or resolution failed, the loop ran indefinitely. Modern Go checks process exit status and aborts cleanly upon repeated failures.
+## 5. Edge Cases & Behavioral Notes
+- **Targeted Staging Isolation:** Identifies unmerged paths specifically using `git diff --name-only --diff-filter=U`. Only resolved paths that were genuinely in conflict are staged (`git add -- <paths...>`), preventing unrelated local edits from being swept in.
+- **Full Merge Message Preservation:** Completes active merges using `git commit --no-edit`, preserving the full original merge commit message payload.
+- **Deterministic Loop Termination:** Bounded loop execution during conflict continuation ensures that tool cancellation or non-zero mergetool exit terminates cleanly rather than entering infinite retry loops.

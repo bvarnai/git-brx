@@ -61,7 +61,7 @@
 | `3` | Shallow repository or detached HEAD. | `[git-brx] Error: You are in a shallow repository` / `[git-brx] Error: You are in detached HEAD state` | None. |
 | `4` | Push rejected by server (lease mismatch) or remote unreachable. | `[git-brx] Error: Publish rejected: remote has newer commits` / `[git-brx] Error: Publish failed` | None. |
 
-## 5. Discrepancies & Edge Cases Discovered
-- **Stale Lease Diagnostics:** Legacy `publish.sh` issued a generic `Publish failed (gitish: 'git push ...' failed)` on lease rejections. The Go specification detects `--force-with-lease` rejections specifically and suggests running `update`.
-- **Accidental Force Push on Master:** Legacy script had no protection against running `publish` on `master`, immediately executing `git push origin master --force-with-lease`. While server branch permissions may reject it, client-side safety checks prevent accidental destructive pushes.
-- **Unquoted Parameter Word Splitting:** Legacy Git alias passed `$@` without double quotes. Cleanly handled by native Go argument parser.
+## 5. Edge Cases & Behavioral Notes
+- **Actionable Lease Rejection Diagnostics:** When a push is rejected due to a lease mismatch (`--force-with-lease`), `publish` detects the condition and provides a specific diagnostic message advising the user to run `update`.
+- **Protected Default Branch Safety:** Explicit client-side safety checks block accidental force-pushing to default branches (`main`, `master`), requiring explicit branch operations.
+- **Robust Argument Parsing:** Positional arguments and flags are parsed cleanly through native CLI structures, preventing unexpected word splitting.
