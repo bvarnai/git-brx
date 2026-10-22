@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/bvarnai/git-brx/internal/checks"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +36,7 @@ Optionally cleans untracked files with --clean.`,
 
 func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) error {
 	if len(args) > 0 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[0])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[0])
 	}
 
 	workDir := "."
@@ -61,12 +61,12 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 		if op == "merge" {
 			a.Logger.Log("Aborting in-progress merge")
 			if abortErr := a.Operations.AbortMerge(ctx, rootDir); abortErr != nil {
-				return domain.WrapError(domain.ExitConflict, abortErr, "Reset failed: unable to abort merge")
+				return errcode.WrapError(errcode.ErrConflict, abortErr, "Reset failed: unable to abort merge")
 			}
 		} else if op == "rebase" {
 			a.Logger.Log("Aborting in-progress rebase")
 			if abortErr := a.Operations.AbortRebase(ctx, rootDir); abortErr != nil {
-				return domain.WrapError(domain.ExitConflict, abortErr, "Reset failed: unable to abort rebase")
+				return errcode.WrapError(errcode.ErrConflict, abortErr, "Reset failed: unable to abort rebase")
 			}
 		}
 	}
@@ -81,19 +81,19 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 	a.Logger.Debug("Active branch: %s, target remoteRef: %s (clean=%v)", currBranch.Name, remoteRef, opts.Clean)
 	_, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, currBranch.Name)
 	if !remoteExists {
-		return domain.NewError(domain.ExitPreconditionRemote, "Reset failed: remote reference '%s' does not exist", remoteRef).
+		return errcode.NewError(errcode.ErrPreconditionRemote, "Reset failed: remote reference '%s' does not exist", remoteRef).
 			WithHint("Your branch may not have been published yet. Use 'git-brx publish' to publish it")
 	}
 
 	// Hard reset to remote ref
 	if resetErr := a.Operations.ResetHard(ctx, rootDir, remoteRef); resetErr != nil {
-		return domain.WrapError(domain.ExitGeneralError, resetErr, "Reset failed: unable to reset working copy to '%s'", remoteRef)
+		return errcode.WrapError(errcode.ErrGeneral, resetErr, "Reset failed: unable to reset working copy to '%s'", remoteRef)
 	}
 
 	// Clean untracked files if requested
 	if opts.Clean {
 		if cleanErr := a.Operations.Clean(ctx, rootDir); cleanErr != nil {
-			return domain.WrapError(domain.ExitGeneralError, cleanErr, "Reset failed: unable to clean untracked files")
+			return errcode.WrapError(errcode.ErrGeneral, cleanErr, "Reset failed: unable to clean untracked files")
 		}
 	}
 

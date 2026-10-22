@@ -13,6 +13,7 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 )
 
 // Client interacts with the GitHub REST API and implements IssueTracker and SCMProvider.
@@ -113,20 +114,20 @@ func (c *Client) GetIssue(ctx context.Context, key string) (*domain.Issue, error
 
 	issueNum, err := strconv.Atoi(cleanKey)
 	if err != nil {
-		return nil, domain.NewError(domain.ExitUsageError, "Invalid GitHub issue number: %s", key)
+		return nil, errcode.NewError(errcode.ErrUsage, "Invalid GitHub issue number: %s", key)
 	}
 
 	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d", c.BaseURL, c.Owner, c.Repo, issueNum)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitGeneralError, err, "failed to create HTTP request")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to create HTTP request")
 	}
 
 	c.setHeaders(req)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitPreconditionRemote, err, "GitHub API request failed")
+		return nil, errcode.WrapError(errcode.ErrPreconditionRemote, err, "GitHub API request failed")
 	}
 	defer resp.Body.Close()
 
@@ -136,7 +137,7 @@ func (c *Client) GetIssue(ctx context.Context, key string) (*domain.Issue, error
 
 	var raw rawGitHubIssue
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, domain.WrapError(domain.ExitAPIError, err, "failed to parse GitHub issue response")
+		return nil, errcode.WrapError(errcode.ErrAPI, err, "failed to parse GitHub issue response")
 	}
 
 	issueType := "Issue"
@@ -203,19 +204,19 @@ func (c *Client) CreatePullRequest(ctx context.Context, req domain.PullRequestRe
 
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitGeneralError, err, "failed to serialize pull request payload")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to serialize pull request payload")
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitGeneralError, err, "failed to create HTTP request")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to create HTTP request")
 	}
 
 	c.setHeaders(httpReq)
 
 	resp, err := c.HTTPClient.Do(httpReq)
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitPreconditionRemote, err, "GitHub pull request creation failed")
+		return nil, errcode.WrapError(errcode.ErrPreconditionRemote, err, "GitHub pull request creation failed")
 	}
 	defer resp.Body.Close()
 
@@ -225,7 +226,7 @@ func (c *Client) CreatePullRequest(ctx context.Context, req domain.PullRequestRe
 
 	var rawPR rawPRResponse
 	if err := json.NewDecoder(resp.Body).Decode(&rawPR); err != nil {
-		return nil, domain.WrapError(domain.ExitAPIError, err, "failed to parse pull request response")
+		return nil, errcode.WrapError(errcode.ErrAPI, err, "failed to parse pull request response")
 	}
 
 	// Request reviewers if specified
@@ -253,14 +254,14 @@ func (c *Client) GetPullRequestForBranch(ctx context.Context, branch string) (*d
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitGeneralError, err, "failed to create HTTP request")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to create HTTP request")
 	}
 
 	c.setHeaders(httpReq)
 
 	resp, err := c.HTTPClient.Do(httpReq)
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitPreconditionRemote, err, "GitHub API request failed")
+		return nil, errcode.WrapError(errcode.ErrPreconditionRemote, err, "GitHub API request failed")
 	}
 	defer resp.Body.Close()
 
@@ -270,7 +271,7 @@ func (c *Client) GetPullRequestForBranch(ctx context.Context, branch string) (*d
 
 	var rawList []rawPRQueryItem
 	if err := json.NewDecoder(resp.Body).Decode(&rawList); err != nil {
-		return nil, domain.WrapError(domain.ExitAPIError, err, "failed to parse pull request list response")
+		return nil, errcode.WrapError(errcode.ErrAPI, err, "failed to parse pull request list response")
 	}
 
 	if len(rawList) == 0 {
@@ -416,7 +417,7 @@ func (c *Client) handleErrorResponse(resp *http.Response, actionFormat string, a
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized, http.StatusForbidden:
-		err := domain.NewError(domain.ExitAPIError, "GitHub authorization failed (%d): %s", resp.StatusCode, msg)
+		err := errcode.NewError(errcode.ErrAPI, "GitHub authorization failed (%d): %s", resp.StatusCode, msg)
 		if strings.Contains(strings.ToLower(action), "issue") {
 			err.WithHint("Ensure GITHUB_TOKEN or GH_TOKEN is set in your environment with 'issues: read' scope")
 		} else {
@@ -424,7 +425,7 @@ func (c *Client) handleErrorResponse(resp *http.Response, actionFormat string, a
 		}
 		return err
 	case http.StatusNotFound:
-		err := domain.NewError(domain.ExitAPIError, "GitHub resource not found during %s: %s", action, msg)
+		err := errcode.NewError(errcode.ErrAPI, "GitHub resource not found during %s: %s", action, msg)
 		if c.Token == "" {
 			err.WithHint("If the repository or issue is private, set GITHUB_TOKEN or GH_TOKEN, or use --offline")
 		} else {
@@ -432,8 +433,8 @@ func (c *Client) handleErrorResponse(resp *http.Response, actionFormat string, a
 		}
 		return err
 	case http.StatusUnprocessableEntity:
-		return domain.NewError(domain.ExitAPIError, "GitHub validation failed during %s (%d): %s", action, resp.StatusCode, msg)
+		return errcode.NewError(errcode.ErrAPI, "GitHub validation failed during %s (%d): %s", action, resp.StatusCode, msg)
 	default:
-		return domain.NewError(domain.ExitAPIError, "GitHub API returned status %d during %s: %s", resp.StatusCode, action, msg)
+		return errcode.NewError(errcode.ErrAPI, "GitHub API returned status %d during %s: %s", resp.StatusCode, action, msg)
 	}
 }

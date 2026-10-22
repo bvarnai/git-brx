@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +26,7 @@ func TestPublishIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"publish"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Branch 'issue/publish-test' successfully published to origin")
 
 		// Verify upstream tracking was configured
@@ -50,7 +50,7 @@ func TestPublishIntegration(t *testing.T) {
 		// First publish
 		var stdout1, stderr1 bytes.Buffer
 		code1 := cli.RunInDir(context.Background(), h.RepoDir, []string{"publish"}, &stdout1, &stderr1)
-		require.Equal(t, int(domain.ExitSuccess), code1)
+		require.Equal(t, int(errcode.ExitSuccess), code1)
 
 		// Make additional commit
 		h.CommitFile("feature2.txt", "v2", "Commit 2")
@@ -58,7 +58,7 @@ func TestPublishIntegration(t *testing.T) {
 		// Second publish
 		var stdout2, stderr2 bytes.Buffer
 		code2 := cli.RunInDir(context.Background(), h.RepoDir, []string{"publish"}, &stdout2, &stderr2)
-		assert.Equal(t, int(domain.ExitSuccess), code2)
+		assert.Equal(t, int(errcode.ExitSuccess), code2)
 		assert.Contains(t, stderr2.String(), "[git-brx] Branch 'issue/subsequent-publish' successfully published to origin")
 	})
 
@@ -71,7 +71,7 @@ func TestPublishIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"publish"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitUsageError), code)
+		assert.Equal(t, int(errcode.ExitUsageError), code)
 		assert.Contains(t, stderr.String(), "Refusing to force-push with lease directly to protected 'master' branch")
 	})
 
@@ -86,7 +86,7 @@ func TestPublishIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"publish", "--no-force"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Branch 'master' successfully published to origin")
 	})
 }

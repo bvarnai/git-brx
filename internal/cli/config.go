@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/config"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +36,7 @@ func (a *App) newConfigCmd() *cobra.Command {
 
 func (a *App) runConfig(ctx context.Context, opts ConfigOptions, args []string) error {
 	if len(args) > 0 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[0])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[0])
 	}
 
 	workDir := "."
@@ -63,7 +63,7 @@ func (a *App) runConfig(ctx context.Context, opts ConfigOptions, args []string) 
 
 	out, err := config.FormatReport(report, opts.Sources)
 	if err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "failed to format configuration report")
+		return errcode.WrapError(errcode.ErrGeneral, err, "failed to format configuration report")
 	}
 
 	a.Logger.Out("%s", strings.TrimRight(out, "\n"))

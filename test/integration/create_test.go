@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +25,7 @@ func TestCreateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--offline", "issue/42"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Creating branch 'issue/42'")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Use 'git-brx publish' to publish your new branch")
 
@@ -42,7 +42,7 @@ func TestCreateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--offline", "issue/existing"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Branch 'issue/existing' found (local)")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: To select this branch, use 'git-brx select issue/existing' instead")
 
@@ -65,7 +65,7 @@ func TestCreateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "-o=false", "issue/on-remote"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Branch 'issue/on-remote' found (remote)")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: To select this branch, use 'git-brx select issue/on-remote' instead")
 	})
@@ -78,7 +78,7 @@ func TestCreateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--offline", "my-feature-branch"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitConfigError), code)
+		assert.Equal(t, int(errcode.ExitConfigError), code)
 		assert.Contains(t, stderr.String(), "doesn't match pattern")
 	})
 
@@ -124,7 +124,7 @@ func TestCreateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/42"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Issue #42: Fix login crash")
 		assert.Contains(t, stderr.String(), "Assignee: octocat")
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/42'")
@@ -158,7 +158,7 @@ func TestCreateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/999"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitAPIError), code)
+		assert.Equal(t, int(errcode.ExitAPIError), code)
 		assert.Contains(t, stderr.String(), "GitHub resource not found")
 	})
 
@@ -206,7 +206,7 @@ func TestCreateIntegration(t *testing.T) {
 		// 1. Success on feature/101 matching 'kind/feature'
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "feature/101"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Creating branch 'feature/101'")
 
 		// 2. Failure on issue/101 (mismatch guard triggers on direct label)
@@ -215,7 +215,7 @@ func TestCreateIntegration(t *testing.T) {
 		stdout.Reset()
 		stderr.Reset()
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/101"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitConfigError), code)
+		assert.Equal(t, int(errcode.ExitConfigError), code)
 		assert.Contains(t, stderr.String(), "Issue type 'kind/feature' is not allowed on 'issue' branch")
 		assert.Contains(t, stderr.String(), "Use 'feature' branch or check mapping rules")
 	})
@@ -264,7 +264,7 @@ func TestCreateIntegration(t *testing.T) {
 
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/102"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/102'")
 	})
 
@@ -307,7 +307,7 @@ func TestCreateIntegration(t *testing.T) {
 
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/103"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Issue #103: Add auto-fallback support")
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/103'")
 	})
@@ -330,7 +330,7 @@ func TestCreateIntegration(t *testing.T) {
 
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/999"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		// Tracker validation skipped; no Target Issue printed
 		assert.NotContains(t, stderr.String(), "Target Issue:")
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/999'")
@@ -384,7 +384,7 @@ func TestCreateIntegration(t *testing.T) {
 		// 1. Enhancement allows 'issue/' branch
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/201"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/201'")
 
 		// Clean up branch for next test
@@ -395,7 +395,7 @@ func TestCreateIntegration(t *testing.T) {
 
 		// 2. Enhancement also allows 'feature/' branch
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "feature/201"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Creating branch 'feature/201'")
 
 		// 3. Enhancement rejects 'epic/' branch with plural hint
@@ -404,7 +404,7 @@ func TestCreateIntegration(t *testing.T) {
 		stdout.Reset()
 		stderr.Reset()
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "epic/201"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitConfigError), code)
+		assert.Equal(t, int(errcode.ExitConfigError), code)
 		assert.Contains(t, stderr.String(), "Issue type 'enhancement' is not allowed on 'epic' branch")
 		assert.Contains(t, stderr.String(), "Use 'issue' or 'feature' branch or check mapping rules")
 
@@ -412,7 +412,7 @@ func TestCreateIntegration(t *testing.T) {
 		stdout.Reset()
 		stderr.Reset()
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "issue/202"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Creating branch 'issue/202'")
 
 		// 5. Bug rejects 'feature/' branch with single target hint
@@ -421,7 +421,7 @@ func TestCreateIntegration(t *testing.T) {
 		stdout.Reset()
 		stderr.Reset()
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "feature/202"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitConfigError), code)
+		assert.Equal(t, int(errcode.ExitConfigError), code)
 		assert.Contains(t, stderr.String(), "Issue type 'bug' is not allowed on 'feature' branch")
 		assert.Contains(t, stderr.String(), "Use 'issue' branch or check mapping rules")
 	})
@@ -480,14 +480,14 @@ func TestCreateIntegration(t *testing.T) {
 		// rfq on feature succeeds
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "feature/301"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Creating branch 'feature/301'")
 
 		// task on epic succeeds
 		stdout.Reset()
 		stderr.Reset()
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--yes", "epic/302"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Creating branch 'epic/302'")
 	})
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +23,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 		{
 			name:         "excess arguments returns usage error",
 			args:         []string{"reset", "unexpected-arg"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unexpected argument: unexpected-arg",
 		},
 		{
@@ -32,7 +32,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Not a git repository",
 		},
 		{
@@ -46,7 +46,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":          {out: "abc1234"},
 				"remote get-url origin":           {out: "https://remote.example.com/repo.git"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Cannot execute on a detached HEAD",
 		},
 		{
@@ -60,7 +60,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":          {out: "abc1234"},
 				"remote get-url origin":           {err: errors.New("no origin")},
 			},
-			expectedCode: int(domain.ExitPreconditionRemote),
+			expectedCode: int(errcode.ExitPreconditionRemote),
 			errSubstr:    "Your repository has no remote origin",
 		},
 		{
@@ -77,7 +77,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/feature/unpublished": {err: errors.New("not found")},
 				"ls-remote --heads origin feature/unpublished":                      {out: ""},
 			},
-			expectedCode: int(domain.ExitPreconditionRemote),
+			expectedCode: int(errcode.ExitPreconditionRemote),
 			errSubstr:    "Reset failed: remote reference 'origin/feature/unpublished' does not exist",
 		},
 		{
@@ -94,7 +94,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/feature/ready": {out: ""},
 				"reset --hard origin/feature/ready":                           {out: ""},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 		},
 	}
 
@@ -106,13 +106,13 @@ func TestResetCommand_UnitTable(t *testing.T) {
 			app.RootCmd.SetArgs(tt.args)
 
 			err := app.Execute(context.Background())
-			if tt.expectedCode == int(domain.ExitSuccess) {
+			if tt.expectedCode == int(errcode.ExitSuccess) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
-				var appErr *domain.AppError
-				require.True(t, errors.As(err, &appErr), "expected *domain.AppError, got %T: %v", err, err)
-				assert.Equal(t, tt.expectedCode, int(appErr.Code))
+				var appErr *errcode.AppError
+				require.True(t, errors.As(err, &appErr), "expected *errcode.AppError, got %T: %v", err, err)
+				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}

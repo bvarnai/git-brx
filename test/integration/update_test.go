@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +38,7 @@ func TestUpdateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Rebased 'issue/VSB-200' onto 'origin/issue/VSB-200' (1 new commit)")
 
 		// Verify rebase: colleague commit is now in history
@@ -60,7 +60,7 @@ func TestUpdateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRemote), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
 		assert.Contains(t, stderr.String(), "Branch 'feature/local-only' has not been published to origin yet")
 		assert.Contains(t, stderr.String(), "Use 'git-brx publish' to publish your branch first")
 	})
@@ -73,7 +73,7 @@ func TestUpdateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRemote), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
 		assert.Contains(t, stderr.String(), "Your repository has no remote origin")
 	})
 
@@ -103,7 +103,7 @@ func TestUpdateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitConflict), code)
+		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Update failed due to conflicts")
 		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 	})
@@ -132,7 +132,7 @@ func TestUpdateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update", "-a"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Fast-forwarded 'issue/VSB-202' to match 'origin/issue/VSB-202' (1 new commit)")
 
 		// Verify unstaged edit was preserved after autostash pop
@@ -154,7 +154,7 @@ func TestUpdateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Branch 'issue/VSB-204' is already up to date with 'origin/issue/VSB-204'")
 	})
 
@@ -178,7 +178,7 @@ func TestUpdateIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Fast-forwarded 'issue/VSB-205' to match 'origin/issue/VSB-205' (2 new commits)")
 	})
 }

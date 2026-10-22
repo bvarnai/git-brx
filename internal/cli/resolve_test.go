@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +25,7 @@ func TestResolveCommand_UnitTable(t *testing.T) {
 		{
 			name:         "excess arguments returns usage error",
 			args:         []string{"resolve", "unexpected-arg"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unexpected argument: unexpected-arg",
 		},
 		{
@@ -34,7 +34,7 @@ func TestResolveCommand_UnitTable(t *testing.T) {
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Not a git repository",
 		},
 		{
@@ -45,7 +45,7 @@ func TestResolveCommand_UnitTable(t *testing.T) {
 				"rev-parse --show-toplevel":       {out: "/repo"},
 				"rev-parse --git-dir":             {out: "/repo/.git"},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 		},
 	}
 
@@ -71,7 +71,7 @@ func TestResolveCommand_UnitTable(t *testing.T) {
 			"diff --name-only --diff-filter=U": {out: "file.txt"},
 			"mergetool --no-prompt":            {err: errors.New("mergetool crashed")},
 		},
-		expectedCode: int(domain.ExitConflict),
+		expectedCode: int(errcode.ExitConflict),
 		errSubstr:    "Merge tool execution failed",
 	})
 
@@ -83,13 +83,13 @@ func TestResolveCommand_UnitTable(t *testing.T) {
 			app.RootCmd.SetArgs(tt.args)
 
 			err := app.Execute(context.Background())
-			if tt.expectedCode == int(domain.ExitSuccess) {
+			if tt.expectedCode == int(errcode.ExitSuccess) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
-				var appErr *domain.AppError
-				require.True(t, errors.As(err, &appErr), "expected *domain.AppError, got %T: %v", err, err)
-				assert.Equal(t, tt.expectedCode, int(appErr.Code))
+				var appErr *errcode.AppError
+				require.True(t, errors.As(err, &appErr), "expected *errcode.AppError, got %T: %v", err, err)
+				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}

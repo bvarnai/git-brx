@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 )
 
 var (
@@ -51,7 +52,7 @@ func ResolveMergeStrategy(mergeCfg *domain.MergeConfig, sourceBranch, targetBran
 		case "squash", "merge", "rebase":
 			return normalized, nil
 		default:
-			return "", domain.NewError(domain.ExitUsageError, "Unsupported merge strategy: %s (must be squash, merge, or rebase)", cliStrategy)
+			return "", errcode.NewError(errcode.ErrUsage, "Unsupported merge strategy: %s (must be squash, merge, or rebase)", cliStrategy)
 		}
 	}
 
@@ -95,6 +96,6 @@ func validateStrategy(strat string) (string, error) {
 	case "squash", "merge", "rebase":
 		return normalized, nil
 	default:
-		return "", domain.NewError(domain.ExitConfigError, "Unsupported merge strategy in configuration: %s (must be squash, merge, or rebase)", strat)
+		return "", errcode.NewError(errcode.ErrConfig, "Unsupported merge strategy in configuration: %s (must be squash, merge, or rebase)", strat)
 	}
 }

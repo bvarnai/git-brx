@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/checks"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/git"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,9 +79,9 @@ func TestInsideWorkTree(t *testing.T) {
 		inspector := git.NewInspector(runner)
 		_, err := checks.InsideWorkTree(context.Background(), inspector, "/outside")
 		assert.Error(t, err)
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		require.True(t, errors.As(err, &appErr))
-		assert.Equal(t, domain.ExitPreconditionRepo, appErr.Code)
+		assert.Equal(t, errcode.ExitPreconditionRepo, errcode.ExitCode(appErr))
 		assert.Contains(t, appErr.Message, "Not a git repository")
 	})
 }
@@ -107,9 +107,9 @@ func TestNoActiveOperation(t *testing.T) {
 	require.NoError(t, os.WriteFile(cherryPickHead, []byte("commit-sha"), 0644))
 	err = checks.NoActiveOperation(context.Background(), inspector, tempDir)
 	assert.Error(t, err)
-	var appErr *domain.AppError
+	var appErr *errcode.AppError
 	require.True(t, errors.As(err, &appErr))
-	assert.Equal(t, domain.ExitConflict, appErr.Code)
+	assert.Equal(t, errcode.ExitConflict, errcode.ExitCode(appErr))
 	assert.Contains(t, appErr.Message, "active cherry-pick")
 	assert.Contains(t, appErr.Hint, "git cherry-pick --abort")
 
@@ -120,7 +120,7 @@ func TestNoActiveOperation(t *testing.T) {
 	err = checks.NoActiveOperation(context.Background(), inspector, tempDir)
 	assert.Error(t, err)
 	require.True(t, errors.As(err, &appErr))
-	assert.Equal(t, domain.ExitConflict, appErr.Code)
+	assert.Equal(t, errcode.ExitConflict, errcode.ExitCode(appErr))
 	assert.Contains(t, appErr.Message, "active merge")
 }
 
@@ -162,9 +162,9 @@ func TestNoOrphanedCommits(t *testing.T) {
 		inspector := git.NewInspector(runner)
 		err := checks.NoOrphanedCommits(context.Background(), inspector, "/repo")
 		assert.Error(t, err)
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		require.True(t, errors.As(err, &appErr))
-		assert.Equal(t, domain.ExitConflict, appErr.Code)
+		assert.Equal(t, errcode.ExitConflict, errcode.ExitCode(appErr))
 		assert.Contains(t, appErr.Message, "detached HEAD with unreferenced commits")
 		assert.Contains(t, appErr.Hint, "Save your work into a branch first")
 	})
@@ -191,9 +191,9 @@ func TestNotShallow(t *testing.T) {
 		inspector := git.NewInspector(runner)
 		err := checks.NotShallow(context.Background(), inspector, "/repo")
 		assert.Error(t, err)
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		require.True(t, errors.As(err, &appErr))
-		assert.Equal(t, domain.ExitPreconditionRepo, appErr.Code)
+		assert.Equal(t, errcode.ExitPreconditionRepo, errcode.ExitCode(appErr))
 		assert.Contains(t, appErr.Message, "shallow repository")
 	})
 }
@@ -227,9 +227,9 @@ func TestAttachedBranch(t *testing.T) {
 		rec, err := checks.AttachedBranch(context.Background(), inspector, "/repo")
 		assert.Nil(t, rec)
 		assert.Error(t, err)
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		require.True(t, errors.As(err, &appErr))
-		assert.Equal(t, domain.ExitPreconditionRepo, appErr.Code)
+		assert.Equal(t, errcode.ExitPreconditionRepo, errcode.ExitCode(appErr))
 		assert.Contains(t, appErr.Message, "detached HEAD")
 	})
 }
@@ -255,9 +255,9 @@ func TestHasOrigin(t *testing.T) {
 		inspector := git.NewInspector(runner)
 		err := checks.HasOrigin(context.Background(), inspector, "/repo")
 		assert.Error(t, err)
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		require.True(t, errors.As(err, &appErr))
-		assert.Equal(t, domain.ExitPreconditionRemote, appErr.Code)
+		assert.Equal(t, errcode.ExitPreconditionRemote, errcode.ExitCode(appErr))
 		assert.Contains(t, appErr.Message, "no remote origin")
 	})
 }
@@ -283,9 +283,9 @@ func TestHasCommits(t *testing.T) {
 		inspector := git.NewInspector(runner)
 		err := checks.HasCommits(context.Background(), inspector, "/repo")
 		require.Error(t, err)
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		require.True(t, errors.As(err, &appErr))
-		assert.Equal(t, domain.ExitPreconditionRepo, appErr.Code)
+		assert.Equal(t, errcode.ExitPreconditionRepo, errcode.ExitCode(appErr))
 		assert.Contains(t, appErr.Message, "Repository has no commits yet")
 	})
 }

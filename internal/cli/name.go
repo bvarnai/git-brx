@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/bvarnai/git-brx/internal/checks"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +26,7 @@ prints the short commit hash and logs a warning on stderr.`,
 
 func (a *App) runName(ctx context.Context, args []string) error {
 	if len(args) > 0 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[0])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[0])
 	}
 
 	workDir := "."
@@ -42,7 +42,7 @@ func (a *App) runName(ctx context.Context, args []string) error {
 
 	curr, err := a.Inspector.CurrentBranch(ctx, rootDir)
 	if err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "failed to resolve branch name")
+		return errcode.WrapError(errcode.ErrGeneral, err, "failed to resolve branch name")
 	}
 	a.Logger.Debug("Resolved active branch: %s (detached: %v)", curr.Name, curr.IsDetached)
 

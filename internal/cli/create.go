@@ -10,6 +10,7 @@ import (
 	"github.com/bvarnai/git-brx/internal/checks"
 	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/github"
 	"github.com/spf13/cobra"
 )
@@ -44,10 +45,10 @@ following repository branching conventions.`,
 func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) error {
 	// 1. Argument & Repository Assertions
 	if len(args) == 0 || strings.TrimSpace(args[0]) == "" {
-		return domain.NewError(domain.ExitUsageError, "No branch name specified")
+		return errcode.NewError(errcode.ErrUsage, "No branch name specified")
 	}
 	if len(args) > 1 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[1])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[1])
 	}
 	targetBranch := strings.TrimSpace(args[0])
 
@@ -82,7 +83,7 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 		a.Logger.Log("Checking for existing branches (remote)")
 		remoteExists, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, targetBranch)
 		if err != nil {
-			return domain.NewError(domain.ExitPreconditionRemote, "Unable to reach remote").
+			return errcode.NewError(errcode.ErrPreconditionRemote, "Unable to reach remote").
 				WithHint("Try --offline if working without network access")
 		}
 		if remoteExists {
@@ -98,22 +99,22 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 	// 4. Configuration & Template Matching
 	cfg, err := config.Load(rootDir, originURL)
 	if err != nil {
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return domain.WrapError(domain.ExitConfigError, err, "Configuration error")
+		return errcode.WrapError(errcode.ErrConfig, err, "Configuration error")
 	}
 
 	templatePattern := cfg.Branch.Template
 	re, err := regexp.Compile(templatePattern)
 	if err != nil {
-		return domain.NewError(domain.ExitConfigError, "Invalid branch template regular expression: %s", templatePattern)
+		return errcode.NewError(errcode.ErrConfig, "Invalid branch template regular expression: %s", templatePattern)
 	}
 
 	matches := re.FindStringSubmatch(targetBranch)
 	if matches == nil {
-		return domain.NewError(domain.ExitConfigError, "Branch name '%s' doesn't match pattern %s", targetBranch, templatePattern)
+		return errcode.NewError(errcode.ErrConfig, "Branch name '%s' doesn't match pattern %s", targetBranch, templatePattern)
 	}
 
 	branchPath, issueKey := extractBranchPathAndKey(matches, targetBranch)
@@ -178,11 +179,11 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 				}
 
 				if !matched && len(allowedTargets) > 0 {
-					return domain.NewError(domain.ExitConfigError, "Issue type '%s' is not allowed on '%s' branch", matchedKey, branchPath).
+					return errcode.NewError(errcode.ErrConfig, "Issue type '%s' is not allowed on '%s' branch", matchedKey, branchPath).
 						WithHint("Use '%s' branch or check mapping rules", strings.Join(allowedTargets, "' or '"))
 				} else if !matched && branchPath != "issue" {
 					// Unmapped custom issue type is allowed on generic 'issue/' branch, but restricted from specialized branches
-					return domain.NewError(domain.ExitConfigError, "Issue type '%s' has no mapping defined for '%s' branch", issue.Type, branchPath).
+					return errcode.NewError(errcode.ErrConfig, "Issue type '%s' has no mapping defined for '%s' branch", issue.Type, branchPath).
 						WithHint("Use 'issue/' branch or configure branch.mapping in .git-brx.yaml")
 				}
 			}
@@ -228,7 +229,7 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 				prompt := fmt.Sprintf("Create branch '%s' [Y/n]?", targetBranch)
 				confirmed, err := a.Logger.Confirm(prompt)
 				if err != nil || !confirmed {
-					return domain.NewError(domain.ExitUserAborted, "Aborted")
+					return errcode.NewError(errcode.ErrUserAborted, "Aborted")
 				}
 			}
 		}
@@ -239,7 +240,7 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 	// 6. Branch Provisioning
 	a.Logger.Log("Creating branch '%s'", targetBranch)
 	if err := a.Operations.CreateAndCheckout(ctx, rootDir, targetBranch); err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "Failed to create branch '%s'", targetBranch)
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to create branch '%s'", targetBranch)
 	}
 
 	a.Logger.Hint("Use 'git-brx publish' to publish your new branch")
@@ -270,7 +271,7 @@ func (a *App) resolveTracker(cfg *domain.ProjectConfig) (domain.IssueTracker, er
 	case "", "none":
 		return nil, nil
 	default:
-		return nil, domain.NewError(domain.ExitConfigError, "Unsupported issue tracker provider: %s", provider)
+		return nil, errcode.NewError(errcode.ErrConfig, "Unsupported issue tracker provider: %s", provider)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -120,9 +121,9 @@ func TestLoader_InvalidEnvVarConfigFails(t *testing.T) {
 	t.Setenv("GIT_BRX_CONFIG", "/nonexistent/path/to/config.yaml")
 	_, err := config.Load(t.TempDir(), "")
 	require.Error(t, err)
-	var appErr *domain.AppError
+	var appErr *errcode.AppError
 	require.True(t, errors.As(err, &appErr))
-	assert.Equal(t, domain.ExitConfigError, appErr.Code)
+	assert.Equal(t, errcode.ExitConfigError, errcode.ExitCode(appErr))
 	assert.Contains(t, appErr.Message, "configuration file specified by GIT_BRX_CONFIG not found")
 }
 
@@ -228,9 +229,9 @@ func TestLoader_MissingConfigAndOriginFails(t *testing.T) {
 	tempDir := t.TempDir()
 	_, err := config.Load(tempDir, "")
 	require.Error(t, err)
-	var appErr *domain.AppError
+	var appErr *errcode.AppError
 	require.True(t, errors.As(err, &appErr))
-	assert.Equal(t, domain.ExitConfigError, appErr.Code)
+	assert.Equal(t, errcode.ExitConfigError, errcode.ExitCode(appErr))
 	assert.Contains(t, appErr.Message, "No configuration file found")
 }
 

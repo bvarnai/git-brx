@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -84,7 +84,7 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 				"rev-parse --is-inside-work-tree": {out: "true"},
 				"rev-parse --show-toplevel":       {out: "/repo"},
 			},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			expectStderr: "[git-brx] Error: Unexpected argument: branch-b",
 		},
 		{
@@ -93,7 +93,7 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {err: errors.New("fatal: not a git repo")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			expectStderr: "[git-brx] Error: Not a git repository",
 		},
 		{
@@ -106,7 +106,7 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/heads/non-existent":          {err: errors.New("not found")},
 				"show-ref --verify --quiet refs/remotes/origin/non-existent": {err: errors.New("not found")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			expectStderr: "[git-brx] Error: Branch 'non-existent' not found",
 		},
 		{
@@ -120,7 +120,7 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/feature/test": {err: errors.New("not found")},
 				"checkout feature/test":                                      {out: ""},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 		},
 	}
 
@@ -134,18 +134,18 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 			app.RootCmd.SetArgs(tc.args)
 
 			err := app.Execute(ctx)
-			code := int(domain.ExitSuccess)
+			code := int(errcode.ExitSuccess)
 			if err != nil {
-				var appErr *domain.AppError
+				var appErr *errcode.AppError
 				if errors.As(err, &appErr) {
 					app.Logger.Error("%s", appErr.Message)
 					if appErr.Hint != "" {
 						app.Logger.Hint("%s", appErr.Hint)
 					}
-					code = int(appErr.Code)
+					code = int(errcode.ExitCode(appErr))
 				} else {
 					app.Logger.Error("%v", err)
-					code = int(domain.ExitUsageError)
+					code = int(errcode.ExitUsageError)
 				}
 			}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/bvarnai/git-brx/internal/checks"
 	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
 
@@ -36,12 +37,12 @@ the pull request on the configured SCM platform (e.g. GitHub or Bitbucket).`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Flags().Changed("merge-instructions") && cmd.Flags().Changed("no-merge-instructions") {
-				return domain.NewError(domain.ExitUsageError, "Cannot specify both --merge-instructions and --no-merge-instructions")
+				return errcode.NewError(errcode.ErrUsage, "Cannot specify both --merge-instructions and --no-merge-instructions")
 			}
 			if opts.Strategy != "" {
 				s := strings.ToLower(strings.TrimSpace(opts.Strategy))
 				if s != "squash" && s != "merge" && s != "rebase" {
-					return domain.NewError(domain.ExitUsageError, "Unsupported merge strategy: %s (must be squash, merge, or rebase)", opts.Strategy)
+					return errcode.NewError(errcode.ErrUsage, "Unsupported merge strategy: %s (must be squash, merge, or rebase)", opts.Strategy)
 				}
 			}
 			var mergeInstrOverride *bool
@@ -68,7 +69,7 @@ the pull request on the configured SCM platform (e.g. GitHub or Bitbucket).`,
 
 func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverride *bool, args []string) error {
 	if len(args) > 1 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[1])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[1])
 	}
 
 	workDir := "."
@@ -88,28 +89,28 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 
 	hasOrigin, originURL, err := a.Inspector.HasOrigin(ctx, rootDir)
 	if err != nil || !hasOrigin {
-		return domain.NewError(domain.ExitPreconditionRepo, "Origin remote is not configured")
+		return errcode.NewError(errcode.ErrPreconditionRepo, "Origin remote is not configured")
 	}
 
 	currBranch, err := a.Inspector.CurrentBranch(ctx, rootDir)
 	if err != nil || currBranch.IsDetached {
-		return domain.NewError(domain.ExitPreconditionRepo, "Cannot create review in detached HEAD state")
+		return errcode.NewError(errcode.ErrPreconditionRepo, "Cannot create review in detached HEAD state")
 	}
 
 	switch currBranch.Type {
 	case domain.BranchTypeIssue, domain.BranchTypeFeature, domain.BranchTypeEpic:
 		// Eligible topic branch
 	default:
-		return domain.NewError(domain.ExitPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to create a review")
+		return errcode.NewError(errcode.ErrPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to create a review")
 	}
 
 	// 2. Publication Precondition Check
 	existsOnServer, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, currBranch.Name)
 	if err != nil {
-		return domain.WrapError(domain.ExitPreconditionRemote, err, "Unable to reach remote; are you offline?")
+		return errcode.WrapError(errcode.ErrPreconditionRemote, err, "Unable to reach remote; are you offline?")
 	}
 	if !existsOnServer {
-		return domain.NewError(domain.ExitPreconditionRemote, "Branch '%s' has not been pushed to remote origin", currBranch.Name).
+		return errcode.NewError(errcode.ErrPreconditionRemote, "Branch '%s' has not been pushed to remote origin", currBranch.Name).
 			WithHint("Run 'git-brx publish' to push your branch before creating a review")
 	}
 
@@ -141,7 +142,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		return err
 	}
 	if scm == nil {
-		return domain.NewError(domain.ExitConfigError, "No SCM provider configured for pull request creation")
+		return errcode.NewError(errcode.ErrConfig, "No SCM provider configured for pull request creation")
 	}
 
 	templatePattern := cfg.Branch.Template
@@ -235,7 +236,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 	result, err := scm.CreatePullRequest(ctx, req)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "409") {
-			return domain.NewError(domain.ExitAPIError, "A pull request for branch '%s' already exists", currBranch.Name)
+			return errcode.NewError(errcode.ErrAPI, "A pull request for branch '%s' already exists", currBranch.Name)
 		}
 		return err
 	}

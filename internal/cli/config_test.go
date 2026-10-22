@@ -10,6 +10,7 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/cli"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -37,7 +38,7 @@ branch:
 		{
 			name:         "unexpected arguments returns usage error",
 			args:         []string{"config", "extra"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unexpected argument: extra",
 		},
 		{
@@ -49,7 +50,7 @@ branch:
 				"rev-parse --show-toplevel":       {out: tempDir},
 				"remote get-url origin":           {out: "git@github.com:my-org/my-service.git"},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			validateOut: func(t *testing.T, stdout string) {
 				assert.Contains(t, stdout, "# Source hierarchy:")
 				assert.Contains(t, stdout, "platform: github")
@@ -69,7 +70,7 @@ branch:
 				"rev-parse --show-toplevel":       {out: tempDir},
 				"remote get-url origin":           {out: "git@github.com:my-org/my-service.git"},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			validateOut: func(t *testing.T, stdout string) {
 				assert.Contains(t, stdout, "# Source hierarchy:")
 				assert.Contains(t, stdout, configPath)
@@ -83,7 +84,7 @@ branch:
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
-			expectedCode: int(domain.ExitConfigError),
+			expectedCode: int(errcode.ExitConfigError),
 			errSubstr:    "No configuration file found",
 		},
 	}
@@ -107,9 +108,9 @@ branch:
 				}
 			} else {
 				require.Error(t, err)
-				var appErr *domain.AppError
+				var appErr *errcode.AppError
 				require.True(t, errors.As(err, &appErr), "expected domain.AppError, got: %v", err)
-				assert.Equal(t, tc.expectedCode, int(appErr.Code))
+				assert.Equal(t, tc.expectedCode, int(errcode.ExitCode(appErr)))
 				if tc.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tc.errSubstr)
 				}

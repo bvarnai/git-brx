@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +31,7 @@ func TestDeleteIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Deleted local branch 'issue/VSB-101' and pruned origin")
 
 		// Verify local branch is gone and current branch is master
@@ -58,7 +58,7 @@ func TestDeleteIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRepo), code)
 		assert.Contains(t, stderr.String(), "Branch 'feature/auth' found on remote origin")
 		assert.Contains(t, stderr.String(), "Branch must be deleted on remote first")
 
@@ -83,7 +83,7 @@ func TestDeleteIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "--force", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Deleted local branch 'issue/VSB-102' and pruned origin")
 		assert.Equal(t, "master", h.CurrentBranch())
 	})
@@ -100,7 +100,7 @@ func TestDeleteIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRepo), code)
 		assert.Contains(t, stderr.String(), "You must be on an 'issue', 'feature', or 'epic' branch to delete it")
 	})
 
@@ -123,7 +123,7 @@ func TestDeleteIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "--force", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitConflict), code)
+		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Unable to switch to 'master' branch")
 		assert.Equal(t, "issue/conflict", h.CurrentBranch())
 	})
@@ -148,7 +148,7 @@ func TestDeleteIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "issue/VSB-200", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Deleted local branch 'issue/VSB-200' and pruned origin")
 
 		// Verify current branch is still master and issue/VSB-200 is gone
@@ -169,7 +169,7 @@ func TestDeleteIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "issue/does-not-exist", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRepo), code)
 		assert.Contains(t, stderr.String(), "Branch 'issue/does-not-exist' does not exist locally")
 	})
 
@@ -185,7 +185,7 @@ func TestDeleteIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "master", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRepo), code)
 		assert.Contains(t, stderr.String(), "You can only delete an 'issue', 'feature', or 'epic' branch")
 	})
 }

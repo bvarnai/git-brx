@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 )
 
 // Inspector provides repository inspection methods using Git plumbing.
@@ -197,12 +198,12 @@ func (i *Inspector) RebaseProgress(ctx context.Context, rootDir string) (*Rebase
 func (i *Inspector) ComputeDelta(ctx context.Context, dir string, localRef, remoteRef string) (*domain.BranchDelta, error) {
 	out, err := i.runner.Run(ctx, dir, "rev-list", "--left-right", "--count", fmt.Sprintf("%s...%s", localRef, remoteRef))
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitPreconditionRemote, err, "failed to compute commit delta for %s against %s", localRef, remoteRef)
+		return nil, errcode.WrapError(errcode.ErrPreconditionRemote, err, "failed to compute commit delta for %s against %s", localRef, remoteRef)
 	}
 
 	fields := strings.Fields(out)
 	if len(fields) < 2 {
-		return nil, domain.NewError(domain.ExitGeneralError, "unexpected rev-list output: %s", out)
+		return nil, errcode.NewError(errcode.ErrGeneral, "unexpected rev-list output: %s", out)
 	}
 
 	ahead, _ := strconv.Atoi(fields[0])

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +57,7 @@ limiting output count (-l / --limit), and peeking file stats (--stat) or patches
 
 func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string) error {
 	if len(args) > 1 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[1])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[1])
 	}
 
 	workDir := "."
@@ -126,9 +126,9 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 		if !pathExists {
 			localExists, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, targetPath)
 			if localExists || remoteExists {
-				return domain.NewError(domain.ExitUsageError, "'%s' is a branch name, not a file path. Use '-b %s' to scope to this branch", targetPath, targetPath)
+				return errcode.NewError(errcode.ErrUsage, "'%s' is a branch name, not a file path. Use '-b %s' to scope to this branch", targetPath, targetPath)
 			}
-			return domain.NewError(domain.ExitUsageError, "Path '%s' does not exist in repository", targetPath)
+			return errcode.NewError(errcode.ErrUsage, "Path '%s' does not exist in repository", targetPath)
 		}
 
 		pathArg = targetPath
@@ -136,13 +136,13 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 	}
 
 	if opts.Topic && opts.Branch != "" {
-		return domain.NewError(domain.ExitUsageError, "Cannot specify both --branch and --topic")
+		return errcode.NewError(errcode.ErrUsage, "Cannot specify both --branch and --topic")
 	}
 
 	if opts.Branch != "" {
 		localExists, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, opts.Branch)
 		if !localExists && !remoteExists {
-			return domain.NewError(domain.ExitPreconditionRepo, "Branch '%s' not found", opts.Branch)
+			return errcode.NewError(errcode.ErrPreconditionRepo, "Branch '%s' not found", opts.Branch)
 		}
 		logArgs = append(logArgs, opts.Branch)
 	} else if opts.Topic {
@@ -177,7 +177,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 	cw := &countingWriter{writer: a.Logger.Stdout()}
 	err = a.Runner.RunStream(ctx, workDir, cw, a.Logger.Stderr(), nil, logArgs...)
 	if err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "Failed to retrieve commit history")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to retrieve commit history")
 	}
 
 	if cw.bytesWritten == 0 {

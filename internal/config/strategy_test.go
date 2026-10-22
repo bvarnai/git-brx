@@ -5,6 +5,7 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -105,9 +106,9 @@ func TestResolveMergeStrategy_ConfigurationOverrides(t *testing.T) {
 		}
 		_, err := config.ResolveMergeStrategy(cfg, "feature/1", "main", "")
 		require.Error(t, err)
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		require.ErrorAs(t, err, &appErr)
-		assert.Equal(t, domain.ExitConfigError, appErr.Code)
+		assert.Equal(t, errcode.ExitConfigError, errcode.ExitCode(appErr))
 	})
 }
 
@@ -134,8 +135,8 @@ func TestResolveMergeStrategy_CLIOverrides(t *testing.T) {
 	t.Run("invalid CLI strategy returns usage error", func(t *testing.T) {
 		_, err := config.ResolveMergeStrategy(cfg, "feature/1", "main", "invalid-strat")
 		require.Error(t, err)
-		var appErr *domain.AppError
+		var appErr *errcode.AppError
 		require.ErrorAs(t, err, &appErr)
-		assert.Equal(t, domain.ExitUsageError, appErr.Code)
+		assert.Equal(t, errcode.ExitUsageError, errcode.ExitCode(appErr))
 	})
 }

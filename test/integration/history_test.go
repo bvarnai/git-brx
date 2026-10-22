@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +23,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Empty(t, stderr.String(), "stderr should be empty on successful history execution")
 
 		out := stdout.String()
@@ -42,7 +42,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-l", "1", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "Commit 3")
 		assert.NotContains(t, out, "Commit 2")
@@ -57,7 +57,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--limit", "1", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "Commit 2")
 		assert.NotContains(t, out, "Commit 1")
@@ -72,7 +72,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "target.txt", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "Commit target v1")
 		assert.Contains(t, out, "Commit target v2")
@@ -87,7 +87,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "pkg", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "Commit in pkg")
 		assert.NotContains(t, out, "Commit in docs")
@@ -102,7 +102,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "Topic branch commit only")
 		assert.NotContains(t, out, "Base master commit")
@@ -115,7 +115,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Empty(t, stdout.String())
 		assert.Contains(t, stderr.String(), "You are on base branch 'master'; there is no topic branch delta to display")
 	})
@@ -130,7 +130,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-b", "feature/other", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "Other branch commit")
 	})
@@ -143,7 +143,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-s", "deadlock", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "resolve deadlock")
 		assert.NotContains(t, out, "add login")
@@ -156,7 +156,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--stat", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
 		assert.Contains(t, out, "stat_test.txt")
 		assert.Contains(t, out, "1 file changed")
@@ -169,7 +169,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRepo), code)
 		assert.Contains(t, stderr.String(), "Repository has no commits yet")
 		assert.Empty(t, stdout.String())
 	})
@@ -180,7 +180,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), notRepo, []string{"history"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRepo), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRepo), code)
 		assert.Contains(t, stderr.String(), "Not a git repository")
 	})
 
@@ -195,7 +195,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), subDir, []string{"history", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stdout.String(), "Root commit")
 	})
 
@@ -206,7 +206,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "path1", "path2"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitUsageError), code)
+		assert.Equal(t, int(errcode.ExitUsageError), code)
 		assert.Contains(t, stderr.String(), "Unexpected argument: path2")
 	})
 
@@ -217,7 +217,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "master"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitUsageError), code)
+		assert.Equal(t, int(errcode.ExitUsageError), code)
 		assert.Contains(t, stderr.String(), "'master' is a branch name, not a file path. Use '-b master' to scope to this branch")
 	})
 
@@ -228,7 +228,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "does_not_exist.txt"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitUsageError), code)
+		assert.Equal(t, int(errcode.ExitUsageError), code)
 		assert.Contains(t, stderr.String(), "Path 'does_not_exist.txt' does not exist in repository")
 	})
 
@@ -239,7 +239,7 @@ func TestHistoryIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "-s", "nonexistent-query-string", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "No commits found matching the specified criteria")
 		assert.Empty(t, stdout.String())
 	})
