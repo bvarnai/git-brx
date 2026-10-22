@@ -221,7 +221,7 @@ git-brx/
 
 - **Package Dependency Boundaries:**
   - `internal/domain` and `internal/errcode` depend exclusively on the Go standard library.
-  - `internal/term` depends on `internal/errcode` and the standard library, providing structured logging, coloring, interactive prompts, and `LogError(err)`.
+  - `internal/term` depends only on the standard library and provides structured logging, coloring, and interactive prompts.
   - `internal/git`, `internal/checks`, `internal/config`, `internal/github`, and `internal/suggest` depend on `internal/domain`, `internal/errcode`, and `internal/term`, never on `internal/cli`.
   - `internal/cli` wires flags and orchestrates domain/runner interfaces, enabling full unit testability via dependency injection.
 

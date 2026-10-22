@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/term"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -155,23 +154,4 @@ func TestLogger_WrapText(t *testing.T) {
 	assert.Greater(t, len(lines), 1)
 	assert.True(t, strings.HasPrefix(lines[0], "Issue #101: "))
 	assert.True(t, strings.HasPrefix(lines[1], "            "))
-}
-
-func TestLogger_LogError(t *testing.T) {
-	var stderr bytes.Buffer
-	logger := term.New(term.Options{
-		Stderr:      &stderr,
-		NoColorFlag: true,
-		Quiet:       true,
-	})
-
-	logger.LogError(nil)
-	assert.Empty(t, stderr.String())
-
-	err := errcode.NewError(errcode.ErrConflict, "Merge conflict encountered").
-		WithHint("Use 'git-brx resolve' to resolve conflicts")
-	logger.LogError(err)
-
-	assert.Contains(t, stderr.String(), "[git-brx] Error: Merge conflict encountered\n")
-	assert.Contains(t, stderr.String(), "[git-brx] Hint: Use 'git-brx resolve' to resolve conflicts\n")
 }

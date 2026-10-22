@@ -143,7 +143,10 @@ func RunInDir(ctx context.Context, dir string, args []string, stdout, stderr io.
 			}
 			return errcode.ExitUserAborted
 		}
-		app.Logger.LogError(appErr)
+		app.Logger.Error("%s", appErr.Error())
+		if appErr.Hint != "" {
+			app.Logger.HintAlways("%s", appErr.Hint)
+		}
 		return errcode.ExitCode(appErr)
 	}
 
