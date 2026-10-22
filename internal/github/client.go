@@ -120,7 +120,7 @@ func (c *Client) GetIssue(ctx context.Context, key string) (*domain.Issue, error
 	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d", c.BaseURL, c.Owner, c.Repo, issueNum)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to create HTTP request")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "Failed to create HTTP request")
 	}
 
 	c.setHeaders(req)
@@ -137,7 +137,7 @@ func (c *Client) GetIssue(ctx context.Context, key string) (*domain.Issue, error
 
 	var raw rawGitHubIssue
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, errcode.WrapError(errcode.ErrAPI, err, "failed to parse GitHub issue response")
+		return nil, errcode.WrapError(errcode.ErrAPI, err, "Failed to parse GitHub issue response")
 	}
 
 	issueType := "Issue"
@@ -204,12 +204,12 @@ func (c *Client) CreatePullRequest(ctx context.Context, req domain.PullRequestRe
 
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to serialize pull request payload")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "Failed to serialize pull request payload")
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to create HTTP request")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "Failed to create HTTP request")
 	}
 
 	c.setHeaders(httpReq)
@@ -226,7 +226,7 @@ func (c *Client) CreatePullRequest(ctx context.Context, req domain.PullRequestRe
 
 	var rawPR rawPRResponse
 	if err := json.NewDecoder(resp.Body).Decode(&rawPR); err != nil {
-		return nil, errcode.WrapError(errcode.ErrAPI, err, "failed to parse pull request response")
+		return nil, errcode.WrapError(errcode.ErrAPI, err, "Failed to parse pull request response")
 	}
 
 	// Request reviewers if specified
@@ -254,7 +254,7 @@ func (c *Client) GetPullRequestForBranch(ctx context.Context, branch string) (*d
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to create HTTP request")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "Failed to create HTTP request")
 	}
 
 	c.setHeaders(httpReq)
@@ -271,7 +271,7 @@ func (c *Client) GetPullRequestForBranch(ctx context.Context, branch string) (*d
 
 	var rawList []rawPRQueryItem
 	if err := json.NewDecoder(resp.Body).Decode(&rawList); err != nil {
-		return nil, errcode.WrapError(errcode.ErrAPI, err, "failed to parse pull request list response")
+		return nil, errcode.WrapError(errcode.ErrAPI, err, "Failed to parse pull request list response")
 	}
 
 	if len(rawList) == 0 {

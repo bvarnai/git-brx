@@ -43,4 +43,4 @@
 | `0` | Configuration evaluated and printed successfully. | None. |
 | `2` | Unexpected positional arguments passed (`git-brx config extra`). | `[git-brx] Error: Unexpected argument: <arg>` |
 | `8` | No configuration files found and no remote origin detected. | `[git-brx] Error: No configuration file found and unable to detect platform from remote origin` |
-| `8` | `GIT_BRX_CONFIG` path specified but file does not exist or is unreadable. | `[git-brx] Error: configuration file specified by GIT_BRX_CONFIG not found: <path>` |
+| `8` | `GIT_BRX_CONFIG` path specified but file does not exist or is unreadable. | `[git-brx] Error: Configuration file specified by GIT_BRX_CONFIG not found: <path>` |

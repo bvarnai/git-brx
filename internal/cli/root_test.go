@@ -64,7 +64,7 @@ func TestCliRunVerboseQuietConflict(t *testing.T) {
 
 	code := cli.Run(ctx, []string{"-v", "-q", "name"}, &stdout, &stderr)
 	assert.Equal(t, errcode.ExitUsageError, code)
-	assert.Contains(t, stderr.String(), "cannot specify both --verbose and --quiet")
+	assert.Contains(t, stderr.String(), "Cannot specify both --verbose and --quiet")
 	assert.Contains(t, stderr.String(), "Hint: Choose either verbose or quiet output mode, not both.")
 }
 

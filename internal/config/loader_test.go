@@ -124,7 +124,7 @@ func TestLoader_InvalidEnvVarConfigFails(t *testing.T) {
 	var appErr *errcode.AppError
 	require.True(t, errors.As(err, &appErr))
 	assert.Equal(t, errcode.ExitConfigError, errcode.ExitCode(appErr))
-	assert.Contains(t, appErr.Message, "configuration file specified by GIT_BRX_CONFIG not found")
+	assert.Contains(t, appErr.Message, "Configuration file specified by GIT_BRX_CONFIG not found")
 }
 
 func TestLoader_LayeredCascadeUserCompanyRepo(t *testing.T) {

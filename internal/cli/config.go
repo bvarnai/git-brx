@@ -63,7 +63,7 @@ func (a *App) runConfig(ctx context.Context, opts ConfigOptions, args []string) 
 
 	out, err := config.FormatReport(report, opts.Sources)
 	if err != nil {
-		return errcode.WrapError(errcode.ErrGeneral, err, "failed to format configuration report")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to format configuration report")
 	}
 
 	a.Logger.Out("%s", strings.TrimRight(out, "\n"))

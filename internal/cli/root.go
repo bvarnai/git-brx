@@ -65,7 +65,7 @@ for local branch lifecycles, upstream synchronization, clean rebasing, and code 
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if app.Opts.Verbose && app.Opts.Quiet {
-				return errcode.NewError(errcode.ErrUsage, "cannot specify both --verbose and --quiet").
+				return errcode.NewError(errcode.ErrUsage, "Cannot specify both --verbose and --quiet").
 					WithHint("Choose either verbose or quiet output mode, not both.")
 			}
 			app.Logger = term.New(term.Options{

@@ -41,7 +41,7 @@ func NoActiveOperation(ctx context.Context, inspector *git.Inspector, rootDir st
 func NoOrphanedCommits(ctx context.Context, inspector *git.Inspector, rootDir string) error {
 	orphaned, err := inspector.HasOrphanedCommits(ctx, rootDir)
 	if err != nil {
-		return errcode.WrapError(errcode.ErrGeneral, err, "failed to inspect detached HEAD state")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to inspect detached HEAD state")
 	}
 	if orphaned {
 		return errcode.NewError(errcode.ErrConflict, "You are on a detached HEAD with unreferenced commits").
@@ -54,7 +54,7 @@ func NoOrphanedCommits(ctx context.Context, inspector *git.Inspector, rootDir st
 func NotShallow(ctx context.Context, inspector *git.Inspector, rootDir string) error {
 	shallow, err := inspector.IsShallow(ctx, rootDir)
 	if err != nil {
-		return errcode.WrapError(errcode.ErrGeneral, err, "failed to check shallow repository state")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to check shallow repository state")
 	}
 	if shallow {
 		return errcode.NewError(errcode.ErrShallowRepo, "You are in a shallow repository")
@@ -66,7 +66,7 @@ func NotShallow(ctx context.Context, inspector *git.Inspector, rootDir string) e
 func AttachedBranch(ctx context.Context, inspector *git.Inspector, rootDir string) (*domain.BranchRecord, error) {
 	curr, err := inspector.CurrentBranch(ctx, rootDir)
 	if err != nil {
-		return nil, errcode.WrapError(errcode.ErrGeneral, err, "failed to get current branch")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "Failed to get current branch")
 	}
 	if curr.IsDetached {
 		return nil, errcode.NewError(errcode.ErrDetachedHead, "Cannot execute on a detached HEAD").
@@ -79,7 +79,7 @@ func AttachedBranch(ctx context.Context, inspector *git.Inspector, rootDir strin
 func HasOrigin(ctx context.Context, inspector *git.Inspector, rootDir string) error {
 	hasOrigin, _, err := inspector.HasOrigin(ctx, rootDir)
 	if err != nil {
-		return errcode.WrapError(errcode.ErrGeneral, err, "failed to check remote origin")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to check remote origin")
 	}
 	if !hasOrigin {
 		return errcode.NewError(errcode.ErrPreconditionRemote, "Your repository has no remote origin")

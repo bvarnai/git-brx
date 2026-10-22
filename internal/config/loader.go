@@ -62,12 +62,12 @@ func FindRepoConfigFile(workDir string) string {
 func loadConfigFile(path string) (*domain.ProjectConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, errcode.WrapError(errcode.ErrConfig, err, "failed to read configuration file: %s", path)
+		return nil, errcode.WrapError(errcode.ErrConfig, err, "Failed to read configuration file: %s", path)
 	}
 
 	cfg := &domain.ProjectConfig{}
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, errcode.WrapError(errcode.ErrConfig, err, "failed to parse configuration file: %s", path)
+		return nil, errcode.WrapError(errcode.ErrConfig, err, "Failed to parse configuration file: %s", path)
 	}
 	return cfg, nil
 }
@@ -95,7 +95,7 @@ func Inspect(workDir, originURL string) (*ConfigReport, error) {
 	// Tier 2: Shared Global (GIT_BRX_CONFIG)
 	if envPath := os.Getenv("GIT_BRX_CONFIG"); envPath != "" {
 		if _, err := os.Stat(envPath); err != nil {
-			return nil, errcode.NewError(errcode.ErrConfig, "configuration file specified by GIT_BRX_CONFIG not found: %s", envPath)
+			return nil, errcode.NewError(errcode.ErrConfig, "Configuration file specified by GIT_BRX_CONFIG not found: %s", envPath)
 		}
 		report.SharedConfigPath = envPath
 		envCfg, err := loadConfigFile(envPath)

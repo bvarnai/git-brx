@@ -42,7 +42,7 @@ func (a *App) runName(ctx context.Context, args []string) error {
 
 	curr, err := a.Inspector.CurrentBranch(ctx, rootDir)
 	if err != nil {
-		return errcode.WrapError(errcode.ErrGeneral, err, "failed to resolve branch name")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to resolve branch name")
 	}
 	a.Logger.Debug("Resolved active branch: %s (detached: %v)", curr.Name, curr.IsDetached)
 
