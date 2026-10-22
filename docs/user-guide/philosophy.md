@@ -2,113 +2,111 @@
 
 ## 1. Workflow over commands: the origin of `git-brx`
 
-`git-brx` comes from my former team, where Git adoption was a struggle. In my experience, the hardest hurdle for beginners is truly understanding Git's dual nature—being local and remote at the same time. After struggling to teach them individual Git commands, I created a few shell scripts used as Git aliases to automate common repository tasks. I quickly realized that having a built-in workflow was essential. Most of the effort went into creating a workflow as simple as possible to support fast, low-overhead development.
+`git-brx` grew out of a team where Git adoption was a recurring bottleneck. The hardest part for engineers new to Git is keeping track of local state versus remote state across fetch, rebase, merge, and push operations. Teaching individual Git flags didn't stick; giving the team a small set of workflow commands with built-in guardrails did. `git-brx` packages that workflow into a single static binary.
 
 ---
 
-## 2. Issue-driven development: the single source of truth
+## 2. Issue-driven development: single source of truth
 
-At the heart of `git-brx` is a strict organizational philosophy: **every code change belongs to a tracked issue (a ticket in Jira or GitHub).**
+In `git-brx`, **every tracked code change maps to an issue in Jira or GitHub.**
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │                   THE ISSUE (Jira / GitHub)            │
 │  • What is the problem?                                │
-│  • Why is this change necessary?                       │
+│  • Why is this change needed?                          │
 │  • What are the acceptance criteria & edge cases?      │
-│  • What is the test and verification plan?             │
+│  • What is the verification and test plan?             │
 └───────────────────────────┬────────────────────────────┘
                             │
-              1:1 Link      ▼
+               1:1 Link     ▼
 ┌────────────────────────────────────────────────────────┐
 │             THE PULL REQUEST (Code Review)             │
-│  • How is the solution architected?                    │
+│  • How is the change implemented?                      │
 │  • Are unit and integration tests passing?             │
-│  • Is the code readable, secure, and maintainable?     │
-│  • Strictly for technical peer review!                 │
+│  • Is the code clear, safe, and maintainable?          │
+│  • Focused strictly on technical review                │
 └────────────────────────────────────────────────────────┘
 ```
 
-### Why separate the "What" from the "How"?
+### Separating "What" from "How"
 
-In many development teams, pull requests suffer from **Scope creep during review**:
-- An engineer opens a PR with minimal explanation
-- Reviewers spend days debating what the feature was actually supposed to do
-- Halfway through code review, stakeholders realize core business requirements were misunderstood
+Without a clear boundary between issues and pull requests, scope debates spill into code review:
+- A developer opens a PR with little context.
+- Reviewers spend days debating what the feature is supposed to do instead of reviewing the code.
+- Missing requirements surface only after the code is written.
 
-`git-brx` enforces a clean division of responsibility:
+`git-brx` separates the two concerns:
 
-| Artifact | Primary audience | Core purpose | Discussion topics |
+| Artifact | Primary audience | Purpose | Discussion scope |
 | :--- | :--- | :--- | :--- |
-| **The issue** | Product managers, QA, engineers, stakeholders | **Source of truth:** Defines *What* needs to be done and *Why*. Contains specifications, acceptance criteria, reproducible steps, and test plans | Business requirements, edge cases, scope, user expectations |
-| **The pull request** | Engineering peers | **Quality assurance:** Inspects *How* the code implements the issue. Verifies architecture, style, test coverage, and performance | Implementation details, code structure, algorithm efficiency, test assertions |
+| **The issue** | Product, QA, engineers | **Defines *What* and *Why*:** Specifications, acceptance criteria, reproduction steps, and test plans | Requirements, edge cases, scope, user impact |
+| **The pull request** | Engineering peers | **Reviews *How*:** Architecture, correctness, test coverage, and performance | Implementation details, code structure, edge-case handling, tests |
 
-When a developer runs `git brx create issue/TASK-101`, `git-brx` reaches out to the issue tracker, verifies that `TASK-101` is a valid, assigned ticket, and sets up a local workspace directly linked to that contract.
+When you run `git brx create issue/TASK-101`, `git-brx` queries the issue tracker, checks that `TASK-101` exists and matches the branch prefix, and creates the local topic branch.
 
 ---
 
-## 3. Branch types and their roles: convention over configuration
+## 3. Branch types and their roles
 
-To standard Git, all branch names look identical. A branch named `fix-typo` and a branch named `cloud-migration` are just arbitrary pointers to a commit.
+To plain Git, all branch names are identical—`fix-typo` and `cloud-migration` are just commit pointers. Because Git doesn't know a branch's purpose, developers have to decide manually on every task:
+- *"Should I rebase or merge `main` into this branch?"*
+- *"Will force-pushing overwrite a teammate's commits?"*
+- *"Should this PR be squashed or merged with `--no-ff`?"*
 
-Because Git does not understand the intended role of a branch, developers are constantly forced to make low-level decisions:
-- *"Should I rebase or merge this branch?"*
-- *"If I force-push, will I overwrite my teammate's work?"*
-- *"Should this pull request be squashed or merged with a merge commit?"*
+`git-brx` encodes those decisions into three branch prefixes:
 
-`git-brx` eliminates this decision fatigue by giving each **branch type** a clear, built-in **role**:
-
-| Branch type | Team role & lifespan | `sync` strategy | PR merge strategy | Why this type behaves this way |
+| Branch type | Scope & lifespan | `sync` strategy | PR merge strategy | Rationale |
 | :--- | :--- | :--- | :--- | :--- |
-| **`issue/<id>`** | **Solo task:** focused bugfixes & tech debt (hours to days) | **Linear rebase** | **Squash & merge** | Single-author work stays strictly linear. Squashing on `main` keeps history bisectable (`git bisect`) while giving engineers the freedom to make messy micro-commits locally |
-| **`feature/<id>`** | **Collaborative feature:** shared stories & capabilities (days to weeks) | **3-way merge** | **Squash & merge** *(or merge commit)* | Multiple teammates share the branch. 3-way merge prevents history rewrites and avoids broken tracking for collaborators |
-| **`epic/<id>`** | **Major initiative:** multi-sprint milestones (weeks to months) | **3-way merge** | **Merge commit (`--no-ff`)** | Long-running initiatives preserve all constituent commits grouped under a clear merge bubble on `main` |
+| **`issue/<id>`** | **Solo task:** bug fixes & small tasks (hours to days) | **Linear rebase** | **Squash & merge** | Single-author work stays linear. Squashing onto `main` keeps history clean for `git bisect` while letting you make small work-in-progress commits locally. |
+| **`feature/<id>`** | **Shared feature:** multi-person stories (days to weeks) | **3-way merge** | **Squash & merge** *(or merge commit)* | Multiple developers can push to the same branch without rewriting shared commit history. |
+| **`epic/<id>`** | **Multi-PR initiative:** larger milestones (weeks to months) | **3-way merge** | **Merge commit (`--no-ff`)** | Preserves individual commits on `main` under an explicit merge commit. |
 
-**The branch type declares the role.** Once you name your branch, `git-brx` automatically applies the right synchronization and review behavior behind the scenes—no manual flags or configuration required.
+Once you name a branch, `git-brx` selects the matching `sync` strategy and PR merge instructions automatically.
 
 > [!NOTE]
-> **Local scratch work is always supported:** For throwaway experiments, local prototypes, or scratch spikes without an issue, standard Git (`git checkout -b scratch-test`) remains fully available alongside `git-brx`.
+> **Local spikes and experiments:** For quick prototypes without an issue ticket, use standard Git (`git checkout -b scratch-test`).
 
 ---
 
-## 4. The 4-Stage workflow cycle
+## 4. The 4-stage workflow
 
 ```mermaid
 flowchart TD
-    subgraph S1 ["Stage 1: Intent & creation"]
-        Issue["Tracker Issue<br/>(TASK-101)"] -->|"git brx create"| TopicBranch["Validated Branch<br/>(issue/TASK-101)"]
+    subgraph S1 ["Stage 1: Create"]
+        Issue["Tracker Issue<br/>(TASK-101)"] -->|"git brx create"| TopicBranch["Topic Branch<br/>(issue/TASK-101)"]
     end
 
-    subgraph S2 ["Stage 2: Iteration & sync"]
+    subgraph S2 ["Stage 2: Sync & Publish"]
         TopicBranch -->|"Write code"| LocalCommits["Local commits"]
-        LocalCommits -->|"git brx sync"| Rebased["Clean rebase onto base"]
+        LocalCommits -->|"git brx sync"| Rebased["Rebased onto base"]
         Rebased -->|"git brx publish"| RemoteBranch["Leased push to origin"]
     end
 
-    subgraph S3 ["Stage 3: Peer review"]
+    subgraph S3 ["Stage 3: Review"]
         RemoteBranch -->|"git brx review"| PullRequest["Pull request<br/>• Checklist<br/>• Reviewers<br/>• Merge instructions"]
     end
 
-    subgraph S4 ["Stage 4: Merge & cleanup"]
+    subgraph S4 ["Stage 4: Delete"]
         PullRequest -->|"Approved & merged"| SCM["Remote merged"]
-        SCM -->|"git brx delete"| Clean["Local deleted & pruned"]
+        SCM -->|"git brx delete"| Clean["Local deleted & origin pruned"]
     end
 ```
 
-### Stage 1: Intent & creation (`git brx create`)
-You never branch from stale or arbitrary commits. `git-brx create` validates that you have an assigned task in Jira or GitHub, validates the naming convention, and branches directly off the latest base branch.
+### Stage 1: Create (`git brx create`)
+Checks that the issue exists in Jira or GitHub, validates the branch prefix against the issue type, and creates the branch from your current base branch.
 
-### Stage 2: Iteration & sync (`git brx sync` / `git brx publish`)
-As you work, other teammates will merge changes into `main` or `master`. Instead of allowing your branch to drift into a divergence nightmare, you run `git brx sync`. For standard issue branches, `git-brx` performs a clean, linear **rebase**, replaying your commits on top of the latest trunk.
+### Stage 2: Sync & publish (`git brx sync` / `git brx publish`)
+As teammates merge changes into `main`, run `git brx sync` to keep your branch current (rebasing `issue/*` branches or merging `main` into `feature/*` and `epic/*` branches).
 
-When you're ready to share your work or backup your commits, `git brx publish` pushes with `--force-with-lease` and establishes upstream tracking automatically.
+Run `git brx publish` to push your branch to `origin` using `--force-with-lease` and configure upstream tracking.
 
-### Stage 3: Peer review (`git brx review`)
-When your implementation is complete and verified, running `git brx review` assembles a pull request. It automatically:
-1. Links the parent Issue
-2. Injects your team's quality checklist (tests, docs, edge cases)
-3. Evaluates modified components and routes the PR to the appropriate code reviewers
-4. Appends standardized, timeless merge instructions
+### Stage 3: Review (`git brx review`)
+When the change is ready for review, `git brx review` opens a pull request:
+1. Links the parent issue (`Closes #<id>`).
+2. Populates your repository's PR template.
+3. Matches modified file paths, issue labels, or branch patterns to assign reviewers (excluding the PR author).
+4. Appends merge strategy instructions (`Squash and merge` or `Create a merge commit`).
 
-### Stage 4: Merge & cleanup (`git brx delete`)
-Once approved and merged, local branch clutter can become overwhelming. `git brx delete` queries your SCM provider to ensure the branch was truly merged, switches your working tree safely back to `main`, deletes the local branch, and prunes stale remote references.
+### Stage 4: Delete (`git brx delete`)
+After the PR is merged and the remote branch is removed on `origin`, `git brx delete` switches your working tree back to `main`, deletes the local topic branch, and prunes stale `origin/*` tracking refs.
