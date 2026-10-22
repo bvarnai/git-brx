@@ -1,22 +1,22 @@
 # Atlassian (Bitbucket Server & Jira) integration guide
 
 > [!WARNING]
-> **Experimental / Untested on Live Instances**
-> While client code and comprehensive unit test suites exist for the Bitbucket Server and Jira REST API integrations, this backend has **not yet been verified against live production instances**. If your organization uses on-premises Bitbucket Server or Jira Data Center, please report any discrepancies on GitHub.
+> **Untested on live servers:**
+> Client implementations and contract schema tests exist for Bitbucket Server and Jira Data Center, but this backend has **not yet been verified against live production servers**. If you run into issues on Bitbucket Server or Jira Data Center, please open an issue on GitHub.
 
 ---
 
 ## 1. Overview
 
-`git-brx` includes built-in client libraries for on-premises Atlassian enterprise stacks:
-- **Jira Server / Data Center:** Used for issue status, issue types, components, and assignee inspection during `git brx create`.
-- **Bitbucket Server / Data Center:** Used for opening Pull Requests (`git brx review`) and validating remote merge status (`git brx delete`).
+`git-brx` includes REST clients for self-hosted Atlassian servers:
+- **Jira Server / Data Center:** Queries issue status, issue type, components, and assignee during `git brx create`.
+- **Bitbucket Server / Data Center:** Creates pull requests (`git brx review`) and checks PR merge state (`git brx delete`).
 
 ---
 
 ## 2. Configuration schema (`.git-brx.yaml`)
 
-To configure an Atlassian enterprise stack, define `platform: bitbucket` in `.git-brx.yaml`:
+Set `platform: bitbucket` in `.git-brx.yaml` and provide your Jira and Bitbucket Server URLs:
 
 ```yaml
 platform: bitbucket
@@ -56,28 +56,28 @@ review:
 
 ## 3. Authentication & Personal Access Token (PAT)
 
-Authentication with Atlassian servers uses a Personal Access Token (HTTP Bearer token) exported in your shell environment:
+Export your Atlassian Personal Access Token (HTTP Bearer token) in `GIT_BRX_TOKEN`:
 
 ```bash
 export GIT_BRX_TOKEN="your_atlassian_personal_access_token"
 ```
 
-If `GIT_BRX_TOKEN` is unset, `git-brx` will attempt to consult your system Git credential helper (`git credential fill`).
+If `GIT_BRX_TOKEN` is unset, `git-brx` falls back to your system Git credential helper (`git credential fill`).
 
 ---
 
 ## 4. Hybrid setups: Jira + GitHub
 
-Many engineering organizations use **Jira** for issue tracking and sprint planning, but use **GitHub** for repository hosting and code review. `git-brx` supports this decoupled combination seamlessly:
+If your team tracks issues in **Jira** and hosts code and pull requests on **GitHub**, configure `tracker` and `scm` separately:
 
 ```yaml
-# Issue tracking handled by Jira Server / DC
+# Issue tracking in Jira Server / DC
 tracker:
   provider: jira
   project: CORE
   uri: https://jira.internal.example.com
 
-# Code review handled by GitHub
+# Pull requests on GitHub
 scm:
   provider: github
   owner: acme-corp
@@ -94,13 +94,13 @@ review:
     default: [team-lead]
 ```
 
-### How hybrid mode works:
+### How hybrid mode works
 1. `git brx create issue/CORE-101`: Validates the issue key, type, and status against **Jira**.
-2. `git brx review`: Opens the pull request on **GitHub**, automatically injecting a markdown link back to Jira issue `CORE-101`.
-3. `git brx delete`: Queries **GitHub** to ensure the PR was merged before pruning the branch.
+2. `git brx review`: Opens a pull request on **GitHub** and links it back to Jira issue `CORE-101`.
+3. `git brx delete`: Checks PR merge state on **GitHub** when verifying remote branch cleanup.
 
-### Hybrid authentication:
-When operating in hybrid mode, provide both tokens:
+### Hybrid authentication
+Export tokens for both services:
 ```bash
 export GIT_BRX_TOKEN="your_jira_token"
 export GITHUB_TOKEN="your_github_token"

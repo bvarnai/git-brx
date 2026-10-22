@@ -1,33 +1,33 @@
 # Supported platforms & integration matrix
 
-`git-brx` is architected with a decoupled provider model to support multiple issue trackers and code review systems.
+`git-brx` decouples issue tracker clients (`TrackerProvider`) from source control review clients (`SCMProvider`), allowing single-platform or hybrid setups.
 
 ---
 
 ## Platform support status
 
-| Platform / Backend | Issue tacker | Code review (PR / MR) | Status | Guide & documentation |
+| Platform / Backend | Issue tracker | Code review (PR / MR) | Status | Guide & documentation |
 | :--- | :--- | :--- | :--- | :--- |
-| ✅ **GitHub** | GitHub issues | GitHub pull requests | **Done** | [GitHub integration guide](platforms/github.md) |
+| ✅ **GitHub** | GitHub Issues | GitHub Pull Requests | **Done** | [GitHub integration guide](platforms/github.md) |
 | ⌛ **Atlassian (Bitbucket + Jira)** | Jira Server / DC | Bitbucket Server / DC | *Implemented (untested)* | [Atlassian integration guide](platforms/atlassian.md) |
-| 🚧 **Hybrid (Jira + GitHub)** | Jira Server / DC | GitHub pull requests | *Implemented (untested)* | [Hybrid setup guide](platforms/atlassian.md#4-hybrid-setups-jira--github) |
-| 🚧 **GitLab** | GitLab issues | GitLab merge requests | *Not yet implemented* | Planned for future release |
-| 🚧 **Bitbucket Cloud** | Jira Cloud / Bitbucket | Bitbucket cloud PRs | *Not yet implemented* | Planned for future release |
+| 🚧 **Hybrid (Jira + GitHub)** | Jira Server / DC | GitHub Pull Requests | *Implemented (untested)* | [Hybrid setup guide](platforms/atlassian.md#4-hybrid-setups-jira--github) |
+| 🚧 **GitLab** | GitLab Issues | GitLab Merge Requests | *Not yet implemented* | Planned |
+| 🚧 **Bitbucket Cloud** | Jira Cloud / Bitbucket | Bitbucket Cloud PRs | *Not yet implemented* | Planned |
 
 ---
 
 ## 1. Zero-config & partial-config modes (Remote auto-detection)
 
 ### Zero-config mode
-If your repository uses GitHub, you **do not need any `.git-brx.yaml` file at all**.
+For GitHub repositories, **no `.git-brx.yaml` file is needed**.
 
-When `git-brx` initializes, it inspects your remote origin URL:
-- `git@github.com:my-org/my-project.git` ➔ Configures `platform: github`, `owner: my-org`, `repo: my-project`
+`git-brx` parses `remote.origin.url` automatically:
+- `git@github.com:my-org/my-project.git` $\to$ sets `platform: github`, `owner: my-org`, `repo: my-project`.
 
-All branch naming rules and issue validations immediately work with standard defaults. For full details on authentication and permissions, see the [GitHub integration guide](platforms/github.md).
+Default branch templates (`issue/*`, `feature/*`, `epic/*`), GitHub issue validation, and PR creation work immediately. See the [GitHub integration guide](platforms/github.md) for token setup.
 
 ### Partial-config mode
-When you create a `.git-brx.yaml` to customize specific rules (such as custom `branch.mapping` or `review.mapping`) but omit `platform:`, `git-brx` automatically falls back to detecting your platform from the remote `origin` URL:
+If you add a `.git-brx.yaml` file to customize specific fields (like `branch.mapping` or `review.mapping`) and omit `platform:`, `git-brx` still detects the platform, owner, and repo from `origin`:
 
 ```yaml
 # .git-brx.yaml
@@ -36,10 +36,8 @@ branch:
     enhancement: "issue"
 ```
 
-In this case, `git-brx` detects `platform: github` from `origin`, auto-populates GitHub issue tracker and code review presets, and applies your custom branch mapping.
-
 ### Disabling platform integrations (`platform: none`)
-If you want to maintain a `.git-brx.yaml` file (for example, to enforce branch naming templates or local workflows) but disable remote issue tracker checks and review integrations entirely, explicitly set:
+To enforce local branch naming templates without querying a remote issue tracker or SCM API, set `platform: none`:
 
 ```yaml
 # .git-brx.yaml
@@ -51,32 +49,30 @@ platform: none
 <a id="5-branch-protection-rules--repository-permissions"></a>
 ## 2. Branch protection rules & repository permissions
 
-To maintain an orderly and reproducible codebase, remote Git hosting platforms (GitHub, Bitbucket Server, GitLab) enforce access control through **repository permissions** and **branch protection rules**.
-
 ### Developer Git permissions
-`git-brx` assumes standard developer permissions:
-* **Read / Clone access:** Required to fetch remotes, inspect commits, and discover branches
-* **Write / Push access:** Required to publish topic branches (`issue/*`, `feature/*`, `epic/*`) to the remote repository (`git brx publish`)
+`git-brx` requires standard repository permissions:
+* **Read / clone access:** Fetching remotes, inspecting commits, and listing branches.
+* **Write / push access:** Pushing topic branches (`issue/*`, `feature/*`, `epic/*`) to `origin` via `git brx publish`.
 
 > [!NOTE]
-> External contributors working on public forks who lack direct push access can still run `git-brx` locally, but `git brx publish` will be rejected by the upstream remote if push access is restricted.
+> Contributors on read-only upstreams can use `git-brx` for local branch operations, but `git brx publish` requires push access to `origin`.
 
 ### Branch protection rules (Base branches vs. Topic branches)
 
-`git-brx` workflows are designed around branch protection and isolation:
+Configure branch protection rules differently for base branches and topic branches:
 
-| Branch category | Target branches | Recommended protection rules | why |
+| Branch category | Target branches | Recommended protection rules | Why |
 | :--- | :--- | :--- | :--- |
-| **Base Branches** | `main`, `master`, `release/*` | • Require pull requests before merging<br>• Prevent direct pushes<br>• Prevent branch deletion<br>• Prevent force pushes (history rewriting) | `git-brx` treats base branches as the production single source of truth. Developers never commit or push directly to `main`; all changes integrate via automated pull requests (`git brx review`) |
-| **Topic Branches** | `issue/*`, `feature/*`, `epic/*` | • Allow force-pushes with lease (`--force-with-lease`)<br>• Allow branch deletion after merge<br>• Full control by developers | `git-brx` uses rebase workflows (`git brx update`, `git brx sync`) to keep history clean and linear. Rebasing changes commit hashes, requiring leased force-pushes during `git brx publish` |
+| **Base Branches** | `main`, `master`, `release/*` | • Require pull requests before merging<br>• Block direct pushes<br>• Block branch deletion<br>• Block force-pushes | Base branches are updated only through merged pull requests (`git brx review`). |
+| **Topic Branches** | `issue/*`, `feature/*`, `epic/*` | • Allow force-pushes (`--force-with-lease`)<br>• Allow branch deletion on merge | `git brx sync` and `git brx update` rebase topic branches, which rewrites commit hashes and requires `--force-with-lease` on `git brx publish`. |
 
 > [!WARNING]
-> **Avoid wildcard branch protection on topic branches:**
-> If your repository administrator configures a blanket branch protection rule or ruleset matching all branches (`*`) that disables force-pushes or requires pull requests to update branches, `git brx publish` will fail when pushing rebased topic branches. Always scope branch protection rules strictly to `main`, `master`, and `release/*`.
+> **Do not apply no-force-push rulesets to `*` (all branches):**
+> If a repository ruleset blocks force-pushes across `*`, `git brx publish` will fail whenever you push a rebased `issue/*` branch. Scope branch protection rules strictly to `main`, `master`, and `release/*`.
 
 ---
 
 ## 3. Platform guides
 
-- 📘 [GitHub integration guide](platforms/github.md) — Zero-config mode, Fine-grained PAT configuration, squash merge settings, and label mappings
-- 📙 [Atlassian (Bitbucket Server & Jira) integration guide](platforms/atlassian.md) — Bitbucket Server, Jira Data Center, and hybrid configurations (Experimental / Untested)
+- 📘 [GitHub integration guide](platforms/github.md) — Zero-config setup, fine-grained PAT permissions, repository merge settings, and label mappings.
+- 📙 [Atlassian (Bitbucket Server & Jira) integration guide](platforms/atlassian.md) — Bitbucket Server, Jira Data Center, and Jira + GitHub hybrid configs (implemented, untested on live servers).

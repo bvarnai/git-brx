@@ -1,39 +1,37 @@
 # User guide & wiki
 
-Welcome to the **`git-brx` user guide**. This documentation provides comprehensive tutorials, conceptual deep dives, command catalogs, and troubleshooting advice for modern software development teams using `git-brx`.
+This guide covers how to install, configure, and use `git-brx` for day-to-day branch management and code review.
 
 ---
 
 ## Table of contents
 
-| Chapter | Title | Focus Area |
+| Chapter | Title | Topics Covered |
 | :---: | :--- | :--- |
-| **01** | [Core philosophy & mental model](philosophy.md) | Issue-first development, hiding Git complexity, psychological safety, and PR review hygiene |
-| **02** | [Getting started](getting-started.md) | Installation, shell integration (`git brx`), configuration cascade, and AI agent integration |
-| **03** | [The branch lifecycle](branch-lifecycle.md) | Branch taxonomy, sync strategies, and end-to-end walkthrough: creating, working, publishing, reviewing, and deleting branches |
-| **04** | [Synchronization, rebasing & conflict resolution](synchronization-and-rebasing.md) | How `sync` and `update` work, interactive conflict resolution with `resolve`, and resetting safely with `reset` |
-| **05** | [Supported platforms & integration matrix](multi-platform.md) | Platform compatibility matrix, zero-config mode, branch protection rules, and dedicated guides for GitHub and Atlassian |
-| **06** | [Complete command reference](command-reference.md) | Exhaustive reference of all subcommands, accepted flags, exit codes, and output formats |
-| **07** | [Troubleshooting & FAQ](troubleshooting-faq.md) | Practical answers to common questions, credential troubleshooting, and recovery tips |
-| **08** | [Colleague simulation & multi-developer testing](colleague-simulation.md) | Simulating concurrent development, rebasing over colleague merges, and conflict injection with Alex Developer |
+| **01** | [Core philosophy & mental model](philosophy.md) | Issue-first workflow, branch roles, and separating issue specs from code review |
+| **02** | [Getting started](getting-started.md) | Installation, shell integration (`git brx`), 4-tier config cascade, and AI agent setup |
+| **03** | [The branch lifecycle](branch-lifecycle.md) | Branch prefixes, sync strategies, and full walkthrough (`create` to `delete`) |
+| **04** | [Synchronization, rebasing & conflict resolution](synchronization-and-rebasing.md) | How `sync` and `update` work, resolving conflicts with `resolve`, and recovering with `reset` |
+| **05** | [Supported platforms & integration matrix](multi-platform.md) | Platform status, zero-config detection, branch protection rules, and platform guides |
+| **06** | [Complete command reference](command-reference.md) | Subcommands, flags, arguments, and examples |
+| **07** | [Troubleshooting & FAQ](troubleshooting-faq.md) | Common errors, token troubleshooting, and recovery commands |
+| **08** | [Colleague simulation & multi-developer testing](colleague-simulation.md) | Testing multi-developer rebase, conflict, and review flows with a simulated peer agent |
 
 ---
 
 ## Reading paths
 
-### For new engineers & onboarding developers
-If you are new to the team or want to get productive quickly without worrying about complex Git commands:
-1. Start with the [Quick start in the README](../../README.md#quick-start)
-2. Read [Core philosophy & mental model](philosophy.md) to understand why we structure work around issues
-3. Follow the step-by-step [Branch lifecycle](branch-lifecycle.md)
+### New to `git-brx`
+1. Run through the [Quick start in the README](../../README.md#quick-start).
+2. Read [Core philosophy & mental model](philosophy.md) for the issue-first workflow and branch types.
+3. Follow [The branch lifecycle](branch-lifecycle.md) step by step.
 
-### For seasoned Git users & tech leads
-If you already know Git inside and out and want to understand how `git-brx` standardizes team hygiene:
-1. Read [Core philosophy & mental model](philosophy.md) for rationale on branching models and Squash & Merge defaults
-2. Review [Synchronization & rebasing](synchronization-and-rebasing.md) to see how `git-brx` automates `--force-with-lease` and safe in-memory delta calculations
-3. Check [Multi-platform setup](multi-platform.md) to configure reviewer routing and pull request templates for your team
+### Configuring `git-brx` for a team
+1. Read [Core philosophy & mental model](philosophy.md) for the rationale behind branch prefixes and Squash & Merge defaults.
+2. Review [Synchronization, rebasing & conflict resolution](synchronization-and-rebasing.md) for `--force-with-lease` and conflict handling details.
+3. Use [Supported platforms & integration matrix](multi-platform.md) and the [GitHub guide](platforms/github.md) to set up reviewer routing, PR templates, and repository settings.
 
 ---
 
 ## Technical specifications
-For internal implementation details, error code contracts, and architecture diagrams, consult the [Technical specifications](../spec/global.md).
+For CLI contracts, exit codes, and plumbing specifications, see [`docs/spec/global.md`](../spec/global.md).

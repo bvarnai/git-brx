@@ -1,19 +1,17 @@
 # Contributing to git-brx
 
-Thank you for your interest in contributing to `git-brx`! We welcome bug reports, documentation improvements, and pull requests that adhere to our architectural standards and workflow rules.
+Bug reports, documentation improvements, and pull requests are welcome. Before opening a PR, review the architectural rules and test workflow below.
 
 ---
 
-## 🎯 Guiding Principles
+## 🎯 Architecture Rules
 
-Before proposing new features or modifying existing code, please review our core architectural rules:
-
-1. **Spec-Driven Parity:** All subcommands, flags, and error codes must strictly adhere to the technical specifications in [`docs/spec/`](docs/spec/global.md). Any change in CLI behavior must be accompanied by updates to the corresponding specification files.
-2. **Deterministic Plumbing over Porcelain:** External `git` invocations must use deterministic plumbing commands (`rev-parse`, `symbolic-ref`, `show-ref`, `for-each-ref`, `diff-index`, `merge-base`, `rev-list`) rather than porcelain commands.
+1. **Spec-Driven Parity:** Subcommands, flags, and exit codes must match the specifications in [`docs/spec/`](docs/spec/global.md). Update the corresponding spec file whenever CLI behavior changes.
+2. **Plumbing over Porcelain:** Invoke Git through deterministic plumbing commands (`rev-parse`, `symbolic-ref`, `show-ref`, `for-each-ref`, `diff-index`, `merge-base`, `rev-list`) rather than porcelain output parsers.
 3. **Stream Separation:**
-   - `stdout` is strictly reserved for primary command results, machine-parseable data (`name`, `config`), and `--help`/`--version`.
-   - `stderr` is used exclusively for operational progress logs (`[git-brx]`), warnings, hints, and error diagnostics.
-4. **Zero Heavyweight Dependencies:** We use the Go standard library (`os`, `strings`, `bufio`, `regexp`, `context`) and standard CLI dependencies (`github.com/spf13/cobra`, `gopkg.in/yaml.v3`). We never import heavyweight Git libraries (such as `go-git`) or shell out to legacy external script utilities.
+   - `stdout` is reserved for primary command output, machine-readable data (`name`, `config`), and `--help`/`--version`.
+   - `stderr` is used for progress logs (`[git-brx]`), warnings, hints, and errors.
+4. **Minimal Dependencies:** Stick to the Go standard library (`os`, `strings`, `bufio`, `regexp`, `context`, `net/http`) and approved CLI packages (`github.com/spf13/cobra`, `gopkg.in/yaml.v3`). Do not import heavyweight Git libraries (`go-git`) or shell out to external script runtimes.
 
 ---
 
@@ -28,7 +26,7 @@ Before proposing new features or modifying existing code, please review our core
 git clone https://github.com/bvarnai/git-brx.git
 cd git-brx
 
-# Build local development binary to bin/
+# Build local binary into ./bin/
 mkdir -p bin
 go build -o ./bin/git-brx ./cmd/git-brx
 
@@ -38,81 +36,76 @@ go build -o ./bin/git-brx ./cmd/git-brx
 
 ---
 
-## 🧪 Testing Guidelines
+## 🧪 Running Tests
 
-We enforce high test coverage and strict architectural boundaries:
-
-1. **Run Unit & Integration Tests:**
+1. **Unit & Integration Tests:**
    ```bash
    go test -v -race ./...
    ```
 
-2. **Verify Code Formatting & Static Analysis:**
+2. **Formatting & Static Analysis:**
    ```bash
-   # Code formatting (all files must be formatted with standard gofmt)
+   # Format code with standard gofmt
    gofmt -s -w .
 
-   # Verify zero unformatted files exist
+   # Verify no unformatted files remain
    test -z "$(gofmt -l .)"
 
-   # Go static analysis
+   # Run go vet
    go vet ./...
    ```
 
-3. **Disposable Integration Tests:**
-   All commands include disposable integration tests in `test/integration/` using `t.TempDir()`. Tests must never touch the host machine's `~/.gitconfig` or global Git state.
+3. **Isolated Integration Tests:**
+   Integration tests in `test/integration/` create disposable repositories in `t.TempDir()`. Tests must never read or modify the host machine's `~/.gitconfig` or global Git state.
 
-4. **Contract Schema & Compatibility Matrix Testing:**
-   `git-brx` validates API payloads against official REST schemas using a schema-first validation engine (`github.com/santhosh-tekuri/jsonschema/v5`):
-   - **Provenance Sources:** Jira schemas are extracted directly from official Atlassian WADL descriptors; Bitbucket schemas are derived from official HTML references.
-   - **Running Compatibility Tests:**
+4. **Contract Schema & Compatibility Matrix Tests:**
+   `git-brx` validates API payloads against REST schemas using `github.com/santhosh-tekuri/jsonschema/v5`:
+   - **Schema Sources:** Jira schemas are extracted from official Atlassian WADL descriptors; Bitbucket schemas come from official REST documentation.
+   - **Run Compatibility Tests:**
      ```bash
      go test -v ./test/integration/... -run "CompatibilityMatrix|Rejection"
      ```
-   - **Adding a New Server Version:**
-     1. Create the version directory: `test/schemas/<product>/<version>` (e.g. `test/schemas/jira/v2-server-9.x`).
-     2. Add the corresponding schema files (`issue.json`, `error_collection.json`, `pull_request.json`, `errors.json`).
+   - **Add a Server Version:**
+     1. Create `test/schemas/<product>/<version>` (e.g., `test/schemas/jira/v2-server-9.x`).
+     2. Add the schema files (`issue.json`, `error_collection.json`, `pull_request.json`, `errors.json`).
      3. Append the version string to the target slice in `test/integration/wiremock_schema_test.go`.
-     4. Execute `go test -v ./test/integration/... -run "CompatibilityMatrix"` to verify zero contract drift.
+     4. Run `go test -v ./test/integration/... -run "CompatibilityMatrix"`.
 
 ---
 
-## 🌿 Git Branch & PR Workflow
+## 🌿 Branch & PR Workflow
 
-We follow the opinionated branch workflow managed by `git-brx`:
+Use `git-brx` itself to manage topic branches and pull requests:
 
-1. **Create an Issue:** Every bug fix or feature must have a corresponding GitHub issue.
-2. **Create Branch:**
+1. **Create an Issue:** Open a GitHub issue for the bug fix or feature.
+2. **Create a Topic Branch:**
    ```bash
    git brx create issue/<number> -y
    ```
-3. **Synchronize & Rebase:**
+3. **Sync with `main`:**
    ```bash
    git brx sync
    ```
-4. **Publish & Review:**
+4. **Publish & Open a PR:**
    ```bash
    git brx publish
    git brx review
    ```
 5. **Clean Up After Merge:**
    ```bash
-   git brx select main
-   git brx update
    git brx delete issue/<number>
+   git brx update
    ```
 
 ---
 
 ## 📝 Commit Conventions
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/):
-- `feat(scope): ...` for new features or capabilities
-- `fix(scope): ...` for bug fixes
-- `docs(scope): ...` for documentation updates
-- `refactor(scope): ...` for code refactoring without behavior change
-- `test(scope): ...` for adding or improving tests
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat(#<issue>): ...` for new features
+- `fix(#<issue>): ...` for bug fixes
+- `docs(#<issue>): ...` for documentation changes
+- `refactor(#<issue>): ...` for refactoring without behavior changes
+- `test(#<issue>): ...` for test additions or updates
 - `ci: ...` for GitHub Actions workflow changes
-- `chore: ...` for maintenance or dependency updates
-
-Thank you for helping make `git-brx` better!
+- `chore(#<issue>): ...` for maintenance or dependency updates
