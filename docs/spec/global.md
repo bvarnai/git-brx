@@ -102,7 +102,7 @@ The following flags are accepted across the root binary and all subcommands:
 
 ### Environment Variables Injected / Propagated
 
-When spawning child Git processes, `git-brx` uses `BuildSanitizedEnv` to strip existing conflicting variables from the process environment before injecting:
+When spawning child Git processes, `git-brx` uses `command.SanitizedEnv` (in package `internal/command`) to strip existing conflicting variables from the process environment before injecting:
 
 - `LC_ALL=C` and `LANG=C`: Injected across all child Git plumbing executions to prevent locale-dependent output parsing failures and guarantee invariant English formatting.
 - `GIT_TERMINAL_PROMPT=0`: Injected during automated non-interactive operations to prevent background worker hangs on missing credentials.

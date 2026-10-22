@@ -7,23 +7,24 @@
   - `cmd/git-brx/main.go`: Thin entrypoint only (signal context `SIGINT`/`SIGTERM`, exit code mapping).
   - `internal/checks/`: Precondition invariant enforcement (`InsideWorkTree`, `NoActiveOperation`, `NoOrphanedCommits`, `NotShallow`, `AttachedBranch`, `HasOrigin`, `HasCommits`).
   - `internal/cli/`: Cobra commands, flag binding, input validation, and user experience orchestration.
+  - `internal/command/`: Low-level subprocess execution primitives (`New`, `DefaultWaitDelay`), environment sanitization (`SanitizedEnv`), and structured exit error representation (`Error`). Depends only on `errcode` and Go stdlib.
   - `internal/config/`: 4-tier cascading YAML config loader (`loader.go`), merger, provenance reporter, and reviewer routing rules.
   - `internal/domain/`: Pure Go value types and domain models (`BranchRecord`, `Issue`, `PullRequestRequest`). Depends only on Go stdlib.
   - `internal/errcode/`: Sentinel error categories, structured application errors (`AppError`), and deterministic exit code mapping. Depends only on Go stdlib.
-  - `internal/git/`: Subprocess execution boundary (`Runner`, `ExecRunner`, `BuildSanitizedEnv`), inspection engine (`Inspector`), and operational engine (`Operations`).
+  - `internal/git/`: Subprocess execution boundary (`Runner`, `ExecRunner`), inspection engine (`Inspector`), and operational engine (`Operations`).
   - `internal/github/`: GitHub REST API client (issues, pull requests, reviewers, authentication).
   - `internal/suggest/`: Levenshtein distance string matching for branch typo suggestions.
   - `internal/term/`: Thread-safe `Logger` with mutex protection, ANSI color policy resolution (`GIT_BRX_COLOR`, `NO_COLOR`, `TERM=dumb`), `Confirm` prompt, `Spinner`, and `Timer`.
   - `test/integration/`: End-to-end integration tests using isolated disposable repositories in `t.TempDir()`.
-- **Dependency Boundaries:** `internal/config`, `internal/git`, `internal/checks`, `internal/github`, and `internal/suggest` may depend on `domain`, `errcode`, and `term`, but NEVER on `internal/cli`.
+- **Dependency Boundaries:** `internal/config`, `internal/git`, `internal/checks`, `internal/github`, and `internal/suggest` may depend on `domain`, `errcode`, `command`, and `term`, but NEVER on `internal/cli`.
 
 ## Coding Standards & Idioms
 In accordance with the [Google Go Style Guide](https://google.github.io/styleguide/go/guide) and `docs/spec/global.md`:
 
 - **External Execution Boundary (`git`):**
   - NEVER call `os/exec.Command` directly in `internal/cli` or `internal/domain`.
-  - ALWAYS invoke Git through `internal/git.Runner`.
-  - Sanitize subprocess environments with `BuildSanitizedEnv`: inject `LC_ALL=C`, `LANG=C`, `GIT_TERMINAL_PROMPT=0`, `GIT_ADVICE=0`, and `-c gc.auto=0`.
+  - ALWAYS invoke Git through `internal/git.Runner` or low-level processes through `internal/command.New`.
+  - Sanitize subprocess environments with `command.SanitizedEnv`: inject `LC_ALL=C`, `LANG=C`, `GIT_TERMINAL_PROMPT=0`, `GIT_ADVICE=0`, and `-c gc.auto=0`.
   - Prefer deterministic Git plumbing (`rev-parse`, `symbolic-ref`, `show-ref`, `ls-remote`, `diff-index`, `rev-list`) over porcelain.
 - **Context, Cancellation & Cleanup:**
   - Every external execution (Git subprocesses, HTTP calls) must accept a `context.Context` bound to `SIGINT`/`SIGTERM`.
