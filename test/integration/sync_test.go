@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +35,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Syncing 'issue/VSB-101' with 'master' base branch by default (strategy: rebase)")
 		assert.Contains(t, stderr.String(), "Successfully rebased 'issue/VSB-101' onto 'master'")
 
@@ -43,7 +43,7 @@ func TestSyncIntegration(t *testing.T) {
 		stdout.Reset()
 		stderr.Reset()
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Branch 'issue/VSB-101' is already up to date with 'master'")
 
 		// Verify rebase happened: issue branch should contain both master.txt and issue.txt
@@ -73,7 +73,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Syncing 'feature/user-auth' with 'master' base branch by default (strategy: merge)")
 		assert.Contains(t, stderr.String(), "Successfully merged 'master' into 'feature/user-auth'")
 
@@ -81,7 +81,7 @@ func TestSyncIntegration(t *testing.T) {
 		stdout.Reset()
 		stderr.Reset()
 		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Branch 'feature/user-auth' is already up to date with 'master'")
 
 		// Verify merge commit exists
@@ -107,7 +107,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "-m"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Syncing 'issue/VSB-102' with 'master' base branch by default (strategy: merge)")
 		assert.Contains(t, stderr.String(), "Successfully merged 'master' into 'issue/VSB-102'")
 		log := h.Git("log", "--oneline")
@@ -132,11 +132,11 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "-r"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Syncing 'feature/payment' with 'master' base branch by default (strategy: rebase)")
 		assert.Contains(t, stderr.String(), "Successfully rebased 'feature/payment' onto 'master'")
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		log := h.Git("log", "--oneline")
 		assert.Contains(t, log, "Payment commit")
 		assert.Contains(t, log, "Core commit")
@@ -164,7 +164,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Fast-forwarded local 'master' to match 'origin/master' (1 commit behind)")
 
 		// Verify local master ref matches origin/master
@@ -198,7 +198,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Fast-forwarded local 'master' to match 'origin/master' (1 commit behind)")
 
 		// Verify local master ref matches origin/master
@@ -230,7 +230,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "--no-auto-update-base"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitConflict), code)
+		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Base branch 'master' is not up-to-date with 'origin/master'")
 		assert.Contains(t, stderr.String(), "Switch to 'master' and run 'git-brx update' first")
 	})
@@ -257,7 +257,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitConflict), code)
+		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Base branch 'master' is not up-to-date with 'origin/master'")
 		assert.Contains(t, stderr.String(), "Switch to 'master' and run 'git-brx update' first")
 	})
@@ -283,7 +283,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitConflict), code)
+		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Sync failed due to merge conflicts")
 		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 	})
@@ -299,7 +299,7 @@ func TestSyncIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitConflict), code)
+		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Cannot switch branches during an active rebase")
 	})
 }

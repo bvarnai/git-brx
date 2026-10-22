@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ func TestCompletion_Generation(t *testing.T) {
 			ctx := context.Background()
 
 			code := cli.Run(ctx, []string{"completion", sh}, &stdout, &stderr)
-			assert.Equal(t, int(domain.ExitSuccess), code)
+			assert.Equal(t, int(errcode.ExitSuccess), code)
 			assert.NotEmpty(t, stdout.String())
 			assert.Empty(t, stderr.String())
 		})
@@ -31,6 +31,6 @@ func TestCompletion_InvalidShell(t *testing.T) {
 	ctx := context.Background()
 
 	code := cli.Run(ctx, []string{"completion", "invalid-shell"}, &stdout, &stderr)
-	assert.Equal(t, int(domain.ExitUsageError), code)
+	assert.Equal(t, int(errcode.ExitUsageError), code)
 	assert.Contains(t, stderr.String(), "[git-brx] Error: invalid argument \"invalid-shell\"")
 }

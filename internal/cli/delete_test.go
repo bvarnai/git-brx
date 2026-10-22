@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +24,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 		{
 			name:         "multiple positional arguments return usage error",
 			args:         []string{"delete", "branch1", "branch2"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unexpected argument: branch2",
 		},
 		{
@@ -39,7 +39,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":                             {out: "abc1234"},
 				"show-ref --verify --quiet refs/heads/issue/missing": {err: errors.New("not found")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Branch 'issue/missing' does not exist locally",
 		},
 		{
@@ -54,7 +54,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":                    {out: "abc1234"},
 				"show-ref --verify --quiet refs/heads/main": {out: ""},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "You can only delete an 'issue', 'feature', or 'epic' branch",
 		},
 		{
@@ -63,7 +63,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Not a git repository",
 		},
 		{
@@ -74,7 +74,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {err: errors.New("exit status 1")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Repository has no commits yet",
 		},
 		{
@@ -86,7 +86,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
 				"remote get-url origin":           {err: errors.New("remote origin not found")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Origin remote is not configured",
 		},
 		{
@@ -100,7 +100,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"symbolic-ref --short -q HEAD":    {err: errors.New("detached")},
 				"rev-parse --short HEAD":          {out: "abc1234"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Cannot delete branch in detached HEAD state",
 		},
 		{
@@ -115,7 +115,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":                                    {out: "abc1234"},
 				"for-each-ref --format=%(upstream:short) refs/heads/master": {out: "origin/master"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "You must be on an 'issue', 'feature', or 'epic' branch to delete it",
 		},
 		{
@@ -130,7 +130,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":                                          {out: "abc1234"},
 				"for-each-ref --format=%(upstream:short) refs/heads/release/v1.0": {out: "origin/release/v1.0"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "You must be on an 'issue', 'feature', or 'epic' branch to delete it",
 		},
 		{
@@ -146,7 +146,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"for-each-ref --format=%(upstream:short) refs/heads/issue/VSB-101": {out: "origin/issue/VSB-101"},
 				"ls-remote --heads origin issue/VSB-101":                           {err: errors.New("Could not resolve host")},
 			},
-			expectedCode: int(domain.ExitPreconditionRemote),
+			expectedCode: int(errcode.ExitPreconditionRemote),
 			errSubstr:    "Unable to reach remote; are you offline?",
 		},
 		{
@@ -162,7 +162,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"for-each-ref --format=%(upstream:short) refs/heads/issue/VSB-101": {out: "origin/issue/VSB-101"},
 				"ls-remote --heads origin issue/VSB-101":                           {out: "abc1234 refs/heads/issue/VSB-101\n"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Branch must be deleted on remote first (e.g., after merging pull request)",
 		},
 		{
@@ -181,7 +181,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"branch -D issue/VSB-101":                                          {out: "Deleted branch issue/VSB-101"},
 				"remote prune origin":                                              {out: ""},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Deleted local branch 'issue/VSB-101' and pruned origin",
 		},
 		{
@@ -201,7 +201,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"branch -D epic/billing":                                          {out: "Deleted branch epic/billing"},
 				"remote prune origin":                                             {out: ""},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Deleted local branch 'epic/billing' and pruned origin",
 		},
 		{
@@ -218,7 +218,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/heads/master":                      {out: ""},
 				"checkout master":                                                  {err: errors.New("local changes would be overwritten")},
 			},
-			expectedCode: int(domain.ExitConflict),
+			expectedCode: int(errcode.ExitConflict),
 			errSubstr:    "Unable to switch to 'master' branch",
 		},
 		{
@@ -237,7 +237,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"branch -D issue/VSB-101":                            {out: "Deleted branch issue/VSB-101"},
 				"remote prune origin":                                {out: ""},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Deleted local branch 'issue/VSB-101' and pruned origin",
 		},
 		{
@@ -256,7 +256,7 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 				"branch -D feature/login":                            {out: "Deleted branch feature/login"},
 				"remote prune origin":                                {out: ""},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Deleted local branch 'feature/login' and pruned origin",
 		},
 	}
@@ -269,16 +269,16 @@ func TestDeleteCommand_UnitTable(t *testing.T) {
 			app.RootCmd.SetArgs(tt.args)
 
 			err := app.Execute(context.Background())
-			if tt.expectedCode == int(domain.ExitSuccess) {
+			if tt.expectedCode == int(errcode.ExitSuccess) {
 				require.NoError(t, err)
 				if tt.expectStderr != "" {
 					assert.Contains(t, stderr.String(), tt.expectStderr)
 				}
 			} else {
 				require.Error(t, err)
-				var appErr *domain.AppError
-				require.True(t, errors.As(err, &appErr), "expected *domain.AppError, got %T: %v", err, err)
-				assert.Equal(t, tt.expectedCode, int(appErr.Code))
+				var appErr *errcode.AppError
+				require.True(t, errors.As(err, &appErr), "expected *errcode.AppError, got %T: %v", err, err)
+				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}

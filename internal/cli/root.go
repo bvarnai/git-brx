@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/git"
 	"github.com/bvarnai/git-brx/internal/term"
 	"github.com/bvarnai/git-brx/internal/version"
@@ -65,7 +65,7 @@ for local branch lifecycles, upstream synchronization, clean rebasing, and code 
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if app.Opts.Verbose && app.Opts.Quiet {
-				return domain.NewError(domain.ExitUsageError, "cannot specify both --verbose and --quiet").
+				return errcode.NewError(errcode.ErrUsage, "Cannot specify both --verbose and --quiet").
 					WithHint("Choose either verbose or quiet output mode, not both.")
 			}
 			app.Logger = term.New(term.Options{
@@ -128,28 +128,28 @@ func RunInDir(ctx context.Context, dir string, args []string, stdout, stderr io.
 
 	err := app.Execute(ctx)
 	if err == nil {
-		return int(domain.ExitSuccess)
+		return errcode.ExitSuccess
 	}
 
-	if errors.Is(err, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) {
-		return int(domain.ExitInterrupted)
+	if errors.Is(err, errcode.ErrInterrupted) || errors.Is(err, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) {
+		return errcode.ExitInterrupted
 	}
 
-	var appErr *domain.AppError
+	var appErr *errcode.AppError
 	if errors.As(err, &appErr) {
-		if appErr.Code == domain.ExitUserAborted {
+		if errors.Is(appErr, errcode.ErrUserAborted) {
 			if appErr.Message != "" {
 				app.Logger.Log("%s", appErr.Message)
 			}
-			return int(appErr.Code)
+			return errcode.ExitUserAborted
 		}
-		app.Logger.Error("%s", appErr.Message)
+		app.Logger.Error("%s", appErr.Error())
 		if appErr.Hint != "" {
 			app.Logger.HintAlways("%s", appErr.Hint)
 		}
-		return int(appErr.Code)
+		return errcode.ExitCode(appErr)
 	}
 
 	app.Logger.Error("%v", err)
-	return int(domain.ExitUsageError)
+	return errcode.ExitUsageError
 }

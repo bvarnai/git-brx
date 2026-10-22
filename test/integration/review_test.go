@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +34,7 @@ func TestReviewIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRemote), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
 		assert.Contains(t, stderr.String(), "Branch 'issue/99' has not been pushed to remote origin")
 		assert.Contains(t, stderr.String(), "Run 'git-brx publish'")
 	})
@@ -109,7 +109,7 @@ scm:
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.True(t, prCreated, "PR must have been submitted to mock server")
 		assert.Contains(t, stderr.String(), "Created pull-request:")
 		assert.NotContains(t, stderr.String(), "Created pull-request https://github.com/test-org/test-repo/pull/12")
@@ -170,7 +170,7 @@ scm:
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--no-merge-instructions"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.False(t, strings.Contains(capturedBody, "### Merge instructions"))
 	})
 
@@ -231,7 +231,7 @@ scm:
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--merge-instructions"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.Contains(t, capturedBody, "### Merge instructions")
 	})
 
@@ -289,7 +289,7 @@ scm:
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.Contains(t, capturedBody, "Create a merge commit")
 	})
 
@@ -347,7 +347,7 @@ scm:
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--strategy=rebase"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.Contains(t, capturedBody, "Rebase and merge")
 	})
 
@@ -421,7 +421,7 @@ review:
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 		// current-author must be excluded, only carol remains
 		assert.Equal(t, []string{"carol"}, requestedReviewers)
 	})
@@ -490,7 +490,7 @@ review:
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--reviewer", "explicit-reviewer"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.Equal(t, []string{"explicit-reviewer"}, requestedReviewers)
 	})
 }

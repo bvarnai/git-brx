@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/suggest"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,7 @@ from origin before switching.`,
 
 func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) error {
 	if len(args) > 1 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[1])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[1])
 	}
 
 	workDir := "."
@@ -99,7 +99,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 				if localExists {
 					a.Logger.Warn("Unable to reach remote; falling back to local references")
 				} else {
-					return domain.NewError(domain.ExitPreconditionRemote, "Select failed: unable to fetch from origin")
+					return errcode.NewError(errcode.ErrPreconditionRemote, "Select failed: unable to fetch from origin")
 				}
 			}
 		}
@@ -115,10 +115,10 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 	checkoutErr := a.Operations.Checkout(ctx, rootDir, targetBranch)
 	if checkoutErr != nil {
 		if strings.Contains(checkoutErr.Error(), "would be overwritten by checkout") {
-			return domain.NewError(domain.ExitConflict, "Select failed: local modifications would be overwritten by checkout").
+			return errcode.NewError(errcode.ErrConflict, "Select failed: local modifications would be overwritten by checkout").
 				WithHint("Commit or stash your changes before switching branches")
 		}
-		return domain.WrapError(domain.ExitGeneralError, checkoutErr, "Select failed: could not checkout branch '%s'", targetBranch)
+		return errcode.WrapError(errcode.ErrGeneral, checkoutErr, "Select failed: could not checkout branch '%s'", targetBranch)
 	}
 
 	// Postflight feedback: warn if uncommitted changes were carried over to the new branch
@@ -152,7 +152,7 @@ func (a *App) hintUpstreamSync(ctx context.Context, rootDir, branch string) {
 }
 
 func (a *App) branchNotFoundError(ctx context.Context, rootDir, targetBranch string) error {
-	appErr := domain.NewError(domain.ExitPreconditionRepo, "Branch '%s' not found", targetBranch)
+	appErr := errcode.NewError(errcode.ErrPreconditionRepo, "Branch '%s' not found", targetBranch)
 	candidates, err := a.Inspector.ListAllBranchNames(ctx, rootDir)
 	if err == nil && len(candidates) > 0 {
 		closest := suggest.Closest(targetBranch, candidates, 3)

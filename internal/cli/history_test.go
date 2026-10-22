@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +25,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 		{
 			name:         "excess arguments returns usage error",
 			args:         []string{"history", "path1", "path2"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unexpected argument: path2",
 		},
 		{
@@ -34,7 +34,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Not a git repository",
 		},
 		{
@@ -45,7 +45,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {err: errors.New("exit status 1")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Repository has no commits yet",
 		},
 		{
@@ -59,7 +59,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | commit message (HEAD -> master) [Test User]",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | commit message (HEAD -> master) [Test User]\n",
 		},
 		{
@@ -73,7 +73,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | commit message [Test User]",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | commit message [Test User]\n",
 		},
 		{
@@ -87,7 +87,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | commit message [Test User]",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | commit message [Test User]\n",
 		},
 		{
@@ -101,7 +101,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | VSB-101 fix auth issue [Test User]",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | VSB-101 fix auth issue [Test User]\n",
 		},
 		{
@@ -115,7 +115,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | commit message [Test User]\n 1 file changed, 1 insertion(+)",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | commit message [Test User]\n 1 file changed, 1 insertion(+)\n",
 		},
 		{
@@ -129,7 +129,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | commit message [Test User]\ndiff --git a/f b/f",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | commit message [Test User]\ndiff --git a/f b/f\n",
 		},
 		{
@@ -145,7 +145,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | feature commit [Test User]",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | feature commit [Test User]\n",
 		},
 		{
@@ -163,7 +163,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | issue commit [Test User]",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | issue commit [Test User]\n",
 		},
 		{
@@ -178,7 +178,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"for-each-ref --format=%(upstream:short) refs/heads/master": {out: "origin/master"},
 				"show-ref --verify --quiet refs/heads/master":               {out: ""},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "",
 			expectStderr: "You are on base branch 'master'; there is no topic branch delta to display",
 		},
@@ -194,7 +194,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "* abc1234 2026-10-09 | touch main.go [Test User]",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "* abc1234 2026-10-09 | touch main.go [Test User]\n",
 		},
 		{
@@ -208,7 +208,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					err: errors.New("broken pipe"),
 				},
 			},
-			expectedCode: int(domain.ExitGeneralError),
+			expectedCode: int(errcode.ExitGeneralError),
 			errSubstr:    "Failed to retrieve commit history",
 		},
 		{
@@ -222,7 +222,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/heads/main":          {out: ""},
 				"show-ref --verify --quiet refs/remotes/origin/main": {out: ""},
 			},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "'main' is a branch name, not a file path. Use '-b main' to scope to this branch",
 		},
 		{
@@ -236,7 +236,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/heads/nonexistent.go":          {err: errors.New("not a ref")},
 				"show-ref --verify --quiet refs/remotes/origin/nonexistent.go": {err: errors.New("not a ref")},
 			},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Path 'nonexistent.go' does not exist in repository",
 		},
 		{
@@ -250,7 +250,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 					out: "",
 				},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "",
 			expectStderr: "No commits found matching the specified criteria",
 		},
@@ -264,7 +264,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			app.RootCmd.SetArgs(tt.args)
 
 			err := app.Execute(context.Background())
-			if tt.expectedCode == int(domain.ExitSuccess) {
+			if tt.expectedCode == int(errcode.ExitSuccess) {
 				require.NoError(t, err)
 				if tt.expectStdout != "" {
 					assert.Equal(t, tt.expectStdout, stdout.String())
@@ -274,9 +274,9 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 				}
 			} else {
 				require.Error(t, err)
-				var appErr *domain.AppError
-				require.True(t, errors.As(err, &appErr), "expected *domain.AppError, got %T: %v", err, err)
-				assert.Equal(t, tt.expectedCode, int(appErr.Code))
+				var appErr *errcode.AppError
+				require.True(t, errors.As(err, &appErr), "expected *errcode.AppError, got %T: %v", err, err)
+				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}

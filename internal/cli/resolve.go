@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/bvarnai/git-brx/internal/checks"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +35,7 @@ stages resolved files specifically, and continues the active rebase or completes
 
 func (a *App) runResolve(ctx context.Context, opts ResolveOptions, args []string) error {
 	if len(args) > 0 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[0])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[0])
 	}
 
 	workDir := "."
@@ -70,7 +70,7 @@ func (a *App) resolveMerge(ctx context.Context, rootDir, tool string) error {
 	}
 
 	if err := a.Operations.CommitNoEdit(ctx, rootDir); err != nil {
-		return domain.WrapError(domain.ExitConflict, err, "Failed to complete merge commit").
+		return errcode.WrapError(errcode.ErrConflict, err, "Failed to complete merge commit").
 			WithHint("Use 'git-brx reset' to abort the merge and restore your branch")
 	}
 
@@ -85,7 +85,7 @@ func (a *App) resolveRebase(ctx context.Context, rootDir, tool string) error {
 	for {
 		iterations++
 		if iterations > maxIterations {
-			return domain.NewError(domain.ExitConflict, "Exceeded maximum rebase iterations (%d); aborting loop", maxIterations).
+			return errcode.NewError(errcode.ErrConflict, "Exceeded maximum rebase iterations (%d); aborting loop", maxIterations).
 				WithHint("Use 'git-brx reset' to abort the rebase and restore your branch")
 		}
 
@@ -115,7 +115,7 @@ func (a *App) resolveRebase(ctx context.Context, rootDir, tool string) error {
 		}
 
 		// Rebase failed for another reason
-		return domain.WrapError(domain.ExitConflict, err, "Failed to continue rebase").
+		return errcode.WrapError(errcode.ErrConflict, err, "Failed to continue rebase").
 			WithHint("Use 'git-brx reset' to abort the rebase and restore your branch")
 	}
 }
@@ -123,27 +123,27 @@ func (a *App) resolveRebase(ctx context.Context, rootDir, tool string) error {
 func (a *App) runMergeToolAndStage(ctx context.Context, rootDir, tool string) error {
 	unmerged, err := a.Inspector.UnmergedFiles(ctx, rootDir)
 	if err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "Failed to query unmerged files")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to query unmerged files")
 	}
 
 	if len(unmerged) > 0 {
 		if err := a.Operations.MergeTool(ctx, rootDir, tool); err != nil {
-			return domain.WrapError(domain.ExitConflict, err, "Merge tool execution failed")
+			return errcode.WrapError(errcode.ErrConflict, err, "Merge tool execution failed")
 		}
 
 		// Verify unmerged files after running mergetool
 		remaining, err := a.Inspector.UnmergedFiles(ctx, rootDir)
 		if err != nil {
-			return domain.WrapError(domain.ExitGeneralError, err, "Failed to check unmerged files")
+			return errcode.WrapError(errcode.ErrGeneral, err, "Failed to check unmerged files")
 		}
 		if len(remaining) > 0 {
-			return domain.NewError(domain.ExitConflict, "Conflicts remain unresolved; cannot continue").
+			return errcode.NewError(errcode.ErrConflict, "Conflicts remain unresolved; cannot continue").
 				WithHint("Resolve all conflict markers in your files, or use 'git-brx reset' to abort")
 		}
 
 		// Explicitly stage only the resolved unmerged paths (never git add .)
 		if err := a.Operations.Add(ctx, rootDir, unmerged...); err != nil {
-			return domain.WrapError(domain.ExitGeneralError, err, "Failed to stage resolved files")
+			return errcode.WrapError(errcode.ErrGeneral, err, "Failed to stage resolved files")
 		}
 	}
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +34,7 @@ func TestResetIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Working tree successfully reset to 'origin/issue/VSB-300'")
 
 		resetSha := strings.TrimSpace(h.Git("rev-parse", "HEAD"))
@@ -59,7 +59,7 @@ func TestResetIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Aborting in-progress merge")
 		assert.Contains(t, stderr.String(), "Working tree successfully reset to 'origin/feature/merge-abort'")
 
@@ -89,7 +89,7 @@ func TestResetIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Aborting in-progress rebase")
 		assert.Contains(t, stderr.String(), "Working tree successfully reset to 'origin/issue/rebase-abort'")
 
@@ -126,7 +126,7 @@ func TestResetIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset", "--clean"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 
 		// Untracked files must be removed
 		_, err = os.Stat(untrackedFile)
@@ -152,7 +152,7 @@ func TestResetIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 
 		// Untracked file must persist
 		content, err := os.ReadFile(untrackedFile)
@@ -172,7 +172,7 @@ func TestResetIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitPreconditionRemote), code)
+		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
 		assert.Contains(t, stderr.String(), "Reset failed: remote reference 'origin/feature/unpublished-reset' does not exist")
 		assert.Contains(t, stderr.String(), "Use 'git-brx publish' to publish it")
 	})

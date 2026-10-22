@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +36,7 @@ Automatically configures upstream tracking if the branch has not been published 
 
 func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string) error {
 	if len(args) > 0 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[0])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[0])
 	}
 
 	workDir := "."
@@ -69,7 +69,7 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 
 	// Protected branch safety assertion
 	if (currBranch.Name == "master" || currBranch.Name == "main") && !opts.NoForce {
-		return domain.NewError(domain.ExitUsageError, "Refusing to force-push with lease directly to protected '%s' branch", currBranch.Name).
+		return errcode.NewError(errcode.ErrUsage, "Refusing to force-push with lease directly to protected '%s' branch", currBranch.Name).
 			WithHint("Use standard push for default branches or switch to a topic branch")
 	}
 
@@ -98,9 +98,9 @@ func (a *App) handlePushError(pushErr error) error {
 		strings.Contains(errMsg, "[rejected") ||
 		strings.Contains(errMsg, "fetch first") ||
 		strings.Contains(errMsg, "non-fast-forward") {
-		return domain.NewError(domain.ExitPreconditionRemote, "Publish rejected: remote has newer commits").
+		return errcode.NewError(errcode.ErrPreconditionRemote, "Publish rejected: remote has newer commits").
 			WithHint("Run 'git-brx update' to incorporate remote changes before publishing")
 	}
 
-	return domain.NewError(domain.ExitPreconditionRemote, "Publish failed: unable to reach remote or authentication rejected")
+	return errcode.NewError(errcode.ErrPreconditionRemote, "Publish failed: unable to reach remote or authentication rejected")
 }

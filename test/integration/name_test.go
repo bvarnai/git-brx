@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +22,7 @@ func TestNameIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"name"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Equal(t, "master\n", stdout.String(), "stdout must contain only branch name and newline")
 		assert.Empty(t, stderr.String(), "stderr must be empty on attached clean branch")
 	})
@@ -35,7 +35,7 @@ func TestNameIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"name"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Equal(t, "issue/VSB-500\n", stdout.String())
 		assert.Empty(t, stderr.String())
 	})
@@ -52,7 +52,7 @@ func TestNameIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), subDir, []string{"name"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Equal(t, "feature/nested-dir\n", stdout.String())
 	})
 
@@ -67,7 +67,7 @@ func TestNameIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"name"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Equal(t, shortSha+"\n", stdout.String())
 		assert.Contains(t, stderr.String(), "Warning: HEAD is detached at "+shortSha)
 	})
@@ -79,7 +79,7 @@ func TestNameIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"name", "extra-arg"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitUsageError), code)
+		assert.Equal(t, int(errcode.ExitUsageError), code)
 		assert.Empty(t, stdout.String(), "stdout must remain empty on error")
 		assert.Contains(t, stderr.String(), "Unexpected argument: extra-arg")
 	})

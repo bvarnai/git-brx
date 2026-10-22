@@ -3,11 +3,13 @@ package github_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,9 +56,9 @@ func TestClient_GetIssue_NotFound(t *testing.T) {
 
 	_, err := client.GetIssue(context.Background(), "999")
 	require.Error(t, err)
-	appErr, ok := err.(*domain.AppError)
-	require.True(t, ok)
-	assert.Equal(t, domain.ExitAPIError, appErr.Code)
+	var appErr *errcode.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, errcode.ExitAPIError, errcode.ExitCode(appErr))
 	assert.Contains(t, appErr.Message, "not found")
 }
 
@@ -72,9 +74,9 @@ func TestClient_GetIssue_Unauthorized(t *testing.T) {
 
 	_, err := client.GetIssue(context.Background(), "42")
 	require.Error(t, err)
-	appErr, ok := err.(*domain.AppError)
-	require.True(t, ok)
-	assert.Equal(t, domain.ExitAPIError, appErr.Code)
+	var appErr *errcode.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, errcode.ExitAPIError, errcode.ExitCode(appErr))
 	assert.Contains(t, appErr.Message, "Bad credentials")
 	assert.Contains(t, appErr.Hint, "GITHUB_TOKEN")
 }

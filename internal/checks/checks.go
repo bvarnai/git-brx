@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/git"
 )
 
@@ -11,7 +12,7 @@ import (
 func InsideWorkTree(ctx context.Context, inspector *git.Inspector, dir string) (string, error) {
 	root, err := inspector.RepoRoot(ctx, dir)
 	if err != nil {
-		return "", domain.NewError(domain.ExitPreconditionRepo, "Not a git repository")
+		return "", errcode.NewError(errcode.ErrNotRepository, "Not a git repository")
 	}
 	return root, nil
 }
@@ -30,7 +31,7 @@ func NoActiveOperation(ctx context.Context, inspector *git.Inspector, rootDir st
 		} else if op == "rebase" {
 			hint = "Abort with 'git rebase --abort' before switching branches"
 		}
-		return domain.NewError(domain.ExitConflict, "Cannot switch branches during an active %s", op).
+		return errcode.NewError(errcode.ErrConflict, "Cannot switch branches during an active %s", op).
 			WithHint("%s", hint)
 	}
 	return nil
@@ -40,10 +41,10 @@ func NoActiveOperation(ctx context.Context, inspector *git.Inspector, rootDir st
 func NoOrphanedCommits(ctx context.Context, inspector *git.Inspector, rootDir string) error {
 	orphaned, err := inspector.HasOrphanedCommits(ctx, rootDir)
 	if err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "failed to inspect detached HEAD state")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to inspect detached HEAD state")
 	}
 	if orphaned {
-		return domain.NewError(domain.ExitConflict, "You are on a detached HEAD with unreferenced commits").
+		return errcode.NewError(errcode.ErrConflict, "You are on a detached HEAD with unreferenced commits").
 			WithHint("Save your work into a branch first: 'git branch <branch-name>'")
 	}
 	return nil
@@ -53,10 +54,10 @@ func NoOrphanedCommits(ctx context.Context, inspector *git.Inspector, rootDir st
 func NotShallow(ctx context.Context, inspector *git.Inspector, rootDir string) error {
 	shallow, err := inspector.IsShallow(ctx, rootDir)
 	if err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "failed to check shallow repository state")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to check shallow repository state")
 	}
 	if shallow {
-		return domain.NewError(domain.ExitPreconditionRepo, "You are in a shallow repository")
+		return errcode.NewError(errcode.ErrShallowRepo, "You are in a shallow repository")
 	}
 	return nil
 }
@@ -65,10 +66,10 @@ func NotShallow(ctx context.Context, inspector *git.Inspector, rootDir string) e
 func AttachedBranch(ctx context.Context, inspector *git.Inspector, rootDir string) (*domain.BranchRecord, error) {
 	curr, err := inspector.CurrentBranch(ctx, rootDir)
 	if err != nil {
-		return nil, domain.WrapError(domain.ExitGeneralError, err, "failed to get current branch")
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "Failed to get current branch")
 	}
 	if curr.IsDetached {
-		return nil, domain.NewError(domain.ExitPreconditionRepo, "Cannot execute on a detached HEAD").
+		return nil, errcode.NewError(errcode.ErrDetachedHead, "Cannot execute on a detached HEAD").
 			WithHint("Checkout or create a branch first: 'git-brx select <branch>'")
 	}
 	return curr, nil
@@ -78,10 +79,10 @@ func AttachedBranch(ctx context.Context, inspector *git.Inspector, rootDir strin
 func HasOrigin(ctx context.Context, inspector *git.Inspector, rootDir string) error {
 	hasOrigin, _, err := inspector.HasOrigin(ctx, rootDir)
 	if err != nil {
-		return domain.WrapError(domain.ExitGeneralError, err, "failed to check remote origin")
+		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to check remote origin")
 	}
 	if !hasOrigin {
-		return domain.NewError(domain.ExitPreconditionRemote, "Your repository has no remote origin")
+		return errcode.NewError(errcode.ErrPreconditionRemote, "Your repository has no remote origin")
 	}
 	return nil
 }
@@ -89,7 +90,7 @@ func HasOrigin(ctx context.Context, inspector *git.Inspector, rootDir string) er
 // HasCommits ensures that the repository contains at least one valid commit ref.
 func HasCommits(ctx context.Context, inspector *git.Inspector, rootDir string) error {
 	if !inspector.HasCommits(ctx, rootDir) {
-		return domain.NewError(domain.ExitPreconditionRepo, "Repository has no commits yet")
+		return errcode.NewError(errcode.ErrPreconditionRepo, "Repository has no commits yet")
 	}
 	return nil
 }

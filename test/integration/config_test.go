@@ -9,6 +9,7 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/cli"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -25,7 +26,7 @@ func TestConfigIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"config"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 
 		out := stdout.String()
 		assert.Contains(t, out, "# Source hierarchy:")
@@ -52,7 +53,7 @@ func TestConfigIntegration(t *testing.T) {
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"config", "--sources"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 
 		out := stdout.String()
 		assert.Contains(t, out, "# Source hierarchy:")
@@ -90,7 +91,7 @@ branch:
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"config"}, &stdout, &stderr)
 
-		assert.Equal(t, int(domain.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 
 		out := stdout.String()
 		assert.Contains(t, out, companyFile)

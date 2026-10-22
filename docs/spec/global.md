@@ -182,7 +182,7 @@ To maintain strict boundary separation, testability, and clean diagnostics acros
 2. **Preflight Checks Engine (`internal/checks`): Invariant Enforcement**
    - **Role:** Evaluates repository state returned by `Inspector` against command preconditions and domain invariants.
    - **Responsibility:** Fatal preflight checks that assert conditions that must hold true before a command proceeds.
-   - **Boundary Constraint:** Pure rule validation; has no UI dependencies. On violation, returns structured `domain.AppError` mapped to specific application exit codes:
+   - **Boundary Constraint:** Pure rule validation; has no UI dependencies. On violation, returns structured `errcode.AppError` mapped to specific application exit codes:
      - `InsideWorkTree(ctx, inspector, dir) (string, error)` (Exit Code 3)
      - `NoActiveOperation(ctx, inspector, rootDir) error` (Exit Code 5)
      - `NoOrphanedCommits(ctx, inspector, rootDir) error` (Exit Code 5)
@@ -205,7 +205,8 @@ git-brx/
 │   ├── checks/                  # Repository precondition assertions (InsideWorkTree, NoActiveOperation)
 │   ├── cli/                     # Cobra command definitions, flag binding, and UX flow
 │   ├── config/                  # 4-tier cascading configuration loader, merger, and YAML validator
-│   ├── domain/                  # Core domain models, enums, interfaces, and exit codes
+│   ├── domain/                  # Core domain models, enums, and interfaces
+│   ├── errcode/                 # Sentinel error categories, structured AppError, and exit code mapping
 │   ├── git/                     # Git execution boundary (ExecRunner, Inspector, Operations)
 │   ├── github/                  # GitHub REST API client (issues, pull requests, reviewers)
 │   ├── suggest/                 # Levenshtein distance string matching for branch typo suggestions
@@ -219,9 +220,9 @@ git-brx/
 ```
 
 - **Package Dependency Boundaries:**
-  - `internal/domain` depends exclusively on the Go standard library.
+  - `internal/domain` and `internal/errcode` depend exclusively on the Go standard library.
   - `internal/term` depends only on the standard library and provides structured logging, coloring, and interactive prompts.
-  - `internal/git`, `internal/checks`, `internal/config`, `internal/github`, and `internal/suggest` depend on `internal/domain` and `internal/term`, never on `internal/cli`.
+  - `internal/git`, `internal/checks`, `internal/config`, `internal/github`, and `internal/suggest` depend on `internal/domain`, `internal/errcode`, and `internal/term`, never on `internal/cli`.
   - `internal/cli` wires flags and orchestrates domain/runner interfaces, enabling full unit testability via dependency injection.
 
 ### Domain Entities

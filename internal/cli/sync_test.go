@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,13 +24,13 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 		{
 			name:         "excess arguments returns usage error",
 			args:         []string{"sync", "master", "extra-arg"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unexpected argument: extra-arg",
 		},
 		{
 			name:         "conflicting strategies -m and -r returns usage error",
 			args:         []string{"sync", "-m", "-r"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Multiple override sync strategies specified",
 		},
 		{
@@ -44,7 +44,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"symbolic-ref --short -q HEAD":      {out: "feature/test"},
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Flags --autostash and --interactive are only supported with rebase strategy",
 		},
 		{
@@ -58,7 +58,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"symbolic-ref --short -q HEAD":      {out: "feature/test"},
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Flags --autostash and --interactive are only supported with rebase strategy",
 		},
 		{
@@ -67,7 +67,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Not a git repository",
 		},
 		{
@@ -79,7 +79,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-parse --git-dir":               {out: "/repo/.git"},
 				"rev-parse --is-shallow-repository": {out: "true"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "You are in a shallow repository",
 		},
 		{
@@ -93,7 +93,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"symbolic-ref --short -q HEAD":      {err: errors.New("detached")},
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Cannot execute on a detached HEAD",
 		},
 		{
@@ -107,7 +107,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"symbolic-ref --short -q HEAD":      {out: "my-custom-branch"},
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "You must be on an 'issue', 'feature', or 'epic' branch to sync",
 		},
 		{
@@ -121,7 +121,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"symbolic-ref --short -q HEAD":      {out: "issue/VSB-100"},
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Cannot sync branch 'issue/VSB-100' onto itself",
 		},
 		{
@@ -137,7 +137,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/heads/non-existent-base":          {err: errors.New("not found")},
 				"show-ref --verify --quiet refs/remotes/origin/non-existent-base": {err: errors.New("not found")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Base branch 'non-existent-base' does not exist locally",
 		},
 		{
@@ -156,7 +156,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/master": {out: ""},
 				"rev-list --left-right --count master...origin/master": {out: "1\t1"},
 			},
-			expectedCode: int(domain.ExitConflict),
+			expectedCode: int(errcode.ExitConflict),
 			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
 		},
 		{
@@ -175,7 +175,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/master": {out: ""},
 				"rev-list --left-right --count master...origin/master": {out: "2\t0"},
 			},
-			expectedCode: int(domain.ExitConflict),
+			expectedCode: int(errcode.ExitConflict),
 			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
 		},
 		{
@@ -194,7 +194,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/master": {out: ""},
 				"rev-list --left-right --count master...origin/master": {out: "0\t2"},
 			},
-			expectedCode: int(domain.ExitConflict),
+			expectedCode: int(errcode.ExitConflict),
 			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
 		},
 		{
@@ -215,7 +215,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"fetch origin master:master":                           {out: ""},
 				"rebase master":                                        {out: ""},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Fast-forwarded local 'master' to match 'origin/master' (2 commits behind)",
 		},
 		{
@@ -236,7 +236,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-list --left-right --count master...origin/master": {out: "0\t0"},
 				"rebase master":                                        {out: "Successfully rebased"},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Successfully rebased 'issue/VSB-100' onto 'master'",
 		},
 		{
@@ -256,7 +256,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-list --left-right --count main...origin/main":      {out: "0\t0"},
 				"merge -m Merge branch 'main' into 'feature/auth' main": {out: "Merge made by 'ort' strategy"},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Successfully merged 'main' into 'feature/auth'",
 		},
 		{
@@ -276,7 +276,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"rev-list --left-right --count master...origin/master": {out: "0\t0"},
 				"rebase master":                                        {out: "Current branch issue/VSB-100 is up to date."},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Branch 'issue/VSB-100' is already up to date with 'master'",
 		},
 	}
@@ -289,13 +289,13 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 			app.RootCmd.SetArgs(tt.args)
 
 			err := app.Execute(context.Background())
-			if tt.expectedCode == int(domain.ExitSuccess) {
+			if tt.expectedCode == int(errcode.ExitSuccess) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
-				var appErr *domain.AppError
-				require.True(t, errors.As(err, &appErr), "expected *domain.AppError, got %T: %v", err, err)
-				assert.Equal(t, tt.expectedCode, int(appErr.Code))
+				var appErr *errcode.AppError
+				require.True(t, errors.As(err, &appErr), "expected *errcode.AppError, got %T: %v", err, err)
+				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}

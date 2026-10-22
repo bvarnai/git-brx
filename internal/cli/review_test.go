@@ -11,6 +11,7 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/cli"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,19 +28,19 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 		{
 			name:         "excess positional arguments returns usage error",
 			args:         []string{"review", "target1", "target2"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unexpected argument: target2",
 		},
 		{
 			name:         "conflicting merge-instructions flags returns usage error",
 			args:         []string{"review", "--merge-instructions", "--no-merge-instructions"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Cannot specify both --merge-instructions and --no-merge-instructions",
 		},
 		{
 			name:         "invalid strategy flag returns usage error",
 			args:         []string{"review", "--strategy", "invalid-strat"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unsupported merge strategy: invalid-strat",
 		},
 		{
@@ -48,7 +49,7 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "false"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Not a git repository",
 		},
 		{
@@ -59,7 +60,7 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 				"rev-parse --show-toplevel":       {out: "/mock/repo"},
 				"rev-parse --verify -q HEAD":      {err: errors.New("exit status 1")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Repository has no commits yet",
 		},
 		{
@@ -71,7 +72,7 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 				"rev-parse --verify -q HEAD":      {out: "abc1234"},
 				"remote get-url origin":           {err: errors.New("remote origin not found")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Origin remote is not configured",
 		},
 		{
@@ -85,7 +86,7 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 				"symbolic-ref --short -q HEAD":    {err: errors.New("detached")},
 				"rev-parse --short HEAD":          {out: "abc1234"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Cannot create review in detached HEAD state",
 		},
 		{
@@ -100,7 +101,7 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":                                    {out: "abc1234"},
 				"for-each-ref --format=%(upstream:short) refs/heads/master": {out: "origin/master"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "You must be on an 'issue', 'feature', or 'epic' branch to create a review",
 		},
 		{
@@ -116,7 +117,7 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 				"for-each-ref --format=%(upstream:short) refs/heads/issue/VSB-101": {out: "origin/issue/VSB-101"},
 				"ls-remote --heads origin issue/VSB-101":                           {out: ""},
 			},
-			expectedCode: int(domain.ExitPreconditionRemote),
+			expectedCode: int(errcode.ExitPreconditionRemote),
 			errSubstr:    "Branch 'issue/VSB-101' has not been pushed to remote origin",
 		},
 	}
@@ -129,16 +130,16 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 			app.RootCmd.SetArgs(tt.args)
 
 			err := app.Execute(context.Background())
-			if tt.expectedCode == int(domain.ExitSuccess) {
+			if tt.expectedCode == int(errcode.ExitSuccess) {
 				require.NoError(t, err)
 				if tt.expectStderr != "" {
 					assert.Contains(t, stderr.String(), tt.expectStderr)
 				}
 			} else {
 				require.Error(t, err)
-				var appErr *domain.AppError
-				require.True(t, errors.As(err, &appErr), "expected *domain.AppError, got %T: %v", err, err)
-				assert.Equal(t, tt.expectedCode, int(appErr.Code))
+				var appErr *errcode.AppError
+				require.True(t, errors.As(err, &appErr), "expected *errcode.AppError, got %T: %v", err, err)
+				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}

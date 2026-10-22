@@ -7,6 +7,7 @@ import (
 
 	"github.com/bvarnai/git-brx/internal/checks"
 	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
 
@@ -46,12 +47,12 @@ or merge (for feature/epic branches).`,
 
 func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) error {
 	if len(args) > 1 {
-		return domain.NewError(domain.ExitUsageError, "Unexpected argument: %s", args[1])
+		return errcode.NewError(errcode.ErrUsage, "Unexpected argument: %s", args[1])
 	}
 
 	// Strategy flag validation
 	if opts.Merge && opts.Rebase {
-		return domain.NewError(domain.ExitUsageError, "Multiple override sync strategies specified").
+		return errcode.NewError(errcode.ErrUsage, "Multiple override sync strategies specified").
 			WithHint("Choose either --merge or --rebase, not both")
 	}
 
@@ -87,7 +88,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 
 	// Options 'autostash/interactive' are rebase only
 	if strategy == "merge" && (opts.Autostash || opts.Interactive) {
-		return domain.NewError(domain.ExitUsageError, "Flags --autostash and --interactive are only supported with rebase strategy")
+		return errcode.NewError(errcode.ErrUsage, "Flags --autostash and --interactive are only supported with rebase strategy")
 	}
 
 	// Target base branch resolution
@@ -112,20 +113,20 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 	}
 
 	if currBranch.Name == baseBranch {
-		return domain.NewError(domain.ExitPreconditionRepo, "Cannot sync branch '%s' onto itself", baseBranch)
+		return errcode.NewError(errcode.ErrPreconditionRepo, "Cannot sync branch '%s' onto itself", baseBranch)
 	}
 
 	// Verify local base branch exists
 	localExists, _, _ := a.Inspector.BranchExists(ctx, rootDir, baseBranch)
 	if !localExists {
-		return domain.NewError(domain.ExitPreconditionRepo, "Base branch '%s' does not exist locally", baseBranch)
+		return errcode.NewError(errcode.ErrPreconditionRepo, "Base branch '%s' does not exist locally", baseBranch)
 	}
 
 	// Remote fetch
 	hasOrigin, _, _ := a.Inspector.HasOrigin(ctx, rootDir)
 	if hasOrigin {
 		if fetchErr := a.Operations.Fetch(ctx, rootDir, "origin"); fetchErr != nil {
-			return domain.NewError(domain.ExitPreconditionRemote, "Sync failed: unable to fetch from origin")
+			return errcode.NewError(errcode.ErrPreconditionRemote, "Sync failed: unable to fetch from origin")
 		}
 
 		// Verify base branch is up-to-date with origin/<baseBranch>
@@ -135,12 +136,12 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 			if deltaErr == nil && delta != nil {
 				a.Logger.Debug("Base branch delta against origin/%s: ahead=%d, behind=%d", baseBranch, delta.AheadCount, delta.BehindCount)
 				if delta.AheadCount > 0 {
-					return domain.NewError(domain.ExitConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
+					return errcode.NewError(errcode.ErrConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
 						WithHint("Switch to '%s' and run 'git-brx update' first", baseBranch)
 				}
 				if delta.BehindCount > 0 {
 					if opts.NoAutoUpdateBase {
-						return domain.NewError(domain.ExitConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
+						return errcode.NewError(errcode.ErrConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
 							WithHint("Switch to '%s' and run 'git-brx update' first", baseBranch)
 					}
 
@@ -150,7 +151,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 					}
 
 					if err := a.Operations.FetchRef(ctx, rootDir, "origin", fmt.Sprintf("%s:%s", baseBranch, baseBranch)); err != nil {
-						return domain.WrapError(domain.ExitConflict, err, "Failed to fast-forward local base branch '%s'", baseBranch)
+						return errcode.WrapError(errcode.ErrConflict, err, "Failed to fast-forward local base branch '%s'", baseBranch)
 					}
 					a.Logger.Log("Fast-forwarded local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
 				}
@@ -162,7 +163,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 	if strategy == "rebase" {
 		out, rebaseErr := a.Operations.Rebase(ctx, rootDir, baseBranch, opts.Autostash, opts.Interactive)
 		if rebaseErr != nil {
-			return domain.NewError(domain.ExitConflict, "Sync failed due to merge conflicts").
+			return errcode.NewError(errcode.ErrConflict, "Sync failed due to merge conflicts").
 				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 		}
 		if strings.Contains(strings.ToLower(out), "up to date") {
@@ -174,7 +175,7 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 		mergeMsg := fmt.Sprintf("Merge branch '%s' into '%s'", baseBranch, currBranch.Name)
 		out, mergeErr := a.Operations.Merge(ctx, rootDir, baseBranch, mergeMsg)
 		if mergeErr != nil {
-			return domain.NewError(domain.ExitConflict, "Sync failed due to merge conflicts").
+			return errcode.NewError(errcode.ErrConflict, "Sync failed due to merge conflicts").
 				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
 		}
 		if strings.Contains(strings.ToLower(out), "already up to date") {
@@ -201,6 +202,6 @@ func resolveSyncStrategy(bType domain.BranchType, opts SyncOptions) (string, err
 	case domain.BranchTypeFeature, domain.BranchTypeEpic:
 		return "merge", nil
 	default:
-		return "", domain.NewError(domain.ExitPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to sync")
+		return "", errcode.NewError(errcode.ErrPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to sync")
 	}
 }

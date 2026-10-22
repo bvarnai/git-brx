@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
-	"github.com/bvarnai/git-brx/internal/domain"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +24,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 		{
 			name:         "excess positional arguments returns usage error",
 			args:         []string{"publish", "extra-arg"},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Unexpected argument: extra-arg",
 		},
 		{
@@ -33,7 +33,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree": {out: "false", err: errors.New("not a git repo")},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Not a git repository",
 		},
 		{
@@ -44,7 +44,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"rev-parse --show-toplevel":         {out: "/repo"},
 				"rev-parse --is-shallow-repository": {out: "true"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "You are in a shallow repository",
 		},
 		{
@@ -58,7 +58,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"symbolic-ref --short -q HEAD":      {out: "abc1234", err: errors.New("detached")},
 				"rev-parse --short HEAD":            {out: "abc1234"},
 			},
-			expectedCode: int(domain.ExitPreconditionRepo),
+			expectedCode: int(errcode.ExitPreconditionRepo),
 			errSubstr:    "Cannot execute on a detached HEAD",
 		},
 		{
@@ -73,7 +73,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":            {out: "abc1234"},
 				"remote get-url origin":             {out: "", err: errors.New("no origin")},
 			},
-			expectedCode: int(domain.ExitPreconditionRemote),
+			expectedCode: int(errcode.ExitPreconditionRemote),
 			errSubstr:    "Your repository has no remote origin",
 		},
 		{
@@ -88,7 +88,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"rev-parse --short HEAD":            {out: "abc1234"},
 				"remote get-url origin":             {out: "https://github.com/org/repo.git"},
 			},
-			expectedCode: int(domain.ExitUsageError),
+			expectedCode: int(errcode.ExitUsageError),
 			errSubstr:    "Refusing to force-push with lease directly to protected 'master' branch",
 		},
 		{
@@ -105,7 +105,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"remote get-url origin":                                          {out: "https://github.com/org/repo.git"},
 				"push --set-upstream origin issue/VSB-1 --force-with-lease":      {out: "Everything up-to-date"},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			outSubstr:    "Branch 'issue/VSB-1' successfully published to origin",
 		},
 		{
@@ -122,7 +122,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"remote get-url origin":                                          {out: "https://github.com/org/repo.git"},
 				"push origin issue/VSB-1 --force-with-lease":                     {out: "Everything up-to-date"},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			outSubstr:    "Branch 'issue/VSB-1' successfully published to origin",
 		},
 		{
@@ -139,7 +139,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"remote get-url origin":                                          {out: "https://github.com/org/repo.git"},
 				"push origin issue/VSB-1 --force-with-lease":                     {out: "", err: errors.New("! [rejected] (stale info)")},
 			},
-			expectedCode: int(domain.ExitPreconditionRemote),
+			expectedCode: int(errcode.ExitPreconditionRemote),
 			errSubstr:    "Publish rejected: remote has newer commits",
 		},
 		{
@@ -156,7 +156,7 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				"remote get-url origin":                                          {out: "https://github.com/org/repo.git"},
 				"push origin issue/VSB-1":                                        {out: "Everything up-to-date"},
 			},
-			expectedCode: int(domain.ExitSuccess),
+			expectedCode: int(errcode.ExitSuccess),
 			outSubstr:    "Branch 'issue/VSB-1' successfully published to origin",
 		},
 	}
@@ -173,9 +173,9 @@ func TestPublishCommand_UnitTable(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
-				var appErr *domain.AppError
+				var appErr *errcode.AppError
 				require.True(t, errors.As(err, &appErr))
-				assert.Equal(t, tt.expectedCode, int(appErr.Code))
+				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}
