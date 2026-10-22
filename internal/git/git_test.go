@@ -2,16 +2,19 @@ package git_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bvarnai/git-brx/internal/command"
+	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/git"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuildSanitizedEnv(t *testing.T) {
+func TestSanitizedEnv(t *testing.T) {
 	base := []string{
 		"PATH=/bin:/usr/bin",
 		"LC_ALL=en_US.UTF-8",
@@ -21,7 +24,7 @@ func TestBuildSanitizedEnv(t *testing.T) {
 		"CUSTOM_VAR=value",
 	}
 
-	env := git.BuildSanitizedEnv(base, []string{"EXTRA=1"})
+	env := command.SanitizedEnv(base, []string{"EXTRA=1"})
 
 	// Check overrides
 	assert.Contains(t, env, "LC_ALL=C")
@@ -56,16 +59,37 @@ func TestExecRunner_RunAndCancel(t *testing.T) {
 	cancel()
 	_, err = runner.Run(cancelCtx, "", "status")
 	require.Error(t, err)
+	assert.True(t, errors.Is(err, errcode.ErrInterrupted))
 
 	// RunLines
 	lines, err := runner.RunLines(ctx, "", "--version")
 	require.NoError(t, err)
 	assert.Len(t, lines, 1)
 
+	// RunLines on empty output
+	emptyLines, err := runner.RunLines(ctx, "", "status", "--porcelain")
+	require.NoError(t, err)
+	// clean repo or empty porcelain returns nil
+	if len(emptyLines) == 0 {
+		assert.Nil(t, emptyLines)
+	}
+
 	// Timeout
 	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 	defer timeoutCancel()
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
 	_, err = runner.Run(timeoutCtx, "", "status")
 	require.Error(t, err)
+	assert.True(t, errors.Is(err, errcode.ErrInterrupted))
+}
+
+func TestExecRunner_MissingBinary(t *testing.T) {
+	runner := &git.ExecRunner{
+		BinaryPath: "nonexistent-git-binary-xyz",
+	}
+	ctx := context.Background()
+	_, err := runner.Run(ctx, "", "--version")
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, errcode.ErrTransport))
+	assert.Contains(t, err.Error(), `Required binary "nonexistent-git-binary-xyz" not found in $PATH`)
 }
