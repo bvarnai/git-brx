@@ -40,10 +40,7 @@ When starting work on an issue or ticket:
    ```bash
    git brx select main
    ```
-2. Determine branch type from issue category / labels:
-   - `bug` or standard task $\to$ `issue/<key>` (e.g., `issue/123`, `issue/PROJ-456`)
-   - `enhancement` or collaborative feature $\to$ `feature/<key>`
-   - `epic` or milestone $\to$ `epic/<key>`
+2. Propose the branch type from the issue (bug or task $\to$ `issue/`, collaborative $\to$ `feature/`, milestone $\to$ `epic/`). The user confirms it, because the prefix decides the sync and merge strategy.
 3. Create the branch non-interactively using `-y`:
    ```bash
    git brx create issue/123 -y
@@ -52,10 +49,7 @@ When starting work on an issue or ticket:
 
 ### Step 2: Local Commits
 - Make incremental changes.
-- Use Conventional Commits referencing the issue key in scope or title:
-  ```bash
-  git commit -m "feat(#123): implement user authentication validator"
-  ```
+- Commit message format comes from the project's own conventions (for example the `agy-standards` plugin). `git-brx` writes the squash commit `<type>(#<key>): <issue title>` when the PR is merged.
 
 ### Step 3: Upstream Synchronization (`sync` & `update`)
 - **Syncing with Base Branch (`main`):**

@@ -210,7 +210,7 @@ See the [Configuration guide](docs/user-guide/getting-started.md#3-configuration
 - 📚 **[Command reference](docs/user-guide/command-reference.md)**: Flags, arguments, and examples for every command.
 - 💡 **[Troubleshooting & FAQ](docs/user-guide/troubleshooting-faq.md)**: Common errors and recovery steps.
 - 🤖 **[AI Assistant Rule Template](templates/rules/git-brx.md)**: Workspace rule for AI coding agents.
-- 🧠 **[Antigravity / Agent Skill](templates/skills/git-brx/SKILL.md)**: Workflow runbook skill for coding agents.
+- 🧠 **[Antigravity / Agent Skill](skills/git-brx/SKILL.md)**: Workflow runbook skill for coding agents.
 
 ---
 
