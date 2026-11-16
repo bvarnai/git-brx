@@ -5,10 +5,6 @@ When working in this repository, always follow the `git-brx` workflow and use th
 1. **Branch Creation:**
    - Always create topic branches via `git brx create <branch> -y`.
    - Never use raw `git checkout -b` or `git switch -c` directly for topic branches.
-   - Use the appropriate prefix:
-     - `issue/<key>` for standard tasks and bugs (linear rebase sync)
-     - `feature/<key>` for collaborative features (merge sync)
-     - `epic/<key>` for multi-commit initiatives
 
 2. **Upstream Synchronization:**
    - Synchronize with the base branch (`main`) using `git brx sync`.

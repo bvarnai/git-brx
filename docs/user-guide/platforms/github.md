@@ -189,3 +189,6 @@ review:
       "epic/*": [lead-architect]
     default: [team-lead]            # Fallback reviewer
 ```
+
+> [!NOTE]
+> When `review.template` is omitted, `git brx review` auto-discovers `.github/pull_request_template.md`, `.github/PULL_REQUEST_TEMPLATE.md`, or `pull_request_template.md` in that order.

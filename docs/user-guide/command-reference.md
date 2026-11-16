@@ -109,7 +109,7 @@ git brx publish --no-force
 ## 6. `git-brx review`
 **Usage:** `git-brx review [flags] [<target_branch>]`
 
-Opens a pull request on the configured SCM platform (GitHub or Bitbucket Server), routes reviewers according to `.git-brx.yaml`, and appends merge instructions.
+Opens a pull request on the configured SCM platform (GitHub or Bitbucket Server), routes reviewers according to `.git-brx.yaml`, and appends merge instructions. When `review.template` is unset, it auto-discovers a repository PR template (such as `pull_request_template.md`).
 
 ### Flags
 - `-r`, `--reviewer <user>`: Request specific reviewer(s) instead of using configured routing rules (repeatable or comma-separated).

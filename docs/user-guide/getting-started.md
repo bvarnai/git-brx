@@ -215,21 +215,50 @@ export GIT_BRX_TOKEN="your_personal_access_token"
 
 ## 6. AI agent integration (Antigravity & coding assistants)
 
-AI coding agents often default to raw Git commands (`git checkout -b`, `git push -f`). Use the templates in `templates/` to configure agents to use `git-brx` instead.
+AI coding agents often default to raw Git commands (`git checkout -b`, `git push -f`). Install the `git-brx` Antigravity plugin so agents use `git-brx` across all your projects.
 
-### Step 1: Add the `git-brx` skill to your repo
+### Primary: Install the Antigravity plugin
+
+Install the plugin once from a local checkout of this repository:
+
 ```bash
-mkdir -p .agents/skills/git-brx
-cp templates/skills/git-brx/SKILL.md .agents/skills/git-brx/SKILL.md
+agy plugin install <path-to-git-brx>
 ```
+
+Or create a symlink so `git pull` in your checkout keeps the plugin automatically up to date:
+
+```bash
+ln -sfn <path-to-git-brx> ~/.gemini/config/plugins/git-brx
+```
+
+*(If you installed the `git-brx` binary from a release archive without a checkout, clone the repository—or download `plugin.json` and `skills/`—and install from that directory.)*
+
+Verify the installation:
+
+```bash
+agy plugin list
+```
+
+> [!NOTE]
+> If a repository still has a local `.agents/skills/git-brx/SKILL.md`, remove it after installing the plugin. Workspace-level skills take precedence over global plugins and will silently shadow the plugin skill.
 
 The skill documents:
 - The branch workflow sequence (`create` $\to$ `sync`/`update` $\to$ `publish` $\to$ `review` $\to$ `delete`).
 - Non-interactive flag usage (`git brx create <branch> -y`).
 - Exit codes and conflict recovery (`resolve` and `reset`).
 
-### Step 2: Add the workflow rule to `GEMINI.md` or `AGENTS.md`
-Append `templates/rules/git-brx.md` to your project's `GEMINI.md` or `AGENTS.md`:
+### Optional: Per-project skill copy
+
+If a project must stay self-contained for contributors who do not have the plugin installed, copy `skills/git-brx/SKILL.md` into that repository:
+
+```bash
+mkdir -p .agents/skills/git-brx
+cp <path-to-git-brx>/skills/git-brx/SKILL.md .agents/skills/git-brx/SKILL.md
+```
+
+### Optional: Always-on workflow rule (non-skill agents)
+
+For coding agents that do not support skills (or repositories that want an always-on rule), append `templates/rules/git-brx.md` to your project's `GEMINI.md` or `AGENTS.md`:
 
 ```markdown
 # Git Workflow Policy
@@ -241,12 +270,4 @@ Append `templates/rules/git-brx.md` to your project's `GEMINI.md` or `AGENTS.md`
   - Submitting PRs: `git brx review`
   - Cleaning merged branches: `git brx delete <branch>`
 - Do not run manual `git checkout -b`, `git push -f`, or raw API scripts for PR creation.
-```
-
-### Optional: Install the skill globally
-To enable the `git-brx` skill across all local workspaces in Antigravity:
-
-```bash
-mkdir -p ~/.gemini/config/skills/git-brx
-cp templates/skills/git-brx/SKILL.md ~/.gemini/config/skills/git-brx/SKILL.md
 ```

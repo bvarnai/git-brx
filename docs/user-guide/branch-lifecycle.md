@@ -147,7 +147,7 @@ git brx review
    - **Branch globs (`mapping.branches`):** If no label rules match, checks the source branch name (e.g., `epic/*`).
    - **Default fallback (`mapping.default`):** Used when no earlier rules match.
    - **Author exclusion:** Removes the PR author from the resolved reviewer list.
-4. **PR body generation:** Loads your PR template (e.g., `.github/pull_request_template.md`), adds the issue closing reference (`Closes #<id>`), and appends **Merge instructions**:
+4. **PR body generation:** Loads your configured `review.template` (or auto-discovers a repository PR template), adds the issue closing reference (`Closes #<id>`), and appends **Merge instructions**:
    ```markdown
    Closes #TASK-101
 
