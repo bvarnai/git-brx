@@ -219,7 +219,13 @@ AI coding agents often default to raw Git commands (`git checkout -b`, `git push
 
 ### Primary: Install the Antigravity plugin
 
-Install the plugin once from a local checkout of this repository:
+Install the plugin directly from GitHub (`agy` >= 1.5.11):
+
+```bash
+agy plugin install https://github.com/bvarnai/git-brx
+```
+
+Or install from a local checkout of this repository:
 
 ```bash
 agy plugin install <path-to-git-brx>
@@ -228,10 +234,9 @@ agy plugin install <path-to-git-brx>
 Or create a symlink so `git pull` in your checkout keeps the plugin automatically up to date:
 
 ```bash
-ln -sfn <path-to-git-brx> ~/.gemini/config/plugins/git-brx
+mkdir -p ~/.gemini/config/plugins
+ln -sfn "<path-to-git-brx>" ~/.gemini/config/plugins/git-brx
 ```
-
-*(If you installed the `git-brx` binary from a release archive without a checkout, clone the repository—or download `plugin.json` and `skills/`—and install from that directory.)*
 
 Verify the installation:
 
