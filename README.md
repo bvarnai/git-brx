@@ -199,6 +199,27 @@ See the [Configuration guide](docs/user-guide/getting-started.md#3-configuration
 
 ---
 
+## Antigravity integration
+
+`git-brx` is packaged as a native [Google Antigravity](https://antigravity.google) (`agy`) plugin (`plugin.json`) so AI coding agents use `git brx` commands instead of raw Git (`git checkout -b`, `git push -f`).
+
+- **Install from GitHub (`agy` >= 1.5.11):**
+
+  ```bash
+  agy plugin install https://github.com/bvarnai/git-brx
+  ```
+
+- **Install from a local clone (symlink):**
+
+  ```bash
+  mkdir -p ~/.gemini/config/plugins
+  ln -sfn "<path-to-git-brx>" ~/.gemini/config/plugins/git-brx
+  ```
+
+See the [AI agent integration guide](docs/user-guide/getting-started.md#6-ai-agent-integration-antigravity--coding-assistants) for per-project setup and always-on rules (`GEMINI.md` / `AGENTS.md`).
+
+---
+
 ## Documentation wiki
 
 - 📖 **[User guide index](docs/user-guide/README.md)**: Table of contents and reading paths.
