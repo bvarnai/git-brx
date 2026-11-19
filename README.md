@@ -199,7 +199,7 @@ See the [Configuration guide](docs/user-guide/getting-started.md#3-configuration
 
 ---
 
-## AI agent integration
+## Antigravity integration
 
 `git-brx` is packaged as a native [Google Antigravity](https://antigravity.google) (`agy`) plugin (`plugin.json`) so AI coding agents use `git brx` commands instead of raw Git (`git checkout -b`, `git push -f`).
 
