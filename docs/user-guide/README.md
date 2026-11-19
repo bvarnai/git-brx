@@ -6,7 +6,7 @@ This guide covers how to install, configure, and use `git-brx` for day-to-day br
 
 ## Table of contents
 
-| Chapter | Title | Topics Covered |
+| Chapter | Title | Topics covered |
 | :---: | :--- | :--- |
 | **01** | [Core philosophy & mental model](philosophy.md) | Issue-first workflow, branch roles, and separating issue specs from code review |
 | **02** | [Getting started](getting-started.md) | Installation, shell integration (`git brx`), 4-tier config cascade, and AI agent setup |

@@ -10,7 +10,7 @@
 
 In `git-brx`, **every tracked code change maps to an issue in Jira or GitHub.**
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │                   THE ISSUE (Jira / GitHub)            │
 │  • What is the problem?                                │

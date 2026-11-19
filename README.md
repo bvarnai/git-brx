@@ -230,8 +230,8 @@ See the [AI agent integration guide](docs/user-guide/getting-started.md#6-ai-age
 - 🌐 **[Supported platforms & matrix](docs/user-guide/multi-platform.md)**: Platform support and setup guides for [GitHub](docs/user-guide/platforms/github.md) and [Atlassian](docs/user-guide/platforms/atlassian.md).
 - 📚 **[Command reference](docs/user-guide/command-reference.md)**: Flags, arguments, and examples for every command.
 - 💡 **[Troubleshooting & FAQ](docs/user-guide/troubleshooting-faq.md)**: Common errors and recovery steps.
-- 🤖 **[AI Assistant Rule Template](templates/rules/git-brx.md)**: Workspace rule for AI coding agents.
-- 🧠 **[Antigravity / Agent Skill](skills/git-brx/SKILL.md)**: Workflow runbook skill for coding agents.
+- 🤖 **[AI assistant rule template](templates/rules/git-brx.md)**: Workspace rule for AI coding agents.
+- 🧠 **[Antigravity / agent skill](skills/git-brx/SKILL.md)**: Workflow runbook skill for coding agents.
 
 ---
 
