@@ -4,24 +4,24 @@ Bug reports, documentation improvements, and pull requests are welcome. Before o
 
 ---
 
-## 🎯 Architecture Rules
+## 🎯 Architecture rules
 
-1. **Spec-Driven Parity:** Subcommands, flags, and exit codes must match the specifications in [`docs/spec/`](docs/spec/global.md). Update the corresponding spec file whenever CLI behavior changes.
-2. **Plumbing over Porcelain:** Invoke Git through deterministic plumbing commands (`rev-parse`, `symbolic-ref`, `show-ref`, `for-each-ref`, `diff-index`, `merge-base`, `rev-list`) rather than porcelain output parsers.
-3. **Stream Separation:**
+1. **Spec-driven parity:** Subcommands, flags, and exit codes must match the specifications in [`docs/spec/`](docs/spec/global.md). Update the corresponding spec file whenever CLI behavior changes.
+2. **Plumbing over porcelain:** Invoke Git through deterministic plumbing commands (`rev-parse`, `symbolic-ref`, `show-ref`, `for-each-ref`, `diff-index`, `merge-base`, `rev-list`) rather than porcelain output parsers.
+3. **Stream separation:**
    - `stdout` is reserved for primary command output, machine-readable data (`name`, `config`), and `--help`/`--version`.
    - `stderr` is used for progress logs (`[git-brx]`), warnings, hints, and errors.
-4. **Minimal Dependencies:** Stick to the Go standard library (`os`, `strings`, `bufio`, `regexp`, `context`, `net/http`) and approved CLI packages (`github.com/spf13/cobra`, `gopkg.in/yaml.v3`). Do not import heavyweight Git libraries (`go-git`) or shell out to external script runtimes.
+4. **Minimal dependencies:** Stick to the Go standard library (`os`, `strings`, `bufio`, `regexp`, `context`, `net/http`) and approved CLI packages (`github.com/spf13/cobra`, `gopkg.in/yaml.v3`). Do not import heavyweight Git libraries (`go-git`) or shell out to external script runtimes.
 
 ---
 
-## 🛠️ Development Setup
+## 🛠️ Development setup
 
 ### Prerequisites
 - [Go](https://golang.org/) >= 1.22
 - [Git](https://git-scm.com/) >= 2.20
 
-### Clone and Build
+### Clone and build
 ```bash
 git clone https://github.com/bvarnai/git-brx.git
 cd git-brx
@@ -36,14 +36,14 @@ go build -o ./bin/git-brx ./cmd/git-brx
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Running tests
 
-1. **Unit & Integration Tests:**
+1. **Unit & integration tests:**
    ```bash
    go test -v -race ./...
    ```
 
-2. **Formatting & Static Analysis:**
+2. **Formatting & static analysis:**
    ```bash
    # Format code with standard gofmt
    gofmt -s -w .
@@ -55,17 +55,17 @@ go build -o ./bin/git-brx ./cmd/git-brx
    go vet ./...
    ```
 
-3. **Isolated Integration Tests:**
+3. **Isolated integration tests:**
    Integration tests in `test/integration/` create disposable repositories in `t.TempDir()`. Tests must never read or modify the host machine's `~/.gitconfig` or global Git state.
 
-4. **Contract Schema & Compatibility Matrix Tests:**
+4. **Contract schema & compatibility matrix tests:**
    `git-brx` validates API payloads against REST schemas using `github.com/santhosh-tekuri/jsonschema/v5`:
-   - **Schema Sources:** Jira schemas are extracted from official Atlassian WADL descriptors; Bitbucket schemas come from official REST documentation.
-   - **Run Compatibility Tests:**
+   - **Schema sources:** Jira schemas are extracted from official Atlassian WADL descriptors; Bitbucket schemas come from official REST documentation.
+   - **Run compatibility tests:**
      ```bash
      go test -v ./test/integration/... -run "CompatibilityMatrix|Rejection"
      ```
-   - **Add a Server Version:**
+   - **Add a server version:**
      1. Create `test/schemas/<product>/<version>` (e.g., `test/schemas/jira/v2-server-9.x`).
      2. Add the schema files (`issue.json`, `error_collection.json`, `pull_request.json`, `errors.json`).
      3. Append the version string to the target slice in `test/integration/wiremock_schema_test.go`.
@@ -73,12 +73,12 @@ go build -o ./bin/git-brx ./cmd/git-brx
 
 ---
 
-## 🌿 Branch & PR Workflow
+## 🌿 Branch & PR workflow
 
 Use `git-brx` itself to manage topic branches and pull requests:
 
-1. **Create an Issue:** Open a GitHub issue for the bug fix or feature.
-2. **Create a Topic Branch:**
+1. **Create an issue:** Open a GitHub issue for the bug fix or feature.
+2. **Create a topic branch:**
    ```bash
    git brx create issue/<number> -y
    ```
@@ -86,12 +86,12 @@ Use `git-brx` itself to manage topic branches and pull requests:
    ```bash
    git brx sync
    ```
-4. **Publish & Open a PR:**
+4. **Publish & open a PR:**
    ```bash
    git brx publish
    git brx review
    ```
-5. **Clean Up After Merge:**
+5. **Clean up after merge:**
    ```bash
    git brx delete issue/<number>
    git brx update
@@ -99,7 +99,7 @@ Use `git-brx` itself to manage topic branches and pull requests:
 
 ---
 
-## 📝 Commit Conventions
+## 📝 Commit conventions
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
 - `feat(#<issue>): ...` for new features

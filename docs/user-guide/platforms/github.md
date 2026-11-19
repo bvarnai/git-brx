@@ -39,9 +39,9 @@ review:
 2. `GH_TOKEN` environment variable.
 3. System Git credential helper (`git credential fill`).
 
-### Creating a Fine-Grained Personal Access Token
+### Creating a fine-grained personal access token
 
-#### Step 1: Open Token Settings
+#### Step 1: Open token settings
 1. In GitHub, click your profile icon in the top-right corner and select **Settings**.
 2. In the left sidebar under **Access**, click **Credentials** (or **Developer settings** $\to$ **Personal access tokens**).
 3. Select **Fine-grained personal access tokens**.
@@ -49,20 +49,20 @@ review:
 
 ![GitHub Credentials Navigation](../../../assets/github-token-credentials-nav.png)
 
-#### Step 2: Select Repository Access
+#### Step 2: Select repository access
 Under **Repository access**:
 - Choose **Only select repositories** and pick your target repo (e.g., `owner/repo`), or select **All repositories** if you use `git-brx` across all of your repos.
 
-#### Step 3: Set Permissions
+#### Step 3: Set permissions
 Grant only the minimum required repository permissions:
 
-| Permission Category | Scope | Access Level | Why `git-brx` needs it |
+| Permission category | Scope | Access level | Why `git-brx` needs it |
 | :--- | :--- | :--- | :--- |
 | **Repository permissions** | **Issues** | **Read-only** | Reads issue title, status, and labels to validate branch prefixes (`issue/`, `feature/`, `epic/`). |
 | **Repository permissions** | **Metadata** *(Required)* | **Read-only** | Required by GitHub for repository metadata and collaborator lookups. |
 | **Repository permissions** | **Pull requests** | **Read and write** | Creates pull requests during `git brx review` and checks merge state during `git brx delete`. |
 | **Repository permissions** | **Contents** *(Private repos)* | **Read-only** | Required on **private** repos during `git brx review` so GitHub can diff `head` and `base` refs (prevents `422: not all refs are readable`). |
-| **User / Account permissions** | *(None)* | *None* | No account-level permissions are needed. |
+| **User / account permissions** | *(None)* | *None* | No account-level permissions are needed. |
 
 ![GitHub Fine-grained token repository permissions](../../../assets/github-token-permissions.png)
 
@@ -70,7 +70,7 @@ Confirm your token summary matches these permissions:
 
 ![GitHub Fine-grained token overview](../../../assets/github-token-overview.png)
 
-#### Step 4: Export the Token
+#### Step 4: Export the token
 Generate the token (`github_pat_...`) and export it in your shell profile (`~/.bashrc`, `~/.zshrc`, or Git Bash):
 
 ```bash
