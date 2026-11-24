@@ -146,14 +146,16 @@ git brx delete --force
 ## 8. `git-brx resolve`
 **Usage:** `git-brx resolve [flags]`
 
-Opens the configured merge tool (`git config merge.tool`) for each conflicted file, verifies conflict markers are resolved, stages **only** those resolved files, and continues the active rebase or merge.
+Scans unmerged files for conflict markers: if markers are already cleared (for example, edited manually), stages **only** those resolved files and continues without launching a merge tool; otherwise launches the configured merge tool (`git config merge.tool`), verifies conflict markers are resolved, stages those paths, and continues the active rebase or merge.
 
 ### Flags
 - `-t`, `--tool <tool>`: Override the configured Git merge tool.
+- `--no-tool`: Never launch an external merge tool; fail listing conflicted files if markers remain.
 
 ### Examples
 ```bash
 git brx resolve
+git brx resolve --no-tool
 git brx resolve -t vimdiff
 ```
 
@@ -162,10 +164,10 @@ git brx resolve -t vimdiff
 ## 9. `git-brx reset`
 **Usage:** `git-brx reset [flags]`
 
-Aborts any in-flight rebase or merge and runs `git reset --hard origin/<branch>`.
+When a merge or rebase conflict is active, aborts the in-flight operation while preserving local commits. When idle (no active conflict), resets the branch to match `origin/<branch>`.
 
 ### Flags
-- `-c`, `--clean`: Remove untracked files and directories (`git clean -fd`).
+- `-c`, `--clean`: Remove untracked files and directories (`git clean -fd`, idle mode only).
 
 ### Examples
 ```bash

@@ -80,13 +80,15 @@ git brx resolve
 ```
 
 ### Resolution flow
-1. **Find conflicted paths:** Lists unmerged files via `git diff --name-only --diff-filter=U`.
-2. **Launch merge tool:** Opens your configured merge tool (`git config merge.tool`, or `-t <tool>`) for each conflicted file.
+1. **Find conflicted paths:** Lists unmerged files via `git diff --name-only --diff-filter=U` and scans them for conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+2. **Auto-stage or launch merge tool:**
+   - If all conflict markers are already cleared (for example, resolved in your editor or by an AI agent), skips `git mergetool` and proceeds directly to staging.
+   - If markers remain, opens your configured merge tool (`git config merge.tool`, or `-t <tool>`). Pass `--no-tool` (or leave `merge.tool` unset in headless terminals) to fail fast with the list of files that still contain markers.
 3. **Stage only resolved files:**
    - Checks each file after the merge tool exits to confirm conflict markers are gone.
    - Stages **only** those resolved paths (`git add -- <file>`). It never runs `git add .`, so unrelated working-tree edits or untracked files stay unstaged.
 4. **Continue the operation:**
-   - **Rebase:** Prints current step progress (e.g., `Resolving rebase conflict (step 2/5)`) and runs `git rebase --continue`.
+   - **Rebase:** Prints current step progress (e.g., `Resolving rebase conflict at step 2 of 5...`) and runs `git rebase --continue`.
    - **Merge:** Commits the merge (`git commit --no-edit`).
 5. **Multi-step rebases:** If later commits in a rebase also conflict, `git-brx` loops through the remaining steps until the rebase completes.
 
@@ -94,16 +96,17 @@ git brx resolve
 
 ## 4. Recovery (`git brx reset`)
 
-To abort an in-flight rebase or merge and reset your branch to match `origin/<current-branch>`:
+`git brx reset` works in two safe steps so aborting a conflict never destroys unpushed local commits:
+
+1. **Active conflict (`merge` or `rebase` in progress):** Aborts the in-flight operation (`git rebase --abort` or `git merge --abort`) and preserves your local commits. Works offline and even on unpublished branches.
+2. **Idle branch (no conflict in progress):** Resets your branch to match `origin/<current-branch>` (`git reset --hard origin/<current-branch>`).
 
 ```bash
 git brx reset
 ```
 
-### What `git brx reset` does
-1. **Aborts active operations:** Detects `.git/rebase-merge`, `.git/rebase-apply`, or `.git/MERGE_HEAD` and runs `git rebase --abort` or `git merge --abort`.
-2. **Hard-resets to upstream:** Runs `git reset --hard origin/<current-branch>`.
-3. **Optional untracked cleanup (`--clean` / `-c`):** Removes untracked files and directories (`git clean -fd`):
-   ```bash
-   git brx reset --clean
-   ```
+### Optional untracked cleanup (`--clean` / `-c`)
+When idle (after any active conflict has been aborted), pass `--clean` to remove untracked files and directories (`git clean -fd`):
+```bash
+git brx reset --clean
+```

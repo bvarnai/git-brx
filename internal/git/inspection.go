@@ -1,6 +1,7 @@
 package git
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -333,6 +334,52 @@ func (i *Inspector) UnmergedFiles(ctx context.Context, dir string) ([]string, er
 		}
 	}
 	return unmerged, nil
+}
+
+// HasConflictMarkers scans a working-tree file for standard Git conflict markers.
+// Returns scannable=false for missing/non-regular files (e.g. delete/modify conflicts)
+// or binary files containing NUL bytes so callers never silently auto-stage them.
+func (i *Inspector) HasConflictMarkers(rootDir, relPath string) (hasMarkers bool, scannable bool, err error) {
+	fullPath := filepath.Join(rootDir, filepath.FromSlash(relPath))
+	info, statErr := os.Stat(fullPath)
+	if statErr != nil || !info.Mode().IsRegular() {
+		return false, false, nil
+	}
+
+	data, readErr := os.ReadFile(fullPath)
+	if readErr != nil {
+		return false, false, fmt.Errorf("reading unmerged file %s: %w", relPath, readErr)
+	}
+
+	sample := data
+	if len(sample) > 8192 {
+		sample = sample[:8192]
+	}
+	if bytes.IndexByte(sample, 0) >= 0 {
+		return false, false, nil
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		trimmed := strings.TrimSuffix(line, "\r")
+		if strings.HasPrefix(trimmed, "<<<<<<<") ||
+			strings.HasPrefix(trimmed, ">>>>>>>") ||
+			strings.HasPrefix(trimmed, "|||||||") ||
+			trimmed == "=======" {
+			return true, true, nil
+		}
+	}
+
+	return false, true, nil
+}
+
+// MergeToolConfigured reports whether git config merge.tool is set to a non-empty value.
+func (i *Inspector) MergeToolConfigured(ctx context.Context, dir string) (string, bool) {
+	out, err := i.runner.Run(ctx, dir, "config", "--get", "merge.tool")
+	if err != nil {
+		return "", false
+	}
+	trimmed := strings.TrimSpace(out)
+	return trimmed, trimmed != ""
 }
 
 // ChangedFiles returns the list of file paths modified between baseBranch and HEAD.

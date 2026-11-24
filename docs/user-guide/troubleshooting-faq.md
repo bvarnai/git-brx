@@ -46,7 +46,7 @@ This skips remote network checks and issue tracker API calls.
 - **Cause:** A previous merge or rebase hit conflicts and was left unfinished.
 - **Fix:**
   - To resolve conflicts and finish: `git brx resolve`
-  - To abort and restore your branch to `origin/<branch>`: `git brx reset`
+  - To abort the active conflict while keeping local commits: `git brx reset` (run a second time when idle to reset to `origin/<branch>`)
 
 ### 4. `[git-brx] Error: Branch must be deleted on remote first`
 - **Cause:** You ran `git brx delete`, but `refs/heads/<branch>` still exists on `origin`.
