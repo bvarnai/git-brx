@@ -33,7 +33,7 @@
    - Scan each unmerged path in-process for conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
    - **Auto-stage path:** If all unmerged files contain zero conflict markers (e.g., already resolved manually in an editor or by an AI agent), skip `git mergetool` and proceed directly to Targeted Staging.
    - **Interactive mergetool path:** If any unmerged file still contains conflict markers:
-     - If `--no-tool` is set, stdin/stderr is non-TTY, or no `merge.tool` is configured in Git (and `--tool` was not passed):
+     - If `--no-tool` is set, or no `merge.tool` is configured in Git (and `--tool` was not passed):
        - Log the list of still-conflicted file paths to `stderr`.
        - Log hint: `[git-brx] Hint: Resolve conflict markers in the listed files and re-run 'git-brx resolve', or run 'git-brx reset' to abort`.
        - Fail with Exit Code `5`.

@@ -3,6 +3,8 @@ package git_test
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -92,4 +94,132 @@ func TestExecRunner_MissingBinary(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, errcode.ErrTransport))
 	assert.Contains(t, err.Error(), `Required binary "nonexistent-git-binary-xyz" not found in $PATH`)
+}
+
+type stubRunner struct {
+	runFunc func(args ...string) (string, error)
+}
+
+func (s *stubRunner) Run(_ context.Context, _ string, args ...string) (string, error) {
+	return s.runFunc(args...)
+}
+
+func (s *stubRunner) RunLines(_ context.Context, _ string, _ ...string) ([]string, error) {
+	return nil, nil
+}
+
+func (s *stubRunner) RunWithEnv(_ context.Context, _ string, _ []string, args ...string) (string, error) {
+	return s.runFunc(args...)
+}
+
+func (s *stubRunner) RunStream(_ context.Context, _ string, _, _ any, _ []string, _ ...string) error {
+	return nil
+}
+
+func TestInspector_HasConflictMarkers(t *testing.T) {
+	tests := []struct {
+		name          string
+		setup         func(t *testing.T, root string) string
+		wantMarkers   bool
+		wantScannable bool
+	}{
+		{
+			name: "clean text file returns false and scannable",
+			setup: func(t *testing.T, root string) string {
+				require.NoError(t, os.WriteFile(filepath.Join(root, "clean.txt"), []byte("hello\nworld\n"), 0644))
+				return "clean.txt"
+			},
+			wantMarkers:   false,
+			wantScannable: true,
+		},
+		{
+			name: "standard conflict markers return true and scannable",
+			setup: func(t *testing.T, root string) string {
+				content := "before\n<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> main\nafter\n"
+				require.NoError(t, os.WriteFile(filepath.Join(root, "conflict.txt"), []byte(content), 0644))
+				return "conflict.txt"
+			},
+			wantMarkers:   true,
+			wantScannable: true,
+		},
+		{
+			name: "diff3 base marker returns true and scannable",
+			setup: func(t *testing.T, root string) string {
+				content := "<<<<<<< HEAD\nours\n||||||| base\ncommon\n=======\ntheirs\n>>>>>>> main\n"
+				require.NoError(t, os.WriteFile(filepath.Join(root, "diff3.txt"), []byte(content), 0644))
+				return "diff3.txt"
+			},
+			wantMarkers:   true,
+			wantScannable: true,
+		},
+		{
+			name: "CRLF conflict separator returns true and scannable",
+			setup: func(t *testing.T, root string) string {
+				content := "<<<<<<< HEAD\r\nours\r\n=======\r\ntheirs\r\n>>>>>>> main\r\n"
+				require.NoError(t, os.WriteFile(filepath.Join(root, "crlf.txt"), []byte(content), 0644))
+				return "crlf.txt"
+			},
+			wantMarkers:   true,
+			wantScannable: true,
+		},
+		{
+			name: "missing deleted file returns non-scannable",
+			setup: func(_ *testing.T, _ string) string {
+				return "deleted.txt"
+			},
+			wantMarkers:   false,
+			wantScannable: false,
+		},
+		{
+			name: "binary file with NUL byte returns non-scannable",
+			setup: func(t *testing.T, root string) string {
+				require.NoError(t, os.WriteFile(filepath.Join(root, "bin.dat"), []byte{0x01, 0x00, 0x02}, 0644))
+				return "bin.dat"
+			},
+			wantMarkers:   false,
+			wantScannable: false,
+		},
+	}
+
+	inspector := git.NewInspector(nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			relPath := tt.setup(t, root)
+			hasMarkers, scannable, err := inspector.HasConflictMarkers(root, relPath)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantMarkers, hasMarkers)
+			assert.Equal(t, tt.wantScannable, scannable)
+		})
+	}
+}
+
+func TestInspector_MergeToolConfigured(t *testing.T) {
+	t.Run("configured merge tool returns name and true", func(t *testing.T) {
+		runner := git.NewExecRunner()
+		dir := t.TempDir()
+		_, err := runner.Run(context.Background(), dir, "init")
+		require.NoError(t, err)
+		_, err = runner.Run(context.Background(), dir, "config", "merge.tool", "vimdiff")
+		require.NoError(t, err)
+
+		inspector := git.NewInspector(runner)
+		tool, ok := inspector.MergeToolConfigured(context.Background(), dir)
+		assert.True(t, ok)
+		assert.Equal(t, "vimdiff", tool)
+	})
+
+	t.Run("unset merge tool returns empty and false", func(t *testing.T) {
+		dir := t.TempDir()
+		runner := git.NewExecRunner()
+		_, err := runner.Run(context.Background(), dir, "init")
+		require.NoError(t, err)
+
+		inspector := git.NewInspector(runner)
+		// Isolate from host ~/.gitconfig by checking a nonexistent HOME
+		t.Setenv("HOME", dir)
+		tool, ok := inspector.MergeToolConfigured(context.Background(), dir)
+		assert.False(t, ok)
+		assert.Empty(t, tool)
+	})
 }

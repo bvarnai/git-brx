@@ -24,8 +24,8 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 | **Branch Selection** | `git brx select [<branch>]` | Fetches remotes and switches working tree (defaults to `main` if omitted). |
 | **Upstream sync** | `git brx sync [<target>]` | Pulls base branch changes (**rebase** for `issue/`, **merge** for `feature/` and `epic/`). Defaults to `main` if omitted. |
 | **Pair Update** | `git brx update` | Pulls colleague commits on the current branch using rebase with `--autostash`. |
-| **Conflict Resolve** | `git brx resolve` | Launches merge tool on conflicted paths and continues in-flight rebase/merge. |
-| **Conflict Abort** | `git brx reset` | Aborts in-flight rebase/merge and resets working copy to clean tracking state. |
+| **Conflict resolve** | `git brx resolve [--no-tool]` | Auto-stages marker-free resolved paths (or launches merge tool) and continues in-flight rebase/merge. |
+| **Conflict abort** | `git brx reset` | Aborts in-flight rebase/merge preserving local commits; resets to `origin/<branch>` when idle. |
 | **Publishing** | `git brx publish` | Pushes branch using safe `--force-with-lease` and binds upstream tracking. |
 | **Code Review / PR** | `git brx review [<target>]` | Opens Pull Request via API, evaluates path/label reviewer mappings, and excludes author. |
 | **Branch Cleanup** | `git brx delete <branch>` | Verifies remote deletion, switches to default branch, and prunes local branch. |
@@ -71,16 +71,18 @@ When starting work on an issue or ticket:
   git brx update
   ```
 
-### Step 4: Conflict Handling (`resolve` / `reset`)
+### Step 4: Conflict handling (`resolve` / `reset`)
 If `git brx sync` or `update` encounters a conflict (Exit Code 5):
-1. **To Resolve:** Inspect conflicted files (`git status`), edit and fix markers, then run:
+1. **To resolve:** Inspect conflicted files (`git status`), edit and remove all conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`), then run:
    ```bash
    git brx resolve
    ```
-2. **To Abort:** Restore working copy cleanly to pre-sync state:
+   `resolve` detects that conflict markers are cleared, skips `git mergetool`, stages only the resolved paths, and continues the rebase/merge. Pass `--no-tool` in automated sessions to fail fast listing any files that still have markers.
+2. **To abort:** Abort the in-flight rebase or merge while preserving unpushed local commits:
    ```bash
    git brx reset
    ```
+   *(Running `git brx reset` again when idle discards local commits and resets to `origin/<branch>`.)*
 
 ### Step 5: Publishing (`publish`)
 Push the local branch and configure remote tracking safely:
