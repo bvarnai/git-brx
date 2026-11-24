@@ -91,69 +91,85 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 		return errcode.NewError(errcode.ErrUsage, "Flags --autostash and --interactive are only supported with rebase strategy")
 	}
 
-	// Target base branch resolution
-	baseBranch := "main"
-	isDefaultBase := false
-	if len(args) == 1 && args[0] != "" {
-		baseBranch = args[0]
-	} else {
-		// If base is omitted, use main (or default branch)
-		defBranch := a.Inspector.DefaultBranch(ctx, rootDir)
-		if defBranch != "" {
-			baseBranch = defBranch
-		}
-		isDefaultBase = true
-	}
-	a.Logger.Debug("Sync configuration: branch=%s, base=%s, strategy=%s", currBranch.Name, baseBranch, strategy)
-
-	if isDefaultBase {
-		a.Logger.Log("Syncing '%s' with '%s' base branch by default (strategy: %s)", currBranch.Name, baseBranch, strategy)
-	} else {
-		a.Logger.Log("Syncing '%s' with '%s' (strategy: %s)", currBranch.Name, baseBranch, strategy)
-	}
-
-	if currBranch.Name == baseBranch {
-		return errcode.NewError(errcode.ErrPreconditionRepo, "Cannot sync branch '%s' onto itself", baseBranch)
-	}
-
-	// Verify local base branch exists
-	localExists, _, _ := a.Inspector.BranchExists(ctx, rootDir, baseBranch)
-	if !localExists {
-		return errcode.NewError(errcode.ErrPreconditionRepo, "Base branch '%s' does not exist locally", baseBranch)
-	}
-
-	// Remote fetch
+	// Fetch from origin upfront so remote tracking refs and recorded remote-only bases are current.
 	hasOrigin, _, _ := a.Inspector.HasOrigin(ctx, rootDir)
 	if hasOrigin {
 		if fetchErr := a.Operations.Fetch(ctx, rootDir, "origin"); fetchErr != nil {
-			return errcode.NewError(errcode.ErrPreconditionRemote, "Sync failed: unable to fetch from origin")
+			return errcode.NewError(errcode.ErrPreconditionRemote, "Unable to fetch from origin")
 		}
+	}
 
-		// Verify base branch is up-to-date with origin/<baseBranch>
-		_, remoteBaseExists, _ := a.Inspector.BranchExists(ctx, rootDir, baseBranch)
-		if remoteBaseExists {
-			delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, baseBranch, "origin/"+baseBranch)
-			if deltaErr == nil && delta != nil {
-				a.Logger.Debug("Base branch delta against origin/%s: ahead=%d, behind=%d", baseBranch, delta.AheadCount, delta.BehindCount)
-				if delta.AheadCount > 0 {
-					return errcode.NewError(errcode.ErrConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
-						WithHint("Switch to '%s' and run 'git-brx update' first", baseBranch)
-				}
+	// Target base branch resolution
+	explicitBase := ""
+	if len(args) == 1 {
+		explicitBase = args[0]
+	}
+	base := a.resolveBaseBranch(ctx, rootDir, currBranch.Name, explicitBase)
+	a.Logger.Debug("Sync configuration: branch=%s, base=%s, ref=%s, strategy=%s", currBranch.Name, base.Name, base.Ref, strategy)
+
+	switch {
+	case base.FromConfig:
+		a.Logger.Log("Syncing '%s' with recorded base '%s' (strategy: %s)", currBranch.Name, base.Name, strategy)
+	case base.FromDefault:
+		a.Logger.Log("Syncing '%s' with '%s' base branch by default (strategy: %s)", currBranch.Name, base.Name, strategy)
+	default:
+		a.Logger.Log("Syncing '%s' with '%s' (strategy: %s)", currBranch.Name, base.Name, strategy)
+	}
+
+	if currBranch.Name == base.Name {
+		return errcode.NewError(errcode.ErrPreconditionRepo, "Cannot sync branch '%s' onto itself", base.Name)
+	}
+
+	// Verify local or remote base branch exists
+	localExists, remoteBaseExists, _ := a.Inspector.BranchExists(ctx, rootDir, base.Name)
+	if !localExists && !remoteBaseExists {
+		return errcode.NewError(errcode.ErrPreconditionRepo, "Base branch '%s' does not exist locally or on origin", base.Name)
+	}
+
+	syncRef := base.Name
+	if !localExists && remoteBaseExists {
+		syncRef = "origin/" + base.Name
+	}
+
+	// Verify local base branch is up-to-date with origin/<base> when both exist
+	if hasOrigin && localExists && remoteBaseExists {
+		delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, base.Name, "origin/"+base.Name)
+		if deltaErr == nil && delta != nil {
+			a.Logger.Debug("Base branch delta against origin/%s: ahead=%d, behind=%d", base.Name, delta.AheadCount, delta.BehindCount)
+			if delta.AheadCount > 0 {
 				if delta.BehindCount > 0 {
-					if opts.NoAutoUpdateBase {
-						return errcode.NewError(errcode.ErrConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", baseBranch, baseBranch).
-							WithHint("Switch to '%s' and run 'git-brx update' first", baseBranch)
-					}
+					return errcode.NewError(errcode.ErrConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", base.Name, base.Name).
+						WithHint("Switch to '%s', run 'git-brx update', and then 'git-brx publish' first", base.Name)
+				}
+				return errcode.NewError(errcode.ErrConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", base.Name, base.Name).
+					WithHint("Switch to '%s' and run 'git-brx publish' first", base.Name)
+			}
+			if delta.BehindCount > 0 {
+				if opts.NoAutoUpdateBase {
+					return errcode.NewError(errcode.ErrConflict, "Base branch '%s' is not up-to-date with 'origin/%s'", base.Name, base.Name).
+						WithHint("Switch to '%s' and run 'git-brx update' first", base.Name)
+				}
 
+				if a.Inspector.IsBranchCheckedOutInOtherWorktree(ctx, rootDir, base.Name) {
+					a.Logger.Log("Base branch '%s' is checked out in another worktree; syncing directly against 'origin/%s'", base.Name, base.Name)
+					syncRef = "origin/" + base.Name
+				} else {
 					commitUnit := "commits"
 					if delta.BehindCount == 1 {
 						commitUnit = "commit"
 					}
 
-					if err := a.Operations.FetchRef(ctx, rootDir, "origin", fmt.Sprintf("%s:%s", baseBranch, baseBranch)); err != nil {
-						return errcode.WrapError(errcode.ErrConflict, err, "Failed to fast-forward local base branch '%s'", baseBranch)
+					if err := a.Operations.FetchRef(ctx, rootDir, "origin", fmt.Sprintf("%s:%s", base.Name, base.Name)); err != nil {
+						errLower := strings.ToLower(err.Error())
+						if strings.Contains(errLower, "checked out at") || strings.Contains(errLower, "worktree") {
+							a.Logger.Log("Base branch '%s' is checked out in another worktree; syncing directly against 'origin/%s'", base.Name, base.Name)
+							syncRef = "origin/" + base.Name
+						} else {
+							return errcode.WrapError(errcode.ErrConflict, err, "Failed to fast-forward local base branch '%s'", base.Name)
+						}
+					} else {
+						a.Logger.Log("Fast-forwarded local '%s' to match 'origin/%s' (%d %s behind)", base.Name, base.Name, delta.BehindCount, commitUnit)
 					}
-					a.Logger.Log("Fast-forwarded local '%s' to match 'origin/%s' (%d %s behind)", baseBranch, baseBranch, delta.BehindCount, commitUnit)
 				}
 			}
 		}
@@ -161,27 +177,27 @@ func (a *App) runSync(ctx context.Context, opts SyncOptions, args []string) erro
 
 	// Execution
 	if strategy == "rebase" {
-		out, rebaseErr := a.Operations.Rebase(ctx, rootDir, baseBranch, opts.Autostash, opts.Interactive)
+		out, rebaseErr := a.Operations.Rebase(ctx, rootDir, syncRef, opts.Autostash, opts.Interactive)
 		if rebaseErr != nil {
 			return errcode.NewError(errcode.ErrConflict, "Sync failed due to merge conflicts").
-				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
+				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort without losing commits")
 		}
 		if strings.Contains(strings.ToLower(out), "up to date") {
-			a.Logger.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, baseBranch)
+			a.Logger.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, syncRef)
 		} else {
-			a.Logger.Log("Successfully rebased '%s' onto '%s'", currBranch.Name, baseBranch)
+			a.Logger.Log("Successfully rebased '%s' onto '%s'", currBranch.Name, syncRef)
 		}
 	} else {
-		mergeMsg := fmt.Sprintf("Merge branch '%s' into '%s'", baseBranch, currBranch.Name)
-		out, mergeErr := a.Operations.Merge(ctx, rootDir, baseBranch, mergeMsg)
+		mergeMsg := fmt.Sprintf("Merge branch '%s' into '%s'", syncRef, currBranch.Name)
+		out, mergeErr := a.Operations.Merge(ctx, rootDir, syncRef, mergeMsg)
 		if mergeErr != nil {
 			return errcode.NewError(errcode.ErrConflict, "Sync failed due to merge conflicts").
-				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
+				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort without losing commits")
 		}
 		if strings.Contains(strings.ToLower(out), "already up to date") {
-			a.Logger.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, baseBranch)
+			a.Logger.Log("Branch '%s' is already up to date with '%s'", currBranch.Name, syncRef)
 		} else {
-			a.Logger.Log("Successfully merged '%s' into '%s'", baseBranch, currBranch.Name)
+			a.Logger.Log("Successfully merged '%s' into '%s'", syncRef, currBranch.Name)
 		}
 	}
 

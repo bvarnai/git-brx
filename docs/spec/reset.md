@@ -42,7 +42,7 @@
      ```
 
    - If not found:
-     - Log: `[git-brx] Error: Reset failed: remote reference 'origin/<branch>' does not exist`
+     - Log: `[git-brx] Error: Remote reference 'origin/<branch>' does not exist`
      - Log: `[git-brx] Hint: Your branch may not have been published yet. Use 'git-brx publish' to publish it`
      - Fail with Exit Code `4`.
 4. **Hard Reset Execution (Idle Mode):**
@@ -64,8 +64,8 @@
 | `0` | Active merge/rebase aborted safely preserving local commits, or idle working copy reset to remote tip. | `[git-brx] Aborted in-progress <op>; local commits preserved` / `[git-brx] Working tree successfully reset to 'origin/<branch>'` | None. |
 | `2` | Positional arguments, unknown flags, or `--clean` passed during active conflict. | `[git-brx] Error: Unexpected argument: <arg>` / `[git-brx] Error: Cannot use '--clean' while a <op> is in progress` | None. |
 | `3` | Outside repository or detached HEAD. | `[git-brx] Error: You are in detached HEAD state, this means you are not on any branch` | None. |
-| `4` | Origin missing or `origin/<branch>` does not exist (idle mode). | `[git-brx] Error: Reset failed: remote reference 'origin/<branch>' does not exist` | None. |
-| `5` | `git merge --abort` or `git rebase --abort` failed. | `[git-brx] Error: Reset failed (git merge --abort failed)` | None. |
+| `4` | Origin missing or `origin/<branch>` does not exist (idle mode). | `[git-brx] Error: Remote reference 'origin/<branch>' does not exist` | None. |
+| `5` | `git merge --abort` or `git rebase --abort` failed. | `[git-brx] Error: Unable to abort merge` / `[git-brx] Error: Unable to abort rebase` | None. |
 
 ## 5. Edge Cases & Behavioral Notes
 - **Safe conflict abort by default:** When a merge or rebase conflict is active, `reset` performs an abort-only restore (`git merge --abort` / `git rebase --abort`) without touching unpushed commits or requiring `origin/<branch>`. Running `git-brx reset` a second time (when idle) discards local commits and resets to `origin/<branch>`.

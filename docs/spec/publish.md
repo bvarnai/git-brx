@@ -44,7 +44,7 @@
      - Log: `[git-brx] Hint: Run 'git-brx update' to incorporate remote changes before publishing`
      - Fail with Exit Code `4`.
    - If push fails due to network or authentication failure:
-     - Log: `[git-brx] Error: Publish failed: unable to reach remote or authentication rejected`
+     - Log: `[git-brx] Error: Unable to reach remote or authentication rejected`
      - Fail with Exit Code `4`.
 5. **Completion:**
    - Log: `[git-brx] Branch '<branch>' successfully published to origin`.
@@ -56,7 +56,7 @@
 | `0` | Branch pushed and tracking configured cleanly. | `[git-brx] Branch '<branch>' successfully published to origin` | None. |
 | `2` | Unknown arguments or flags passed. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Shallow repository or detached HEAD. | `[git-brx] Error: You are in a shallow repository` / `[git-brx] Error: You are in detached HEAD state` | None. |
-| `4` | Push rejected by server (lease mismatch) or remote unreachable. | `[git-brx] Error: Publish rejected: remote has newer commits` / `[git-brx] Error: Publish failed` | None. |
+| `4` | Push rejected by server (lease mismatch) or remote unreachable. | `[git-brx] Error: Publish rejected: remote has newer commits` / `[git-brx] Error: Unable to reach remote or authentication rejected` | None. |
 
 ## 5. Edge Cases & Behavioral Notes
 - **Actionable Lease Rejection Diagnostics:** When a push is rejected due to a lease mismatch (`--force-with-lease`), `publish` detects the condition and provides a specific diagnostic message advising the user to run `update`.

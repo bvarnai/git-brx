@@ -84,6 +84,16 @@ func (o *Operations) Rebase(ctx context.Context, dir, upstream string, autostash
 	return o.runner.Run(ctx, dir, args...)
 }
 
+// RebasePreserveMerges runs git rebase --rebase-merges against the specified upstream ref.
+func (o *Operations) RebasePreserveMerges(ctx context.Context, dir, upstream string, autostash bool) (string, error) {
+	args := []string{"rebase", "--rebase-merges"}
+	if autostash {
+		args = append(args, "--autostash")
+	}
+	args = append(args, upstream)
+	return o.runner.Run(ctx, dir, args...)
+}
+
 // Merge runs git merge with a commit message merging upstream into current branch.
 func (o *Operations) Merge(ctx context.Context, dir, upstream, message string) (string, error) {
 	args := []string{"merge"}

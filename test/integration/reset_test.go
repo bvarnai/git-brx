@@ -226,7 +226,7 @@ func TestResetIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"reset"}, &stdout, &stderr)
 
 		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
-		assert.Contains(t, stderr.String(), "Reset failed: remote reference 'origin/feature/unpublished-reset' does not exist")
+		assert.Contains(t, stderr.String(), "Remote reference 'origin/feature/unpublished-reset' does not exist")
 		assert.Contains(t, stderr.String(), "Use 'git-brx publish' to publish it")
 	})
 }

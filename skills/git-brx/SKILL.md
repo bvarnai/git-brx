@@ -22,11 +22,11 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 | :--- | :--- | :--- |
 | **Branch creation** | `git brx create [--base <base>] <branch> -y` | Validates against issue tracker, forks from `<base>` (recording `brx-base`), or auto-switches if `<branch>` already exists. |
 | **Branch selection** | `git brx select [--no-ff] [<branch>]` | Fetches remotes, switches working tree (default: `main`), and fast-forwards clean behind-origin branches. |
-| **Upstream sync** | `git brx sync [<target>]` | Pulls base branch changes (**rebase** for `issue/`, **merge** for `feature/` and `epic/`). Defaults to `main` if omitted. |
-| **Pair Update** | `git brx update` | Pulls colleague commits on the current branch using rebase with `--autostash`. |
+| **Upstream sync** | `git brx sync [<target>]` | Pulls base branch changes (**rebase** for `issue/`, **merge** for `feature/` and `epic/`). Uses recorded `brx-base`, `<target>`, or `main` (with remote-only/worktree fallback). |
+| **Pair Update** | `git brx update` | Queries `origin` directly and pulls colleague commits (linear rebase for `issue/`, `--rebase-merges` for `feature/` and `epic/`). |
 | **Conflict resolve** | `git brx resolve [--no-tool]` | Auto-stages marker-free resolved paths (or launches merge tool) and continues in-flight rebase/merge. |
 | **Conflict abort** | `git brx reset` | Aborts in-flight rebase/merge preserving local commits; resets to `origin/<branch>` when idle. |
-| **Publishing** | `git brx publish` | Pushes branch using safe `--force-with-lease` and binds upstream tracking. |
+| **Publishing** | `git brx publish` | Pushes branch (`--force-with-lease` on `issue/`/`feature/`, fast-forward-only on `epic/`/`release/`) and binds upstream tracking. |
 | **Code Review / PR** | `git brx review [<target>]` | Opens Pull Request via API, evaluates path/label reviewer mappings, and excludes author. |
 | **Branch Cleanup** | `git brx delete <branch>` | Verifies remote deletion, switches to default branch, and prunes local branch. |
 
@@ -128,9 +128,9 @@ Use an `epic/<E>` branch as a long-lived integration branch when a feature or ep
    ```
    *(Or fork directly with `git brx create --base epic/<E> issue/<N> -y`; `create` records `branch.issue/<N>.brx-base=epic/<E>`, and `select epic/<E>` fast-forwards clean behind-origin branches automatically.)*
 3. **Sync, publish, and open the child PR against `epic/<E>`:**
-   Always pass `epic/<E>` explicitly to `sync` and `review`; omitting `<target>` defaults to `main`:
+   `git brx sync` uses the recorded `branch.issue/<N>.brx-base` (`epic/<E>`) automatically when `<target>` is omitted; pass `epic/<E>` explicitly to `review` (omitting `<target>` on `review` defaults to `main`):
    ```bash
-   git brx sync epic/<E>
+   git brx sync
    git brx publish
    git brx review epic/<E>
    ```

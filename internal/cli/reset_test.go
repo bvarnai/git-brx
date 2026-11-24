@@ -80,7 +80,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				"ls-remote --heads origin feature/unpublished":                      {out: ""},
 			},
 			expectedCode: int(errcode.ExitPreconditionRemote),
-			errSubstr:    "Reset failed: remote reference 'origin/feature/unpublished' does not exist",
+			errSubstr:    "Remote reference 'origin/feature/unpublished' does not exist",
 		},
 		{
 			name: "resets hard to remote ref cleanly",

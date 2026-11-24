@@ -259,7 +259,7 @@ func TestSyncIntegration(t *testing.T) {
 
 		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Base branch 'master' is not up-to-date with 'origin/master'")
-		assert.Contains(t, stderr.String(), "Switch to 'master' and run 'git-brx update' first")
+		assert.Contains(t, stderr.String(), "Switch to 'master', run 'git-brx update', and then 'git-brx publish' first")
 	})
 
 	t.Run("MergeConflictReturnsExit5AndResolveHint", func(t *testing.T) {
@@ -285,7 +285,7 @@ func TestSyncIntegration(t *testing.T) {
 
 		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Sync failed due to merge conflicts")
-		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
+		assert.Contains(t, stderr.String(), "Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort without losing commits")
 	})
 
 	t.Run("ActiveRebaseBlocksSync", func(t *testing.T) {
@@ -301,5 +301,84 @@ func TestSyncIntegration(t *testing.T) {
 
 		assert.Equal(t, int(errcode.ExitConflict), code)
 		assert.Contains(t, stderr.String(), "Cannot switch branches during an active rebase")
+	})
+
+	t.Run("UsesRecordedBrxBaseWhenOmitted", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/91")
+		h.CommitFile("epic.txt", "epic v1", "Epic 1")
+		h.Git("push", "-u", "origin", "epic/91")
+
+		h.CreateBranch("issue/44")
+		h.Git("config", "branch.issue/44.brx-base", "epic/91")
+		h.CommitFile("issue.txt", "issue work", "Issue work")
+
+		h.Git("checkout", "epic/91")
+		h.CommitFile("epic2.txt", "epic v2", "Epic 2")
+		h.Git("push", "origin", "epic/91")
+
+		h.Git("checkout", "issue/44")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Syncing 'issue/44' with recorded base 'epic/91'")
+		assert.FileExists(t, filepath.Join(h.RepoDir, "epic2.txt"))
+	})
+
+	t.Run("RemoteOnlyBaseBranchFallsBackToOrigin", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteBare := h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h2 := CloneHarness(t, remoteBare)
+		h2.Git("checkout", "-b", "epic/remote-only")
+		h2.CommitFile("remote_epic.txt", "remote epic", "Remote epic commit")
+		h2.Git("push", "-u", "origin", "epic/remote-only")
+
+		h.CreateBranch("issue/remote-base")
+		h.CommitFile("local.txt", "local", "Local commit")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "epic/remote-only"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Successfully rebased 'issue/remote-base' onto 'origin/epic/remote-only'")
+		assert.FileExists(t, filepath.Join(h.RepoDir, "remote_epic.txt"))
+	})
+
+	t.Run("WorktreeCheckedOutBaseFallsBackToOrigin", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteBare := h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/wt")
+		h.CommitFile("epic.txt", "e1", "Epic 1")
+		h.Git("push", "-u", "origin", "epic/wt")
+
+		h.CreateBranch("issue/wt-child")
+		h.CommitFile("issue.txt", "i1", "Issue 1")
+
+		wtDir := filepath.Join(t.TempDir(), "epic-wt")
+		h.Git("worktree", "add", wtDir, "epic/wt")
+
+		h2 := CloneHarness(t, remoteBare)
+		h2.Git("checkout", "epic/wt")
+		h2.CommitFile("epic2.txt", "e2", "Teammate epic commit")
+		h2.Git("push", "origin", "epic/wt")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "epic/wt"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Base branch 'epic/wt' is checked out in another worktree; syncing directly against 'origin/epic/wt'")
+		assert.FileExists(t, filepath.Join(h.RepoDir, "epic2.txt"))
 	})
 }

@@ -3,7 +3,7 @@
 ## 1. Command Signature
 - **Usage:** `git-brx sync [flags] [<branch>]`
 - **Arguments:**
-  - `<branch>` *(optional)*: Base branch to synchronize changes from. Defaults to `main` (or repository default) if omitted.
+  - `<branch>` *(optional)*: Base branch to synchronize changes from. Defaults to recorded `branch.<current_branch>.brx-base` if set, otherwise `main` (or repository default).
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Strategy flags:
@@ -91,7 +91,7 @@
 | `0` | Branch successfully synchronized. | None (informational progress logged). | None. |
 | `2` | Conflicting strategy flags (`--merge` + `--rebase`) or rebase flags on merge. | `[git-brx] Error: Multiple override sync strategies specified` | None. |
 | `3` | Shallow repository, detached HEAD, or unpermitted branch type. | `[git-brx] Error: You are in a shallow repository` / `[git-brx] Error: You must be on 'issue', 'feature' or 'epic' branch` | None. |
-| `4` | Fetch from origin failed. | `[git-brx] Error: Sync failed (git fetch failed)` | None. |
+| `4` | Fetch from origin failed. | `[git-brx] Error: Unable to fetch from origin` | None. |
 | `5` | In-flight rebase/merge active, base branch not up to date, or conflicts hit. | `[git-brx] Error: Sync branch '<branch>' is not up-to-date` / `[git-brx] Error: Sync failed due to merge conflicts` | Leave conflicted state for `git-brx resolve`. |
 
 ## 5. Edge Cases & Behavioral Notes
