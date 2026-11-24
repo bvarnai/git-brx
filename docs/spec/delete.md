@@ -6,7 +6,9 @@
   - `[<branch>]` (optional): Name of the topic branch to delete. Defaults to the current active branch if omitted.
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
-  - Override flag: `--force` (`-f`): Skip verification that the remote branch has already been deleted on origin.
+  - Feature flags:
+    - `-f`, `--force`: Skip verification that the remote branch has already been deleted on origin.
+    - `--delete-remote`: When the branch still exists on `origin` and the SCM API confirms its pull request is `MERGED`, delete the remote branch (`git push origin --delete <branch>`) before deleting locally.
 
 ## 2. Prerequisites & Environment
 - **Required host binaries:** `git` (>= 2.20.0).
@@ -48,26 +50,30 @@
      - If ref output is non-empty (branch still exists on remote):
        - Log: `[git-brx] Branch '<target_branch>' found on remote origin`
        - **SCM-Aware Pull Request Diagnostic:**
-         - Query configured SCM provider (`scm.GetPullRequestForBranch(ctx, target_branch)`).
-         - If an active or merged pull request is discovered, provide tailored status context:
-           - **Merged:** `[git-brx] Pull request is merged (<url>), but the remote branch has not been deleted yet.`
-           - **Open:** `[git-brx] Error: Pull request is still open (<url>). Merge or close it before deleting.`
+         - Query configured SCM provider (`scm.GetPullRequestForBranch(ctx, target_branch)`). When multiple PRs exist for a reused branch name, prioritize `OPEN` > `MERGED` > `CLOSED`.
+         - If `--delete-remote` is set and PR state is `MERGED`:
+           - Execute `git push origin --delete <target_branch>` and log `[git-brx] Deleted remote branch 'origin/<target_branch>'`.
+           - Proceed to step 4.
+         - Otherwise, if an active, merged, or closed pull request is discovered, provide tailored status context and exit with Exit Code `3`:
+           - **Merged:** `[git-brx] Pull request is merged (<url>), but the remote branch has not been deleted yet.` (hint: pass `--delete-remote` or `--force`).
+           - **Open:** `[git-brx] Error: Pull request is still open (<url>). Merge or close it before deleting.` (never deleted even with `--delete-remote`).
            - **Closed:** `[git-brx] Pull request is closed without merge (<url>).`
        - Log: `[git-brx] Error: Branch must be deleted on remote first (e.g., after merging pull request)`
        - Log: `[git-brx] Hint: Use '--force' to bypass remote check if you intend to delete an unpublished branch`
        - Fail with Exit Code `3`.
-4. **Switch to Base Branch (if currently on target branch):**
-   - Resolve base branch (`main` or `master`).
-   - If currently checked out on target branch:
-     - Execute:
-       ```bash
-       git checkout <base_branch>
-       ```
+4. **Switch to Parent or Base Branch (if currently on target branch):**
+   - Resolve return branch `<return_branch>` in strict order:
+     1. Recorded parent base (`git config --get branch.<target_branch>.brx-base`), if that branch still exists locally or on `origin`.
+     2. Repository default base branch (`main`, `master`, or `origin/HEAD`).
+   - If currently checked out on `<target_branch>`:
+     - Check whether `<return_branch>` is already checked out in another linked worktree (`git worktree list --porcelain`) or absent locally (only `origin/<return_branch>` exists):
+       - If checked out in another worktree or remote-only: detach `HEAD` onto `origin/<return_branch>` (or `<return_branch>`) via `git checkout --detach <ref>` and log `[git-brx] Branch '<return_branch>' is unavailable for checkout (checked out in another worktree or remote-only); detached HEAD before deleting '<target_branch>'`.
+       - Otherwise: execute `git checkout <return_branch>`. If online, clean, and `<return_branch>` is strictly behind `origin/<return_branch>` (`AheadCount == 0 && BehindCount > 0`), auto-fast-forward it (`git merge --ff-only origin/<return_branch>`) and log `[git-brx] Fast-forwarded '<return_branch>' to match 'origin/<return_branch>' (<N> new commit(s))`.
      - If checkout fails (e.g., uncommitted local edits collide with base branch):
-       - Log: `[git-brx] Error: Unable to switch to '<base_branch>' branch`
+       - Log: `[git-brx] Error: Unable to switch to '<return_branch>' branch`
        - Fail with Exit Code `5`.
 5. **Delete Local Branch:**
-   - Force delete the local branch reference:
+   - Force delete the local branch reference (which also removes `branch.<target_branch>.brx-base` from local Git config):
      ```bash
      git branch -D <target_branch>
      ```
@@ -78,7 +84,7 @@
      ```
 7. **Completion & Advice:**
    - Log: `[git-brx] Deleted local branch '<target_branch>' and pruned origin`.
-   - Log: `[git-brx] Hint: Your local '<base_branch>' may not be up-to-date. Use 'git-brx update' to update changes`.
+   - If switched to `<return_branch>` and it was not already fast-forwarded, log `[git-brx] Hint: Your local '<return_branch>' may not be up-to-date. Use 'git-brx update' to update changes`.
    - Exit with Exit Code `0`.
 
 ## 4. Error Handling & Exit Codes
@@ -93,5 +99,13 @@
 ## 5. Edge Cases & Behavioral Notes
 - **Accurate Remote Verification:** Remote branch existence and accessibility are verified using standard `git ls-remote --heads origin <branch>`, emitting clean diagnostic messages if unreachable or offline.
 - **Default Branch Divergence Hint:** After deleting the topic branch and switching to default (`main` / `master`), `delete` emits a clear hint suggesting running `git-brx update` to fast-forward any newly squashed/merged remote commits.
-- **Direct Git Branch Switching:** Switching to the default branch is performed directly through internal Git operations rather than indirect command dispatch.
-- **SCM Pull Request Context Awareness:** If the remote branch still exists on the server, `delete` queries the SCM provider API (GitHub, Bitbucket) and advises whether the pull request is merged, still open, or closed, guiding the user to cleanly delete the remote branch or use `--force`.
+- **Direct Git Branch Switching:** Switching to the parent/default branch is performed directly through internal Git operations rather than indirect command dispatch, with linked-worktree detach fallback.
+- **SCM Pull Request Context Awareness:** If the remote branch still exists on the server, `delete` queries the SCM provider API (prioritizing `OPEN` > `MERGED` > `CLOSED` across reused branch names) and advises or executes `--delete-remote` when `MERGED`.
+
+## 6. Black-box verification scenarios
+| Scenario ID | Given | When | Then (exit code, output, state) |
+| :--- | :--- | :--- | :--- |
+| `TC-DEL-01` | Active `issue/44` with `branch.issue/44.brx-base=epic/10`, remote deleted, clean worktree | `git-brx delete` | Switches to `epic/10` (fast-forwarding if behind `origin/epic/10`), deletes `issue/44`, exits `0`. |
+| `TC-DEL-02` | Linked worktree on `issue/44`; `main` checked out in primary worktree | `git-brx delete` | Detaches `HEAD` onto `origin/main` (or `main`), deletes `issue/44`, exits `0`. |
+| `TC-DEL-03` | `issue/44` still exists on `origin` with PR `MERGED` vs. PR `OPEN` | `git-brx delete --delete-remote` | Deletes remote then local when `MERGED` (exit `0`); refuses and exits `3` when `OPEN`. |
+| `TC-DEL-04` | Reused branch `issue/44` has an older `CLOSED` PR and a newer `OPEN` PR | `git-brx delete` | Reports `OPEN` PR status and blocks deletion with Exit Code `3`. |

@@ -7,9 +7,10 @@
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flags:
-    - `--reviewer` (`-r` `<username>`): Explicitly assign a designated reviewer instead of automated component mapping.
+    - `--reviewer` (`-r` `<username>`): Explicitly assign designated reviewer(s) instead of automated component mapping. Repeatable and comma-separated (e.g., `-r alice,bob` or `-r alice -r bob`), trimmed and deduplicated.
     - `--title` (`-t` `<title>`): Override default pull request title.
     - `--strategy` (`-s` `<strategy>`): Override merge strategy (`squash`, `merge`, or `rebase`).
+    - `--draft`: Create the pull request in draft state (skips automated `review.mapping` reviewer assignment unless `--reviewer` is explicitly provided).
     - `--merge-instructions`: Explicitly enable merge instructions in PR body.
     - `--no-merge-instructions`: Explicitly disable merge instructions in PR body.
 
@@ -28,17 +29,29 @@
    - Verify worktree: `git rev-parse --is-inside-work-tree`.
    - Assert attached branch: `git symbolic-ref --short -q HEAD`. Store current branch `<branch>`.
    - Validate branch prefix (`issue`, `feature`, or `epic`). If unrecognized, fail with Exit Code `3`.
-2. **Target Branch Resolution:**
-   - If `<target_branch>` argument is omitted, default to repository default base branch (e.g. `main`) and log:
-     `[git-brx] Selecting '<default>' target branch by default`.
-3. **Publication Precondition Check:**
-   - Verify that `<branch>` has been published to remote `origin`:
+2. **Target Branch Resolution & Remote Existence Validation:**
+   - Resolve `<targetBranch>` in strict order:
+     1. Explicit positional `<target_branch>` argument, if supplied.
+     2. Recorded parent base (`git config --get branch.<branch>.brx-base`), logging `[git-brx] Selecting recorded base '<base>' as target branch`.
+     3. Repository default base branch (`main`, `master`, or `origin/HEAD`), logging `[git-brx] Selecting '<default>' target branch by default`.
+   - Validate that `<targetBranch>` exists on `origin`:
+     ```bash
+     git ls-remote --heads origin <targetBranch>
+     ```
+     If missing on `origin`, fail with Exit Code `4` (with Levenshtein closest-branch suggestion if available).
+3. **Publication & Up-to-Date Precondition Check:**
+   - Verify that `<branch>` has been published to remote `origin` and matches local `HEAD`:
      ```bash
      git ls-remote --heads origin <branch>
+     git rev-parse HEAD
      ```
    - If missing on remote:
      - Log: `[git-brx] Error: Branch '<branch>' has not been pushed to remote origin`
      - Log: `[git-brx] Hint: Run 'git-brx publish' to push your branch before creating a review`
+     - Fail with Exit Code `4`.
+   - If remote SHA differs from local `HEAD` SHA:
+     - Log: `[git-brx] Error: Branch '<branch>' has unpushed local commits (out of sync with origin)`
+     - Log: `[git-brx] Hint: Run 'git-brx publish' to push your latest commits before creating a review`
      - Fail with Exit Code `4`.
 4. **Configuration & Issue Loading:**
    - Load configuration via the layered cascade (User Global `~/.config/git-brx/config.yaml` / `~/.git-brx.yaml` -> Shared Global `GIT_BRX_CONFIG` -> Repo Local `.git-brx.yaml` / `.git-brx/config.yaml` -> zero-config remote origin auto-discovery).
@@ -46,10 +59,11 @@
    - Fetch issue details using the configured `IssueTracker` (Jira REST, GitHub, etc.) to retrieve components/labels and summary.
    - If issue call fails (401/404): Fail with Exit Code `6`.
 5. **Reviewer Resolution:**
-   - If `--reviewer` (`-r`) flag was provided, use specified user.
+   - If `--reviewer` (`-r`) flag(s) were provided, split values on commas, trim whitespace, drop empty items, and deduplicate (preserving order).
+   - Else if `--draft` is set, skip automated `review.mapping` resolution (`reviewers = nil`) so draft PRs do not auto-ping mapped reviewers.
    - Otherwise, resolve reviewers using structured `config.review.mapping`:
      - **Resolution Hierarchy:**
-       1. **Changed file paths (`review.mapping.paths`):** Evaluates modified files on topic branch (`git diff --name-only <base>...HEAD`) against path globs (e.g. `internal/ui/**`, `docs/**`). Collects and deduplicates all matched reviewers.
+       1. **Changed file paths (`review.mapping.paths`):** Evaluates modified files on topic branch (`git diff --name-only origin/<target>...HEAD`, falling back to `<target>...HEAD` if needed) against path globs (e.g. `internal/ui/**`, `docs/**`). Collects and deduplicates all matched reviewers.
        2. **Issue labels or components (`review.mapping.labels`):** If no path rules matched, matches issue labels (GitHub) or components (Jira).
        3. **Branch patterns (`review.mapping.branches`):** If no labels matched, matches topic branch name against glob patterns (e.g. `epic/*`).
        4. **Default fallback (`review.mapping.default`):** Falls back to default reviewer if no prior rules matched.
@@ -91,13 +105,16 @@
      - `sourceBranch`: `<branch>`
      - `targetBranch`: `<targetBranch>`
      - `reviewers`: List of resolved reviewer user handles.
+     - `draft`: Boolean from `--draft`.
+   - **Reviewer assignment failure handling:** If PR creation succeeds (HTTP 201) but requesting reviewers fails, log `[git-brx] Warning: Pull request created, but failed to assign reviewers: <err>` to `stderr` (do not fail the command since the PR already exists).
 8. **Response Handling:**
    - If HTTP 201 Created:
      - Log: `[git-brx] Created pull-request:` (to stderr).
      - Emit URL to stdout for machine consumption.
      - Exit with Exit Code `0`.
    - If HTTP 409 Conflict (e.g., open pull request already exists):
-     - Log: `[git-brx] Error: A pull request for branch '<branch>' already exists`.
+     - Query `SCMProvider.GetPullRequestForBranch(ctx, <branch>)` for the existing PR URL.
+     - Log: `[git-brx] Error: A pull request for branch '<branch>' already exists (<url>)` (or without `(<url>)` if lookup fails).
      - Fail with Exit Code `6`.
    - If HTTP 400/401/403/404:
      - Extract and log API error messages: `[git-brx] Error: <error_message>`.
@@ -109,11 +126,23 @@
 | `0` | Pull request created successfully. | `[git-brx] Created pull-request:` (URL emitted to stdout) | None. |
 | `2` | Excess positional arguments or unknown flags. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Detached HEAD or unpermitted branch type (e.g. running on `main` or `master`). | `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch` | None. |
-| `4` | Source branch not published on remote origin. | `[git-brx] Error: Branch '<branch>' has not been pushed to remote origin` | None. |
-| `6` | JIRA or Bitbucket API failure (HTTP 401, 404, 409 conflict). | `[git-brx] Error: A pull request for branch '<branch>' already exists` / `[git-brx] Error: Request failure` | None. |
+| `4` | Source branch missing/out-of-sync on `origin`, or target branch missing on `origin`. | `[git-brx] Error: Branch '<branch>' has not been pushed to remote origin` / `...has unpushed local commits` | None. |
+| `6` | SCM/Tracker API failure (HTTP 401, 404, 409 conflict). | `[git-brx] Error: A pull request for branch '<branch>' already exists (<url>)` / `[git-brx] Error: Request failure` | None. |
 | `8` | Configuration file or review template missing / corrupt. | `[git-brx] Error: Configuration file not found` | None. |
 
 ## 5. Edge Cases & Behavioral Notes
-- **Pre-flight Remote Branch Verification:** Verifies that the remote tracking branch exists on the remote before submitting pull request creation requests, providing an actionable hint to run `publish` if missing.
+- **Pre-flight Remote Sync & Target Verification:** Verifies that the remote tracking branch exists on `origin` and matches local `HEAD` before submitting pull request creation requests, and verifies that `<targetBranch>` exists on `origin`.
+- **Non-Default Target Closing References:** Child PRs targeting `epic/*` retain `Closes #<issueKey>` in the PR body for issue cross-linking, though GitHub only auto-closes `#<issueKey>` when the PR merges into the repository default branch (`main`).
 - **Secure In-Memory Credential Handling:** Authentication credentials and tokens are maintained exclusively within process memory for API calls, preventing secrets exposure in process lists.
-- **Randomized Reviewer Load Balancing & Override:** When multiple reviewers match a component in configuration, a reviewer is selected using uniform random distribution, which can be explicitly overridden via `--reviewer`.
+- **Reviewer List Parsing:** `-r` supports both repeated flags and comma-separated usernames, deduplicating while preserving order.
+
+## 6. Black-box verification scenarios
+| Scenario ID | Given | When | Then (exit code, output, state) |
+| :--- | :--- | :--- | :--- |
+| `TC-REV-01` | Published `issue/50` with 1 new unpushed local commit | `git-brx review` | Exits `4` with `unpushed local commits` error and `git-brx publish` hint; no API POST sent. |
+| `TC-REV-02` | Published `issue/50` targeting non-existent `epic/999` | `git-brx review epic/999` | Exits `4` reporting missing target branch on `origin`. |
+| `TC-REV-03` | `issue/50` has `branch.issue/50.brx-base=epic/10` | `git-brx review` | Opens PR with `base=epic/10` and `Squash and merge` instructions without explicit `<target>`. |
+| `TC-REV-04` | Published `issue/50` and reviewer API returns 422 | `git-brx review -r alice,bob -r bob` | Sends `["alice", "bob"]` to reviewer endpoint, logs stderr warning, still emits PR URL and exits `0`. |
+| `TC-REV-05` | Published `issue/50` with `review.mapping.default` configured | `git-brx review --draft` / `git-brx review --draft -r alice` | Sends `draft: true` in PR payload; skips automated `review.mapping` reviewers when `-r` is omitted and assigns `["alice"]` when `-r alice` is explicitly passed, exits `0`. |
+| `TC-REV-06` | `issue/50` already has an open PR `#77` | `git-brx review` | Queries existing PR and exits `6` with URL for `#77`. |
+| `TC-REV-07` | `origin/epic/10` exists remotely, no local `epic/10` | `git-brx review epic/10` | Computes `ChangedFiles` against `origin/epic/10...HEAD` for `review.mapping.paths`. |

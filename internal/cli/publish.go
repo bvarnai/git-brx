@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
+	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/spf13/cobra"
 )
@@ -77,7 +78,11 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 	expectedUpstream := "origin/" + currBranch.Name
 	setUpstream := currBranch.UpstreamRef != expectedUpstream
 
+	// Shared integration branches (epic/*, release/*) always push fast-forward only
 	forceWithLease := !opts.NoForce
+	if currBranch.Type == domain.BranchTypeEpic || currBranch.Type == domain.BranchTypeRelease {
+		forceWithLease = false
+	}
 	a.Logger.Debug("Publishing branch %s (setUpstream=%v, forceWithLease=%v)", currBranch.Name, setUpstream, forceWithLease)
 
 	// Execute push
@@ -102,5 +107,5 @@ func (a *App) handlePushError(pushErr error) error {
 			WithHint("Run 'git-brx update' to incorporate remote changes before publishing")
 	}
 
-	return errcode.NewError(errcode.ErrPreconditionRemote, "Publish failed: unable to reach remote or authentication rejected")
+	return errcode.NewError(errcode.ErrPreconditionRemote, "Unable to reach remote or authentication rejected")
 }

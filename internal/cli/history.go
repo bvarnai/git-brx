@@ -148,17 +148,13 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 	} else if opts.Topic {
 		currBranch, branchErr := a.Inspector.CurrentBranch(ctx, rootDir)
 		if branchErr == nil {
-			baseBranch := a.Inspector.DefaultBranch(ctx, rootDir)
-			if baseBranch == "" {
-				baseBranch = "main"
-			}
-
+			base := a.resolveBaseBranch(ctx, rootDir, currBranch.Name, "")
 			if currBranch.IsDetached {
-				logArgs = append(logArgs, fmt.Sprintf("%s..HEAD", baseBranch))
-			} else if currBranch.Name != baseBranch {
-				logArgs = append(logArgs, fmt.Sprintf("%s..%s", baseBranch, currBranch.Name))
+				logArgs = append(logArgs, fmt.Sprintf("%s..HEAD", base.Ref))
+			} else if currBranch.Name != base.Name {
+				logArgs = append(logArgs, fmt.Sprintf("%s..%s", base.Ref, currBranch.Name))
 			} else {
-				a.Logger.Log("You are on base branch '%s'; there is no topic branch delta to display", baseBranch)
+				a.Logger.Log("You are on base branch '%s'; there is no topic branch delta to display", base.Name)
 				return nil
 			}
 		}

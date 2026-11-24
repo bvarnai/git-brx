@@ -17,6 +17,7 @@ import (
 
 // CreateOptions stores flags for the create command.
 type CreateOptions struct {
+	Base    string
 	Offline bool
 	Yes     bool
 }
@@ -36,8 +37,11 @@ following repository branching conventions.`,
 		},
 	}
 
+	cmd.Flags().StringVarP(&opts.Base, "base", "b", "", "Explicit base branch to fork from and record as parent base")
 	cmd.Flags().BoolVarP(&opts.Offline, "offline", "o", false, "Skip issue validation and remote Git availability checks")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Automatically accept confirmation prompts without interactive input")
+
+	_ = cmd.RegisterFlagCompletionFunc("base", a.completeBranchNames)
 
 	return cmd
 }
@@ -69,31 +73,26 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 	a.Logger.Debug("Repository root: %s", rootDir)
 	a.Logger.Debug("Target branch to create: %s (offline=%v)", targetBranch, opts.Offline)
 
-	// 2. Local Branch Collision Check
+	// 2. Local & Remote Branch Collision Auto-Switch
 	localExists, _, _ := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
-	if localExists {
-		a.Logger.Log("Branch '%s' found (local)", targetBranch)
-		a.Logger.Hint("To select this branch, use 'git-brx select %s' instead", targetBranch)
-		return nil
-	}
-
-	// 3. Remote Branch Collision Check (Online Mode)
 	hasOrigin, originURL, _ := a.Inspector.HasOrigin(ctx, rootDir)
-	if !opts.Offline && hasOrigin {
+	remoteExists := false
+	if !localExists && !opts.Offline && hasOrigin {
 		a.Logger.Log("Checking for existing branches (remote)")
-		remoteExists, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, targetBranch)
+		remoteExists, err = a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, targetBranch)
 		if err != nil {
 			return errcode.NewError(errcode.ErrPreconditionRemote, "Unable to reach remote").
 				WithHint("Try --offline if working without network access")
 		}
-		if remoteExists {
-			a.Logger.Log("Branch '%s' found (remote)", targetBranch)
-			a.Logger.Hint("To select this branch, use 'git-brx select %s' instead", targetBranch)
-			return nil
+		if !remoteExists {
+			a.Logger.Log("No branch '%s' found (remote)", targetBranch)
 		}
-		a.Logger.Log("No branch '%s' found (remote)", targetBranch)
-	} else if opts.Offline {
+	} else if !localExists && opts.Offline {
 		a.Logger.Log("Offline mode selected (git remote checks skipped...)")
+	}
+
+	if localExists || remoteExists {
+		return a.switchToExistingBranch(ctx, rootDir, targetBranch, localExists, hasOrigin, opts.Offline)
 	}
 
 	// 4. Configuration & Template Matching
@@ -237,14 +236,139 @@ func (a *App) runCreate(ctx context.Context, opts CreateOptions, args []string) 
 		a.Logger.Log("Offline mode selected (issue tracker checks skipped...)")
 	}
 
+	// 5.5. Base Branch Validation & Guardrails
+	resolvedBase, startPoint, err := a.prepareCreateBase(ctx, rootDir, targetBranch, opts.Base, hasOrigin, opts.Offline)
+	if err != nil {
+		return err
+	}
+
 	// 6. Branch Provisioning
+	if dirty, dirtyErr := a.Inspector.IsDirty(ctx, rootDir); dirtyErr == nil && dirty {
+		a.Logger.Warn("Uncommitted local changes will be carried over to '%s'", targetBranch)
+	}
+
 	a.Logger.Log("Creating branch '%s'", targetBranch)
-	if err := a.Operations.CreateAndCheckout(ctx, rootDir, targetBranch); err != nil {
+	if err := a.Operations.CreateAndCheckoutFrom(ctx, rootDir, targetBranch, startPoint); err != nil {
 		return errcode.WrapError(errcode.ErrGeneral, err, "Failed to create branch '%s'", targetBranch)
+	}
+
+	if resolvedBase != "" && resolvedBase != targetBranch {
+		if baseErr := a.Operations.SetBranchBase(ctx, rootDir, targetBranch, resolvedBase); baseErr != nil {
+			a.Logger.Debug("Failed to record parent base branch '%s' for '%s': %v", resolvedBase, targetBranch, baseErr)
+		}
 	}
 
 	a.Logger.Hint("Use 'git-brx publish' to publish your new branch")
 	return nil
+}
+
+func (a *App) switchToExistingBranch(ctx context.Context, rootDir, targetBranch string, localExists, hasOrigin, offline bool) error {
+	if err := checks.NoOrphanedCommits(ctx, a.Inspector, rootDir); err != nil {
+		return err
+	}
+
+	wasDirty, _ := a.Inspector.IsDirty(ctx, rootDir)
+	prevBranch := ""
+	if curr, err := a.Inspector.CurrentBranch(ctx, rootDir); err == nil && !curr.IsDetached {
+		prevBranch = curr.Name
+	}
+
+	fetchOK := false
+	if prevBranch != targetBranch {
+		if !localExists && hasOrigin && !offline {
+			if fetchErr := a.Operations.Fetch(ctx, rootDir, "origin"); fetchErr != nil {
+				return errcode.NewError(errcode.ErrPreconditionRemote, "Unable to reach remote").
+					WithHint("Try --offline if working without network access")
+			}
+			fetchOK = true
+		}
+
+		if checkoutErr := a.Operations.Checkout(ctx, rootDir, targetBranch); checkoutErr != nil {
+			if strings.Contains(checkoutErr.Error(), "would be overwritten by checkout") {
+				return errcode.NewError(errcode.ErrConflict, "Local modifications would be overwritten by checkout").
+					WithHint("Commit or stash your changes before switching branches")
+			}
+			return errcode.WrapError(errcode.ErrGeneral, checkoutErr, "Failed to switch to existing branch '%s'", targetBranch)
+		}
+
+		a.warnDirtyWorktree(wasDirty, prevBranch, targetBranch)
+	}
+
+	if !offline && hasOrigin {
+		if !fetchOK && localExists {
+			fetchOK = a.Operations.Fetch(ctx, rootDir, "origin") == nil
+		}
+		if fetchOK {
+			a.syncOrHintUpstream(ctx, rootDir, targetBranch, false, false)
+		}
+	}
+
+	a.Logger.Log("Branch '%s' already exists; switched to '%s'", targetBranch, targetBranch)
+	return nil
+}
+
+func (a *App) prepareCreateBase(ctx context.Context, rootDir, targetBranch, explicitBase string, hasOrigin, offline bool) (resolvedBase string, startPoint string, err error) {
+	baseName := strings.TrimSpace(explicitBase)
+	if baseName != "" {
+		var fetchErr error
+		if !offline && hasOrigin {
+			fetchErr = a.Operations.Fetch(ctx, rootDir, "origin")
+		}
+
+		baseLocal, baseRemote, _ := a.Inspector.BranchExists(ctx, rootDir, baseName)
+		if !baseLocal && !baseRemote {
+			if fetchErr != nil {
+				return "", "", errcode.NewError(errcode.ErrPreconditionRemote, "Unable to reach remote").
+					WithHint("Try --offline if working without network access")
+			}
+			return "", "", errcode.NewError(errcode.ErrPreconditionRepo, "Base branch '%s' not found", baseName)
+		}
+
+		if !baseLocal {
+			return baseName, "origin/" + baseName, nil
+		}
+
+		startPoint = baseName
+		if !offline && hasOrigin && baseRemote {
+			delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, baseName, "origin/"+baseName)
+			if deltaErr == nil && delta != nil && delta.BehindCount > 0 {
+				curr, _ := a.Inspector.CurrentBranch(ctx, rootDir)
+				checkedOutHere := curr != nil && !curr.IsDetached && curr.Name == baseName
+				checkedOutElsewhere := a.Inspector.IsBranchCheckedOutInOtherWorktree(ctx, rootDir, baseName)
+
+				if delta.AheadCount == 0 && !checkedOutHere && !checkedOutElsewhere {
+					if ffErr := a.Operations.FetchRef(ctx, rootDir, "origin", baseName+":"+baseName); ffErr != nil {
+						startPoint = "origin/" + baseName
+					}
+				} else if delta.AheadCount == 0 && checkedOutElsewhere {
+					startPoint = "origin/" + baseName
+				} else {
+					a.Logger.Warn("Base branch '%s' is behind 'origin/%s' by %d commit(s)", baseName, baseName, delta.BehindCount)
+					a.Logger.Hint("Run 'git-brx update' before branching if you need the latest commits")
+				}
+			}
+		}
+		return baseName, startPoint, nil
+	}
+
+	curr, currErr := a.Inspector.CurrentBranch(ctx, rootDir)
+	if currErr == nil && !curr.IsDetached {
+		resolvedBase = curr.Name
+		if curr.Type == domain.BranchTypeIssue || curr.Type == domain.BranchTypeFeature {
+			def := a.Inspector.DefaultBranch(ctx, rootDir)
+			a.Logger.Warn("Creating '%s' from topic branch '%s' instead of default branch", targetBranch, curr.Name)
+			a.Logger.Hint("Pass '--base %s' or run 'git-brx select %s' first if this was unintentional", def, def)
+		}
+		if !offline && hasOrigin {
+			if _, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, curr.Name); remoteExists {
+				if delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, curr.Name, "origin/"+curr.Name); deltaErr == nil && delta != nil && delta.BehindCount > 0 {
+					a.Logger.Warn("Base branch '%s' is behind 'origin/%s' by %d commit(s)", curr.Name, curr.Name, delta.BehindCount)
+					a.Logger.Hint("Run 'git-brx update' before branching if you need the latest commits")
+				}
+			}
+		}
+	}
+	return resolvedBase, "", nil
 }
 
 func extractBranchPathAndKey(matches []string, targetBranch string) (string, string) {

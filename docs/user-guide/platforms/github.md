@@ -19,7 +19,8 @@ To customize specific settings—like reviewer mappings or branch labels—witho
 ```yaml
 # .git-brx.yaml
 review:
-  default: [team-lead]
+  mapping:
+    default: [team-lead]
 ```
 
 `git-brx` still infers `platform: github`, `owner`, and `repo` from `origin` and merges your overrides on top.
@@ -174,7 +175,6 @@ review:
         "epic/*": merge
         "release/*": merge
       targets:                       # Match against PR target branch (BASE)
-        "epic/*": merge
         "release/*": merge
   template: .github/pull_request_template.md
   mapping:

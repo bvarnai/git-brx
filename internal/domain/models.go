@@ -18,6 +18,7 @@ type BranchRecord struct {
 	Type        BranchType `json:"type"`
 	IssueKey    string     `json:"issue_key,omitempty"`
 	UpstreamRef string     `json:"upstream_ref,omitempty"`
+	BaseBranch  string     `json:"base_branch,omitempty"`
 	CommitHash  string     `json:"commit_hash,omitempty"`
 	IsDetached  bool       `json:"is_detached"`
 }

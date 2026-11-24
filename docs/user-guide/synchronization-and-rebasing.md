@@ -9,12 +9,14 @@ This guide covers how `git-brx` syncs branches with `main`, pulls collaborator c
 As teammates merge changes into `main`, run `git brx sync` to incorporate upstream commits into your topic branch:
 
 ```bash
-# Sync with the default base branch (main or master):
+# Sync with your recorded brx-base (or main/master by default):
 git brx sync
 
 # Sync with a specific target branch (e.g., develop or a release branch):
 git brx sync develop
 ```
+
+If `<branch>` is omitted, `git brx sync` checks the recorded `branch.<name>.brx-base` config first (set automatically by `git brx create`) before falling back to `main`/`master`. When the target base exists only on `origin` (`origin/<base>`) or is checked out in another linked worktree, `git brx sync` syncs directly against `origin/<base>`.
 
 ### Default strategy by branch prefix
 `git brx sync` selects the strategy based on your active branch prefix:
@@ -44,12 +46,15 @@ To disable in-place base fast-forwarding, pass `--no-auto-update-base`:
 git brx sync --no-auto-update-base
 ```
 
+*(If `<base>` is behind `origin/<base>` while checked out in another linked worktree, `git brx sync` leaves that worktree untouched and syncs directly against `origin/<base>`.)*
+
 ### Diverged base branch check
 If your local base branch has unpushed commits or has diverged from `origin/main` (`ahead > 0`), `git brx sync` stops with Exit Code `5` to avoid rebasing onto unverified local state:
 ```text
 [git-brx] Error: Base branch 'main' is not up-to-date with 'origin/main'
-[git-brx] Hint: Switch to 'main' and run 'git-brx update' first
+[git-brx] Hint: Switch to 'main' and run 'git-brx publish' first
 ```
+*(If the base branch is both ahead and behind `origin/main`, the hint recommends running `'git-brx update'` and then `'git-brx publish'` first.)*
 
 ---
 
@@ -62,8 +67,8 @@ git brx update
 ```
 
 ### How `update` works
-1. Fetches `origin/<active-branch>`.
-2. Fast-forwards if you have no local commits, or rebases your local unpushed commits on top of `origin/<active-branch>`.
+1. Queries `origin` directly so branches published from another clone or worktree are discovered even before a local `origin/<branch>` ref exists, then fetches `origin/<active-branch>`.
+2. Fast-forwards if you have no local commits, or rebases your local unpushed commits on top of `origin/<active-branch>` (using `git rebase --rebase-merges` on `feature/*` and `epic/*` branches to preserve 3-way merge commits from `sync`).
 3. With `--autostash` (`-a`), stashes uncommitted local changes before rebasing and reapplies them afterward:
    ```bash
    git brx update --autostash
@@ -80,13 +85,15 @@ git brx resolve
 ```
 
 ### Resolution flow
-1. **Find conflicted paths:** Lists unmerged files via `git diff --name-only --diff-filter=U`.
-2. **Launch merge tool:** Opens your configured merge tool (`git config merge.tool`, or `-t <tool>`) for each conflicted file.
+1. **Find conflicted paths:** Lists unmerged files via `git diff --name-only --diff-filter=U` and scans them for conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+2. **Auto-stage or launch merge tool:**
+   - If all conflict markers are already cleared (for example, resolved in your editor or by an AI agent), skips `git mergetool` and proceeds directly to staging.
+   - If markers remain, opens your configured merge tool (`git config merge.tool`, or `-t <tool>`). Pass `--no-tool` (or leave `merge.tool` unset in headless terminals) to fail fast with the list of files that still contain markers.
 3. **Stage only resolved files:**
    - Checks each file after the merge tool exits to confirm conflict markers are gone.
    - Stages **only** those resolved paths (`git add -- <file>`). It never runs `git add .`, so unrelated working-tree edits or untracked files stay unstaged.
 4. **Continue the operation:**
-   - **Rebase:** Prints current step progress (e.g., `Resolving rebase conflict (step 2/5)`) and runs `git rebase --continue`.
+   - **Rebase:** Prints current step progress (e.g., `Resolving rebase conflict at step 2 of 5...`) and runs `git rebase --continue`.
    - **Merge:** Commits the merge (`git commit --no-edit`).
 5. **Multi-step rebases:** If later commits in a rebase also conflict, `git-brx` loops through the remaining steps until the rebase completes.
 
@@ -94,16 +101,17 @@ git brx resolve
 
 ## 4. Recovery (`git brx reset`)
 
-To abort an in-flight rebase or merge and reset your branch to match `origin/<current-branch>`:
+`git brx reset` works in two safe steps so aborting a conflict never destroys unpushed local commits:
+
+1. **Active conflict (`merge` or `rebase` in progress):** Aborts the in-flight operation (`git rebase --abort` or `git merge --abort`) and preserves your local commits. Works offline and even on unpublished branches.
+2. **Idle branch (no conflict in progress):** Resets your branch to match `origin/<current-branch>` (`git reset --hard origin/<current-branch>`).
 
 ```bash
 git brx reset
 ```
 
-### What `git brx reset` does
-1. **Aborts active operations:** Detects `.git/rebase-merge`, `.git/rebase-apply`, or `.git/MERGE_HEAD` and runs `git rebase --abort` or `git merge --abort`.
-2. **Hard-resets to upstream:** Runs `git reset --hard origin/<current-branch>`.
-3. **Optional untracked cleanup (`--clean` / `-c`):** Removes untracked files and directories (`git clean -fd`):
-   ```bash
-   git brx reset --clean
-   ```
+### Optional untracked cleanup (`--clean` / `-c`)
+When idle (after any active conflict has been aborted), pass `--clean` to remove untracked files and directories (`git clean -fd`):
+```bash
+git brx reset --clean
+```

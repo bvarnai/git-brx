@@ -32,10 +32,42 @@ func (o *Operations) Checkout(ctx context.Context, dir, branch string) error {
 	return err
 }
 
+// CheckoutDetach detaches HEAD at the specified ref.
+func (o *Operations) CheckoutDetach(ctx context.Context, dir, ref string) error {
+	_, err := o.runner.Run(ctx, dir, "checkout", "--detach", ref)
+	return err
+}
+
+// DeleteRemoteBranch deletes a branch reference on the specified remote via git push <remote> --delete <branch>.
+func (o *Operations) DeleteRemoteBranch(ctx context.Context, dir, remote, branch string) error {
+	_, err := o.runner.Run(ctx, dir, "push", remote, "--delete", branch)
+	return err
+}
+
 // CreateAndCheckout provisions a new local branch and switches the working tree to it.
 func (o *Operations) CreateAndCheckout(ctx context.Context, dir, branch string) error {
 	_, err := o.runner.Run(ctx, dir, "checkout", "-b", branch)
 	return err
+}
+
+// CreateAndCheckoutFrom provisions a new local branch from startPoint (or HEAD if empty) and switches to it.
+func (o *Operations) CreateAndCheckoutFrom(ctx context.Context, dir, branch, startPoint string) error {
+	if startPoint == "" {
+		return o.CreateAndCheckout(ctx, dir, branch)
+	}
+	_, err := o.runner.Run(ctx, dir, "checkout", "-b", branch, startPoint)
+	return err
+}
+
+// SetBranchBase records the parent base branch for branch in repository-local Git config.
+func (o *Operations) SetBranchBase(ctx context.Context, dir, branch, base string) error {
+	_, err := o.runner.Run(ctx, dir, "config", "--local", "branch."+branch+".brx-base", base)
+	return err
+}
+
+// MergeFFOnly fast-forwards the current branch to upstream using git merge --ff-only.
+func (o *Operations) MergeFFOnly(ctx context.Context, dir, upstream string) (string, error) {
+	return o.runner.Run(ctx, dir, "merge", "--ff-only", upstream)
 }
 
 // Push pushes commits for the given branch to remote with optional upstream tracking and leased force.
@@ -59,6 +91,16 @@ func (o *Operations) Rebase(ctx context.Context, dir, upstream string, autostash
 	}
 	if interactive {
 		args = append(args, "--interactive")
+	}
+	args = append(args, upstream)
+	return o.runner.Run(ctx, dir, args...)
+}
+
+// RebasePreserveMerges runs git rebase --rebase-merges against the specified upstream ref.
+func (o *Operations) RebasePreserveMerges(ctx context.Context, dir, upstream string, autostash bool) (string, error) {
+	args := []string{"rebase", "--rebase-merges"}
+	if autostash {
+		args = append(args, "--autostash")
 	}
 	args = append(args, upstream)
 	return o.runner.Run(ctx, dir, args...)

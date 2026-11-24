@@ -111,6 +111,7 @@ func (c *Client) GetIssue(ctx context.Context, key string) (*domain.Issue, error
 	cleanKey := strings.TrimPrefix(key, "#")
 	cleanKey = strings.TrimPrefix(cleanKey, "issue/")
 	cleanKey = strings.TrimPrefix(cleanKey, "feature/")
+	cleanKey = strings.TrimPrefix(cleanKey, "epic/")
 
 	issueNum, err := strconv.Atoi(cleanKey)
 	if err != nil {
@@ -180,6 +181,7 @@ type rawCreatePRRequest struct {
 	Body  string `json:"body"`
 	Head  string `json:"head"`
 	Base  string `json:"base"`
+	Draft bool   `json:"draft,omitempty"`
 }
 
 type rawPRResponse struct {
@@ -200,6 +202,7 @@ func (c *Client) CreatePullRequest(ctx context.Context, req domain.PullRequestRe
 		Body:  req.Description,
 		Head:  req.SourceBranch,
 		Base:  req.TargetBranch,
+		Draft: req.Draft,
 	}
 
 	bodyBytes, err := json.Marshal(payload)
@@ -229,14 +232,18 @@ func (c *Client) CreatePullRequest(ctx context.Context, req domain.PullRequestRe
 		return nil, errcode.WrapError(errcode.ErrAPI, err, "Failed to parse pull request response")
 	}
 
-	// Request reviewers if specified
+	// Request reviewers if specified; surface non-fatal warning on failure since PR already exists
+	var warnings []string
 	if len(req.Reviewers) > 0 {
-		c.requestReviewers(ctx, rawPR.Number, req.Reviewers)
+		if revErr := c.requestReviewers(ctx, rawPR.Number, req.Reviewers); revErr != nil {
+			warnings = append(warnings, fmt.Sprintf("Pull request created, but failed to assign reviewers: %v", revErr))
+		}
 	}
 
 	return &domain.PullRequestResult{
-		ID:  strconv.Itoa(rawPR.Number),
-		URL: rawPR.HTMLURL,
+		ID:       strconv.Itoa(rawPR.Number),
+		URL:      rawPR.HTMLURL,
+		Warnings: warnings,
 	}, nil
 }
 
@@ -278,23 +285,26 @@ func (c *Client) GetPullRequestForBranch(ctx context.Context, branch string) (*d
 		return nil, nil // No PR found for branch
 	}
 
-	pr := rawList[0]
-	state := domain.PRStateOpen
-	merged := pr.MergedAt != nil && *pr.MergedAt != ""
+	details := make([]domain.PullRequestDetail, 0, len(rawList))
+	for _, pr := range rawList {
+		state := domain.PRStateOpen
+		merged := pr.MergedAt != nil && *pr.MergedAt != ""
+		if merged {
+			state = domain.PRStateMerged
+		} else if strings.EqualFold(pr.State, "closed") {
+			state = domain.PRStateClosed
+		}
 
-	if merged {
-		state = domain.PRStateMerged
-	} else if strings.EqualFold(pr.State, "closed") {
-		state = domain.PRStateClosed
+		details = append(details, domain.PullRequestDetail{
+			ID:     strconv.Itoa(pr.Number),
+			Number: pr.Number,
+			URL:    pr.HTMLURL,
+			State:  state,
+			Merged: merged,
+		})
 	}
 
-	return &domain.PullRequestDetail{
-		ID:     strconv.Itoa(pr.Number),
-		Number: pr.Number,
-		URL:    pr.HTMLURL,
-		State:  state,
-		Merged: merged,
-	}, nil
+	return domain.SelectPullRequest(details), nil
 }
 
 // GetCurrentUser retrieves the authenticated GitHub user's login handle.
@@ -346,30 +356,37 @@ func (c *Client) FormatClosingIssue(issueKey string) string {
 	cleanKey := strings.TrimPrefix(issueKey, "#")
 	cleanKey = strings.TrimPrefix(cleanKey, "issue/")
 	cleanKey = strings.TrimPrefix(cleanKey, "feature/")
+	cleanKey = strings.TrimPrefix(cleanKey, "epic/")
 	if cleanKey == "" {
 		return ""
 	}
 	return fmt.Sprintf("Closes #%s", cleanKey)
 }
 
-func (c *Client) requestReviewers(ctx context.Context, prNumber int, reviewers []string) {
+func (c *Client) requestReviewers(ctx context.Context, prNumber int, reviewers []string) error {
 	url := fmt.Sprintf("%s/repos/%s/%s/pulls/%d/requested_reviewers", c.BaseURL, c.Owner, c.Repo, prNumber)
 	payload := rawReviewersRequest{Reviewers: reviewers}
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return
+		return fmt.Errorf("serialize reviewers: %w", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return
+		return fmt.Errorf("build reviewer request: %w", err)
 	}
 
 	c.setHeaders(httpReq)
 	resp, err := c.HTTPClient.Do(httpReq)
-	if err == nil && resp != nil {
-		_ = resp.Body.Close()
+	if err != nil {
+		return fmt.Errorf("request reviewers: %w", err)
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return c.handleErrorResponse(resp, "assign reviewers to pull request #%d", prNumber)
+	}
+	return nil
 }
 
 func (c *Client) setHeaders(req *http.Request) {

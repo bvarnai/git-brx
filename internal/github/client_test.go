@@ -130,6 +130,66 @@ func TestClient_CreatePullRequest_Success(t *testing.T) {
 	assert.True(t, reviewersRequested, "reviewers must be requested after PR creation")
 }
 
+func TestClient_CreatePullRequest_DraftAndReviewerWarning(t *testing.T) {
+	t.Run("DraftFlagSerializesTrue", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/repos/my-org/my-repo/pulls", r.URL.Path)
+			var body map[string]any
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			assert.Equal(t, true, body["draft"])
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"number": 106, "html_url": "https://github.com/my-org/my-repo/pull/106"}`))
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "test-token", github.WithBaseURL(server.URL))
+		res, err := client.CreatePullRequest(context.Background(), domain.PullRequestRequest{
+			Title:        "feat(#10): draft work",
+			Description:  "WIP",
+			SourceBranch: "feature/10",
+			TargetBranch: "main",
+			Draft:        true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "https://github.com/my-org/my-repo/pull/106", res.URL)
+	})
+
+	t.Run("Reviewer422SurfacesWarningWithoutFailing", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/my-org/my-repo/pulls" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 107, "html_url": "https://github.com/my-org/my-repo/pull/107"}`))
+				return
+			}
+			if r.URL.Path == "/repos/my-org/my-repo/pulls/107/requested_reviewers" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				_, _ = w.Write([]byte(`{"message": "Reviews may only be requested from collaborators"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "test-token", github.WithBaseURL(server.URL))
+		res, err := client.CreatePullRequest(context.Background(), domain.PullRequestRequest{
+			Title:        "fix(#10): bugfix",
+			Description:  "Closes #10",
+			SourceBranch: "issue/10",
+			TargetBranch: "main",
+			Reviewers:    []string{"external-user"},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "https://github.com/my-org/my-repo/pull/107", res.URL)
+		require.Len(t, res.Warnings, 1)
+		assert.Contains(t, res.Warnings[0], "Pull request created, but failed to assign reviewers")
+		assert.Contains(t, res.Warnings[0], "collaborators")
+	})
+}
+
 func TestClient_ResolveReviewers(t *testing.T) {
 	reviewCfg := &domain.ReviewConfig{
 		Mapping: domain.ReviewMappingConfig{
@@ -232,6 +292,48 @@ func TestClient_GetPullRequestForBranch(t *testing.T) {
 		pr, err := client.GetPullRequestForBranch(context.Background(), "feature/none")
 		require.NoError(t, err)
 		assert.Nil(t, pr)
+	})
+
+	t.Run("PrioritizesOpenOverMergedAndClosed", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"number": 10, "html_url": "https://github.com/my-org/my-repo/pull/10", "state": "closed", "merged_at": null},
+				{"number": 20, "html_url": "https://github.com/my-org/my-repo/pull/20", "state": "closed", "merged_at": "2026-10-09T08:00:00Z"},
+				{"number": 30, "html_url": "https://github.com/my-org/my-repo/pull/30", "state": "open", "merged_at": null}
+			]`))
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL(server.URL))
+		pr, err := client.GetPullRequestForBranch(context.Background(), "issue/reused")
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		assert.Equal(t, 30, pr.Number)
+		assert.Equal(t, domain.PRStateOpen, pr.State)
+		assert.False(t, pr.Merged)
+	})
+
+	t.Run("PrioritizesMergedOverClosedAndBreaksTiesByNumber", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"number": 10, "html_url": "https://github.com/my-org/my-repo/pull/10", "state": "closed", "merged_at": null},
+				{"number": 15, "html_url": "https://github.com/my-org/my-repo/pull/15", "state": "closed", "merged_at": "2026-10-01T08:00:00Z"},
+				{"number": 25, "html_url": "https://github.com/my-org/my-repo/pull/25", "state": "closed", "merged_at": "2026-10-09T08:00:00Z"}
+			]`))
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL(server.URL))
+		pr, err := client.GetPullRequestForBranch(context.Background(), "issue/reused")
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		assert.Equal(t, 25, pr.Number)
+		assert.Equal(t, domain.PRStateMerged, pr.State)
+		assert.True(t, pr.Merged)
 	})
 }
 

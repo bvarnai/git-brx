@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
@@ -78,7 +80,7 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				"ls-remote --heads origin feature/unpublished":                      {out: ""},
 			},
 			expectedCode: int(errcode.ExitPreconditionRemote),
-			errSubstr:    "Reset failed: remote reference 'origin/feature/unpublished' does not exist",
+			errSubstr:    "Remote reference 'origin/feature/unpublished' does not exist",
 		},
 		{
 			name: "resets hard to remote ref cleanly",
@@ -95,6 +97,76 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				"reset --hard origin/feature/ready":                           {out: ""},
 			},
 			expectedCode: int(errcode.ExitSuccess),
+		},
+	}
+
+	// Active conflict test cases (in-flight rebase / merge)
+	rebaseRepo := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(rebaseRepo, ".git", "rebase-merge"), 0755))
+
+	mergeRepo := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(mergeRepo, ".git"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(mergeRepo, ".git", "MERGE_HEAD"), []byte("deadbeef\n"), 0644))
+
+	activeTests := []struct {
+		name           string
+		args           []string
+		mockResponses  map[string]mockGitResponse
+		expectedCode   int
+		errSubstr      string
+		expectStderr   []string
+		expectExecuted []string
+		forbidExecuted []string
+	}{
+		{
+			name: "active rebase with --clean returns code 2 without aborting",
+			args: []string{"reset", "--clean"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree": {out: "true"},
+				"rev-parse --show-toplevel":       {out: rebaseRepo},
+				"rev-parse --git-dir":             {out: filepath.Join(rebaseRepo, ".git")},
+			},
+			expectedCode:   int(errcode.ExitUsageError),
+			errSubstr:      "Cannot use '--clean' while a rebase is in progress",
+			forbidExecuted: []string{"rebase --abort", "clean -fd"},
+		},
+		{
+			name: "active rebase on unpublished branch aborts safely without hard reset",
+			args: []string{"reset"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree": {out: "true"},
+				"rev-parse --show-toplevel":       {out: rebaseRepo},
+				"rev-parse --git-dir":             {out: filepath.Join(rebaseRepo, ".git")},
+				"rebase --abort":                  {out: ""},
+				"symbolic-ref --short -q HEAD":    {out: "issue/unpublished"},
+				"rev-parse --short HEAD":          {out: "abc1234"},
+				"for-each-ref --format=%(upstream:short) refs/heads/issue/unpublished": {out: ""},
+				"show-ref --verify --quiet refs/heads/issue/unpublished":               {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/issue/unpublished":      {err: errors.New("not found")},
+			},
+			expectedCode:   int(errcode.ExitSuccess),
+			expectStderr:   []string{"Aborted in-progress rebase; local commits preserved"},
+			expectExecuted: []string{"rebase --abort"},
+			forbidExecuted: []string{"reset --hard origin/issue/unpublished"},
+		},
+		{
+			name: "active merge on published branch aborts safely and emits re-run hint",
+			args: []string{"reset"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree": {out: "true"},
+				"rev-parse --show-toplevel":       {out: mergeRepo},
+				"rev-parse --git-dir":             {out: filepath.Join(mergeRepo, ".git")},
+				"merge --abort":                   {out: ""},
+				"symbolic-ref --short -q HEAD":    {out: "feature/test"},
+				"rev-parse --short HEAD":          {out: "abc1234"},
+				"for-each-ref --format=%(upstream:short) refs/heads/feature/test": {out: "origin/feature/test"},
+				"show-ref --verify --quiet refs/heads/feature/test":               {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/feature/test":      {out: ""},
+			},
+			expectedCode:   int(errcode.ExitSuccess),
+			expectStderr:   []string{"Aborted in-progress merge; local commits preserved", "Run 'git-brx reset' again to discard local changes and match 'origin/feature/test'"},
+			expectExecuted: []string{"merge --abort"},
+			forbidExecuted: []string{"reset --hard origin/feature/test"},
 		},
 	}
 
@@ -116,6 +188,37 @@ func TestResetCommand_UnitTable(t *testing.T) {
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
 				}
+			}
+		})
+	}
+
+	for _, tt := range activeTests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			runner := &mockGitRunner{responses: tt.mockResponses}
+			app := cli.NewApp(&stdout, &stderr, runner)
+			app.RootCmd.SetArgs(tt.args)
+
+			err := app.Execute(context.Background())
+			if tt.expectedCode == int(errcode.ExitSuccess) {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				var appErr *errcode.AppError
+				require.True(t, errors.As(err, &appErr), "expected *errcode.AppError, got %T: %v", err, err)
+				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
+				if tt.errSubstr != "" {
+					assert.Contains(t, appErr.Message, tt.errSubstr)
+				}
+			}
+			for _, substr := range tt.expectStderr {
+				assert.Contains(t, stderr.String(), substr)
+			}
+			for _, cmd := range tt.expectExecuted {
+				assert.Contains(t, runner.executed, cmd)
+			}
+			for _, cmd := range tt.forbidExecuted {
+				assert.NotContains(t, runner.executed, cmd)
 			}
 		})
 	}

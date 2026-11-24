@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bvarnai/git-brx/internal/checks"
+	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/git"
 	"github.com/spf13/cobra"
@@ -64,8 +65,11 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 		return err
 	}
 
-	// Verify current branch exists on origin
-	_, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, currBranch.Name)
+	// Query origin directly so branches published from another clone or worktree are discovered cleanly
+	remoteExists, existsErr := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, currBranch.Name)
+	if existsErr != nil {
+		return errcode.WrapError(errcode.ErrPreconditionRemote, existsErr, "Unable to query remote 'origin'")
+	}
 	if !remoteExists {
 		return errcode.NewError(errcode.ErrPreconditionRemote, "Branch '%s' has not been published to origin yet", currBranch.Name).
 			WithHint("Use 'git-brx publish' to publish your branch first")
@@ -76,7 +80,7 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 
 	// Fetch remote reference
 	if fetchErr := a.Operations.FetchRef(ctx, rootDir, "origin", currBranch.Name); fetchErr != nil {
-		return errcode.NewError(errcode.ErrPreconditionRemote, "Update failed: unable to fetch 'origin/%s'", currBranch.Name)
+		return errcode.NewError(errcode.ErrPreconditionRemote, "Unable to fetch 'origin/%s'", currBranch.Name)
 	}
 
 	delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, currBranch.Name, remoteRef)
@@ -88,13 +92,19 @@ func (a *App) runUpdate(ctx context.Context, opts UpdateOptions, args []string) 
 		}
 	}
 
-	// Rebase onto remote tracking ref
-	if _, rebaseErr := a.Operations.Rebase(ctx, rootDir, remoteRef, opts.Autostash, false); rebaseErr != nil {
+	// Rebase onto remote tracking ref (preserve merge topology on shared feature/epic branches)
+	var rebaseErr error
+	if currBranch.Type == domain.BranchTypeFeature || currBranch.Type == domain.BranchTypeEpic {
+		_, rebaseErr = a.Operations.RebasePreserveMerges(ctx, rootDir, remoteRef, opts.Autostash)
+	} else {
+		_, rebaseErr = a.Operations.Rebase(ctx, rootDir, remoteRef, opts.Autostash, false)
+	}
+	if rebaseErr != nil {
 		if strings.Contains(rebaseErr.Error(), "conflict") || isRebaseConflict(ctx, a.Inspector, rootDir) {
 			return errcode.NewError(errcode.ErrConflict, "Update failed due to conflicts").
-				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort")
+				WithHint("Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort without losing commits")
 		}
-		return errcode.WrapError(errcode.ErrConflict, rebaseErr, "Update failed: could not rebase onto '%s'", remoteRef)
+		return errcode.WrapError(errcode.ErrConflict, rebaseErr, "Could not rebase onto '%s'", remoteRef)
 	}
 
 	if deltaErr == nil && delta != nil {

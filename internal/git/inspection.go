@@ -1,6 +1,7 @@
 package git
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -61,14 +62,73 @@ func (i *Inspector) CurrentBranch(ctx context.Context, dir string) (*domain.Bran
 	branchType := ClassifyBranch(branchName)
 	hash, _ := i.runner.Run(ctx, dir, "rev-parse", "--short", "HEAD")
 	upstream, _ := i.runner.Run(ctx, dir, "for-each-ref", "--format=%(upstream:short)", "refs/heads/"+branchName)
+	baseBranch := i.BranchBase(ctx, dir, branchName)
 
 	return &domain.BranchRecord{
 		Name:        branchName,
 		Type:        branchType,
 		UpstreamRef: upstream,
+		BaseBranch:  baseBranch,
 		CommitHash:  hash,
 		IsDetached:  false,
 	}, nil
+}
+
+// BranchBase returns the recorded parent base branch for branch from local Git config, or "".
+func (i *Inspector) BranchBase(ctx context.Context, dir, branch string) string {
+	if strings.TrimSpace(branch) == "" {
+		return ""
+	}
+	out, err := i.runner.Run(ctx, dir, "config", "--local", "--get", "branch."+branch+".brx-base")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// IsBranchCheckedOutInOtherWorktree reports whether branch is currently checked out in a different linked worktree.
+func (i *Inspector) IsBranchCheckedOutInOtherWorktree(ctx context.Context, rootDir, branch string) bool {
+	if strings.TrimSpace(branch) == "" {
+		return false
+	}
+	lines, err := i.runner.RunLines(ctx, rootDir, "worktree", "list", "--porcelain")
+	if err != nil {
+		return false
+	}
+
+	cleanRoot := canonicalPath(rootDir)
+	targetRef := "refs/heads/" + branch
+	var currentWorktree string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			currentWorktree = ""
+			continue
+		}
+		if strings.HasPrefix(trimmed, "worktree ") {
+			currentWorktree = canonicalPath(strings.TrimPrefix(trimmed, "worktree "))
+			continue
+		}
+		if strings.HasPrefix(trimmed, "branch ") && currentWorktree != "" {
+			ref := strings.TrimPrefix(trimmed, "branch ")
+			if ref == targetRef && currentWorktree != cleanRoot {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func canonicalPath(p string) string {
+	if p == "" {
+		return ""
+	}
+	cleaned := filepath.Clean(p)
+	if resolved, err := filepath.EvalSymlinks(cleaned); err == nil {
+		return resolved
+	}
+	return cleaned
 }
 
 // ClassifyBranch identifies branch type from prefix convention.
@@ -232,11 +292,45 @@ func (i *Inspector) BranchExists(ctx context.Context, dir, branch string) (local
 // Returns (true, nil) if ref exists on remote origin.
 // Returns (false, err) if git ls-remote fails (e.g. network/remote unreachable).
 func (i *Inspector) RemoteBranchExistsOnServer(ctx context.Context, dir, branch string) (bool, error) {
-	out, err := i.runner.RunWithEnv(ctx, dir, []string{"GIT_TERMINAL_PROMPT=0"}, "ls-remote", "--heads", "origin", branch)
+	sha, err := i.RemoteBranchSHA(ctx, dir, branch)
 	if err != nil {
 		return false, err
 	}
-	return strings.TrimSpace(out) != "", nil
+	return sha != "", nil
+}
+
+// RemoteBranchSHA queries origin via git ls-remote --heads origin <branch> and returns
+// the remote commit SHA, or "" if the branch does not exist on origin.
+func (i *Inspector) RemoteBranchSHA(ctx context.Context, dir, branch string) (string, error) {
+	out, err := i.runner.RunWithEnv(ctx, dir, []string{"GIT_TERMINAL_PROMPT=0"}, "ls-remote", "--heads", "origin", branch)
+	if err != nil {
+		return "", err
+	}
+
+	expectedRef := "refs/heads/" + branch
+	var singleToken string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[1] == expectedRef {
+			return fields[0], nil
+		}
+		if len(fields) == 1 && singleToken == "" {
+			singleToken = fields[0]
+		}
+	}
+	if singleToken != "" {
+		return singleToken, nil
+	}
+	return "", nil
+}
+
+// HeadSHA returns the commit SHA of local HEAD.
+func (i *Inspector) HeadSHA(ctx context.Context, dir string) (string, error) {
+	out, err := i.runner.Run(ctx, dir, "rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
 }
 
 // HasOrphanedCommits checks if HEAD is detached and contains commits not reachable from any local or remote branch.
@@ -335,17 +429,85 @@ func (i *Inspector) UnmergedFiles(ctx context.Context, dir string) ([]string, er
 	return unmerged, nil
 }
 
+// HasConflictMarkers scans a working-tree file for standard Git conflict markers.
+// Returns scannable=false for missing/non-regular files (e.g. delete/modify conflicts)
+// or binary files containing NUL bytes so callers never silently auto-stage them.
+func (i *Inspector) HasConflictMarkers(rootDir, relPath string) (hasMarkers bool, scannable bool, err error) {
+	fullPath := filepath.Join(rootDir, filepath.FromSlash(relPath))
+	info, statErr := os.Stat(fullPath)
+	if statErr != nil || !info.Mode().IsRegular() {
+		return false, false, nil
+	}
+
+	data, readErr := os.ReadFile(fullPath)
+	if readErr != nil {
+		return false, false, fmt.Errorf("reading unmerged file %s: %w", relPath, readErr)
+	}
+
+	sample := data
+	if len(sample) > 8192 {
+		sample = sample[:8192]
+	}
+	if bytes.IndexByte(sample, 0) >= 0 {
+		return false, false, nil
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		trimmed := strings.TrimSuffix(line, "\r")
+		if strings.HasPrefix(trimmed, "<<<<<<<") ||
+			strings.HasPrefix(trimmed, ">>>>>>>") ||
+			strings.HasPrefix(trimmed, "|||||||") ||
+			trimmed == "=======" {
+			return true, true, nil
+		}
+	}
+
+	return false, true, nil
+}
+
+// MergeToolConfigured reports whether git config merge.tool is set to a non-empty value.
+func (i *Inspector) MergeToolConfigured(ctx context.Context, dir string) (string, bool) {
+	out, err := i.runner.Run(ctx, dir, "config", "--get", "merge.tool")
+	if err != nil {
+		return "", false
+	}
+	trimmed := strings.TrimSpace(out)
+	return trimmed, trimmed != ""
+}
+
 // ChangedFiles returns the list of file paths modified between baseBranch and HEAD.
+// Prefers origin/<baseBranch>...HEAD so remote-only targets resolve without a local branch ref.
 func (i *Inspector) ChangedFiles(ctx context.Context, dir, baseBranch string) ([]string, error) {
 	if strings.TrimSpace(baseBranch) == "" {
 		baseBranch = "main"
 	}
-	out, err := i.runner.Run(ctx, dir, "diff", "--name-only", baseBranch+"...HEAD")
-	if err != nil {
-		out, err = i.runner.Run(ctx, dir, "diff", "--name-only", baseBranch, "HEAD")
-		if err != nil {
-			return nil, fmt.Errorf("failed to determine changed files relative to %s: %w", baseBranch, err)
+
+	var candidates [][]string
+	if strings.HasPrefix(baseBranch, "origin/") {
+		candidates = [][]string{
+			{"diff", "--name-only", baseBranch + "...HEAD"},
+			{"diff", "--name-only", baseBranch, "HEAD"},
 		}
+	} else {
+		remoteBase := "origin/" + baseBranch
+		candidates = [][]string{
+			{"diff", "--name-only", remoteBase + "...HEAD"},
+			{"diff", "--name-only", baseBranch + "...HEAD"},
+			{"diff", "--name-only", remoteBase, "HEAD"},
+			{"diff", "--name-only", baseBranch, "HEAD"},
+		}
+	}
+
+	var out string
+	var err error
+	for _, args := range candidates {
+		out, err = i.runner.Run(ctx, dir, args...)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine changed files relative to %s: %w", baseBranch, err)
 	}
 
 	var files []string

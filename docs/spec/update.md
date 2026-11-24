@@ -24,20 +24,27 @@
    - Assert attached branch: `git symbolic-ref --short -q HEAD`. Store current branch name.
    - Assert remote origin exists: `git remote get-url origin`.
    - Assert no active merge/rebase: Check `.git/MERGE_HEAD`, `.git/rebase-merge`, `.git/rebase-apply`. If present, exit with Exit Code `5`.
-2. **Remote Reference Verification:**
-   - Verify that the current branch exists on `origin` via `git ls-remote --heads origin <branch>`.
-   - If not found on remote, emit warning: `[git-brx] Error: Branch '<branch>' has not been published to origin yet` with hint `[git-brx] Hint: Use 'git-brx publish' to publish your branch first` and exit with Exit Code `4`.
+2. **Fetch & Remote Reference Verification:**
+   - Query `origin` directly before inspecting local tracking refs so branches published from another machine or worktree are discovered cleanly:
+     - Check `git ls-remote --heads origin <branch>` (or fetch `git fetch origin <branch>` first).
+     - If remote is unreachable, fail with Exit Code `4`.
+     - If `<branch>` is not found on `origin`, emit `[git-brx] Error: Branch '<branch>' has not been published to origin yet` with hint `[git-brx] Hint: Use 'git-brx publish' to publish your branch first` and exit with Exit Code `4`.
 3. **Fetch & Rebase Execution:**
    - Fetch latest remote changes: `git fetch origin <branch>`.
-   - Execute rebase:
-     ```bash
-     git rebase origin/<branch>
-     ```
+   - Inspect branch type (`ClassifyBranch(<branch>)`):
+     - For `feature/*` and `epic/*` branches (which may contain 3-way merge commits from `sync`), preserve merge topology:
+       ```bash
+       git rebase --rebase-merges origin/<branch>
+       ```
+     - For `issue/*` and default branches (`main`, `master`), execute linear rebase:
+       ```bash
+       git rebase origin/<branch>
+       ```
      *(If `--autostash` is enabled, append `--autostash`).*
 4. **Conflict Interception:**
    - If `git rebase` exits with a non-zero code due to merge conflicts:
      - Log diagnostic message: `[git-brx] Error: Update failed due to conflicts`
-     - Log actionable hint: `[git-brx] Hint: Use 'git-brx resolve' to resolve conflicts or 'git-brx reset' to abort`
+     - Log actionable hint: `[git-brx] Hint: Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort without losing commits`
      - Terminate with Exit Code `5`.
 5. **Completion:**
    - Log informational success:
@@ -55,10 +62,17 @@
 | `0` | Branch successfully updated and rebased onto remote tip. | `[git-brx] Fast-forwarded ...` / `[git-brx] Rebased ...` / `[git-brx] Branch ... is already up to date with ...` | None. |
 | `2` | Positional arguments or unknown flags supplied. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Outside repository or detached HEAD. | `[git-brx] Error: You are in detached HEAD state, this means you are not on any branch` | None. |
-| `4` | Origin missing, unreachable, or branch not published on remote. | `[git-brx] Error: Your repository has no remote origin` / `[git-brx] Error: Branch not found on remote` | None. |
+| `4` | Origin missing, unreachable, or branch not published on remote. | `[git-brx] Error: Your repository has no remote origin` / `[git-brx] Error: Branch '<branch>' has not been published to origin yet` / `[git-brx] Error: Unable to query remote 'origin'` | None. |
 | `5` | Active rebase/merge already in progress or conflicts hit during rebase. | `[git-brx] Error: You are in a middle of a rebase/merge` / `[git-brx] Error: Update failed due to conflicts` | Leave in conflicted rebase state for `resolve`. |
 
 ## 5. Edge Cases & Behavioral Notes
 - **Unpublished Branch Verification:** Verifies remote tracking branch existence before attempting rebase pull, emitting an actionable hint to run `publish` if the branch has not been pushed yet.
 - **Explicit Upstream Target Refspec:** Explicitly targets `origin/<current_branch>` during pull operations to prevent unintentional rebasing against default remote heads.
 - **Safe Working Tree Autostash:** Supports `--autostash` to automatically stash uncommitted changes before rebasing and re-apply them after completion.
+
+## 6. Black-box verification scenarios
+| Scenario ID | Given | When | Then (exit code, output, state) |
+| :--- | :--- | :--- | :--- |
+| `TC-UPD-01` | Local `feature/12` has no local `refs/remotes/origin/feature/12` yet, but `feature/12` exists on `origin` | `git-brx update` | Fetches `origin/feature/12` and fast-forwards/rebases cleanly instead of reporting unpublished, exits `0`. |
+| `TC-UPD-02` | Shared `epic/10` has a local merge commit from `sync` and `origin/epic/10` has a new teammate commit | `git-brx update` | Executes `git rebase --rebase-merges origin/epic/10` preserving the merge commit, exits `0`. |
+| `TC-UPD-03` | Branch `issue/99` does not exist on `origin` | `git-brx update` | Emits `publish` hint and exits `4`. |

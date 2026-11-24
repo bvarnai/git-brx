@@ -167,6 +167,62 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | issue commit [Test User]\n",
 		},
 		{
+			name: "topic flag uses recorded brx-base epic branch",
+			args: []string{"history", "--topic", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                       {out: "true"},
+				"rev-parse --show-toplevel":                             {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                            {out: "abc1234"},
+				"symbolic-ref --short -q HEAD":                          {out: "issue/44"},
+				"config --local --get branch.issue/44.brx-base":         {out: "epic/10"},
+				"show-ref --verify --quiet refs/heads/epic/10":          {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10": {out: ""},
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color epic/10..issue/44`: {
+					out: "* abc1234 2026-10-09 | slice commit [Test User]",
+				},
+			},
+			expectedCode: int(errcode.ExitSuccess),
+			expectStdout: "* abc1234 2026-10-09 | slice commit [Test User]\n",
+		},
+		{
+			name: "topic flag falls back to origin/recorded-base when local base is missing",
+			args: []string{"history", "--topic", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                       {out: "true"},
+				"rev-parse --show-toplevel":                             {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                            {out: "abc1234"},
+				"symbolic-ref --short -q HEAD":                          {out: "issue/44"},
+				"config --local --get branch.issue/44.brx-base":         {out: "epic/10"},
+				"show-ref --verify --quiet refs/heads/epic/10":          {err: errors.New("not local")},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10": {out: ""},
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color origin/epic/10..issue/44`: {
+					out: "* abc1234 2026-10-09 | slice commit [Test User]",
+				},
+			},
+			expectedCode: int(errcode.ExitSuccess),
+			expectStdout: "* abc1234 2026-10-09 | slice commit [Test User]\n",
+		},
+		{
+			name: "topic flag warns and falls back to master when recorded base no longer exists",
+			args: []string{"history", "--topic", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                         {out: "true"},
+				"rev-parse --show-toplevel":                               {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                              {out: "abc1234"},
+				"symbolic-ref --short -q HEAD":                            {out: "issue/44"},
+				"config --local --get branch.issue/44.brx-base":           {out: "epic/gone"},
+				"show-ref --verify --quiet refs/heads/epic/gone":          {err: errors.New("not local")},
+				"show-ref --verify --quiet refs/remotes/origin/epic/gone": {err: errors.New("not remote")},
+				"show-ref --verify --quiet refs/heads/master":             {out: ""},
+				`log --pretty=tformat:%h %ad | %s%d [%an] --graph --decorate --date=short --no-color master..issue/44`: {
+					out: "* abc1234 2026-10-09 | slice commit [Test User]",
+				},
+			},
+			expectedCode: int(errcode.ExitSuccess),
+			expectStdout: "* abc1234 2026-10-09 | slice commit [Test User]\n",
+			expectStderr: "Recorded base branch 'epic/gone' no longer exists; falling back to default branch",
+		},
+		{
 			name: "topic flag when already on master logs notice and exits cleanly",
 			args: []string{"history", "--topic", "--no-color"},
 			mockResponses: map[string]mockGitResponse{

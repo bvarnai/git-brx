@@ -162,3 +162,75 @@ func TestSelectCommand_UnitTable(t *testing.T) {
 		})
 	}
 }
+
+func TestSelectCommand_FastForwardAndHints(t *testing.T) {
+	t.Run("clean branch behind origin auto-fast-forwards on switch", func(t *testing.T) {
+		runner := &mockGitRunner{
+			responses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                        {out: "true"},
+				"rev-parse --show-toplevel":                              {out: "/repo"},
+				"rev-parse --git-dir":                                    {out: "/repo/.git"},
+				"remote get-url origin":                                  {out: "https://github.com/org/repo.git"},
+				"fetch origin":                                           {out: ""},
+				"show-ref --verify --quiet refs/heads/epic/10":           {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10":  {out: ""},
+				"checkout epic/10":                                       {out: ""},
+				"rev-list --left-right --count epic/10...origin/epic/10": {out: "0\t2"},
+				"merge --ff-only origin/epic/10":                         {out: ""},
+			},
+		}
+		var stdout, stderr bytes.Buffer
+		app := cli.NewApp(&stdout, &stderr, runner)
+		app.RootCmd.SetArgs([]string{"select", "epic/10"})
+
+		require.NoError(t, app.Execute(context.Background()))
+		assert.Contains(t, runner.executed, "merge --ff-only origin/epic/10")
+		assert.Contains(t, stderr.String(), "Fast-forwarded 'epic/10' to match 'origin/epic/10' (2 new commits)")
+	})
+
+	t.Run("--no-ff skips fast-forward and emits update hint", func(t *testing.T) {
+		runner := &mockGitRunner{
+			responses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                        {out: "true"},
+				"rev-parse --show-toplevel":                              {out: "/repo"},
+				"rev-parse --git-dir":                                    {out: "/repo/.git"},
+				"remote get-url origin":                                  {out: "https://github.com/org/repo.git"},
+				"fetch origin":                                           {out: ""},
+				"show-ref --verify --quiet refs/heads/epic/10":           {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10":  {out: ""},
+				"checkout epic/10":                                       {out: ""},
+				"rev-list --left-right --count epic/10...origin/epic/10": {out: "0\t2"},
+			},
+		}
+		var stdout, stderr bytes.Buffer
+		app := cli.NewApp(&stdout, &stderr, runner)
+		app.RootCmd.SetArgs([]string{"select", "--no-ff", "epic/10"})
+
+		require.NoError(t, app.Execute(context.Background()))
+		assert.NotContains(t, runner.executed, "merge --ff-only origin/epic/10")
+		assert.Contains(t, stderr.String(), "Run 'git-brx update' to update.")
+	})
+
+	t.Run("diverged topic or epic branch emits update hint instead of sync", func(t *testing.T) {
+		runner := &mockGitRunner{
+			responses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                        {out: "true"},
+				"rev-parse --show-toplevel":                              {out: "/repo"},
+				"rev-parse --git-dir":                                    {out: "/repo/.git"},
+				"symbolic-ref --short -q HEAD":                           {out: "epic/10"},
+				"remote get-url origin":                                  {out: "https://github.com/org/repo.git"},
+				"fetch origin":                                           {out: ""},
+				"show-ref --verify --quiet refs/heads/epic/10":           {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10":  {out: ""},
+				"rev-list --left-right --count epic/10...origin/epic/10": {out: "1\t1"},
+			},
+		}
+		var stdout, stderr bytes.Buffer
+		app := cli.NewApp(&stdout, &stderr, runner)
+		app.RootCmd.SetArgs([]string{"select", "epic/10"})
+
+		require.NoError(t, app.Execute(context.Background()))
+		assert.Contains(t, stderr.String(), "Run 'git-brx update' to update.")
+		assert.NotContains(t, stderr.String(), "git-brx sync")
+	})
+}

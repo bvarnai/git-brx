@@ -20,15 +20,15 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 
 | Stage | `git-brx` Command | Purpose & Behavior |
 | :--- | :--- | :--- |
-| **Branch Creation** | `git brx create <branch> -y` | Validates against issue tracker (GitHub/Jira), enforces prefix rules (`issue/`, `feature/`, `epic/`), and creates local topic branch. |
-| **Branch Selection** | `git brx select [<branch>]` | Fetches remotes and switches working tree (defaults to `main` if omitted). |
-| **Upstream sync** | `git brx sync [<target>]` | Pulls base branch changes (**rebase** for `issue/`, **merge** for `feature/` and `epic/`). Defaults to `main` if omitted. |
-| **Pair Update** | `git brx update` | Pulls colleague commits on the current branch using rebase with `--autostash`. |
-| **Conflict Resolve** | `git brx resolve` | Launches merge tool on conflicted paths and continues in-flight rebase/merge. |
-| **Conflict Abort** | `git brx reset` | Aborts in-flight rebase/merge and resets working copy to clean tracking state. |
-| **Publishing** | `git brx publish` | Pushes branch using safe `--force-with-lease` and binds upstream tracking. |
-| **Code Review / PR** | `git brx review [<target>]` | Opens Pull Request via API, evaluates path/label reviewer mappings, and excludes author. |
-| **Branch Cleanup** | `git brx delete <branch>` | Verifies remote deletion, switches to default branch, and prunes local branch. |
+| **Branch creation** | `git brx create [--base <base>] <branch> -y` | Validates against issue tracker, forks from `<base>` (recording `brx-base`), or auto-switches if `<branch>` already exists. |
+| **Branch selection** | `git brx select [--no-ff] [<branch>]` | Fetches remotes, switches working tree (default: `main`), and fast-forwards clean behind-origin branches. |
+| **Upstream sync** | `git brx sync [<target>]` | Pulls base branch changes (**rebase** for `issue/`, **merge** for `feature/` and `epic/`). Uses recorded `brx-base`, `<target>`, or `main` (with remote-only/worktree fallback). |
+| **Pair Update** | `git brx update` | Queries `origin` directly and pulls colleague commits (linear rebase for `issue/`, `--rebase-merges` for `feature/` and `epic/`). |
+| **Conflict resolve** | `git brx resolve [--no-tool]` | Auto-stages marker-free resolved paths (or launches merge tool) and continues in-flight rebase/merge. |
+| **Conflict abort** | `git brx reset` | Aborts in-flight rebase/merge preserving local commits; resets to `origin/<branch>` when idle. |
+| **Publishing** | `git brx publish` | Pushes branch (`--force-with-lease` on `issue/`/`feature/`, fast-forward-only on `epic/`/`release/`) and binds upstream tracking. |
+| **Code Review / PR** | `git brx review [--draft] [<target>]` | Verifies pushed `HEAD` and remote `<target>`, resolves recorded `brx-base`, assigns reviewers, and opens PR. |
+| **Branch Cleanup** | `git brx delete [--delete-remote] [<branch>]` | Checks remote deletion (or deletes merged remote with `--delete-remote`), returns to recorded `brx-base`/`main` (detaching in busy worktrees), and prunes local branch. |
 
 ---
 
@@ -47,11 +47,11 @@ When starting work on an issue or ticket:
    - `epic/*`: Multi-PR integration branches aggregating child slices (merge sync, merge commit into `main`).
    The user confirms the branch type when creating standalone branches.
 3. **GitHub `epic` label prerequisite:** GitHub repositories do not include an `epic` label by default. Before running `git brx create epic/<E> -y`, ensure the `epic` label exists in the repository's GitHub label settings and is applied to issue `#<E>`. Child slice tickets use standard labels (`enhancement`, `bug`, `feature`, or unlabeled for `issue/*`).
-4. Create the branch non-interactively using `-y`:
+4. Create the branch non-interactively using `-y` (pass `--base <branch>` to fork from a specific base such as `epic/<E>` without switching first):
    ```bash
    git brx create issue/123 -y
    ```
-   *(If offline or bypassing tracker validation, add `-o`/`--offline`)*
+   *(If the branch already exists locally or on `origin`, `create` switches to it automatically. If offline or bypassing tracker validation, add `-o`/`--offline`.)*
 
 ### Step 2: Local Commits
 - Make incremental changes.
@@ -71,16 +71,18 @@ When starting work on an issue or ticket:
   git brx update
   ```
 
-### Step 4: Conflict Handling (`resolve` / `reset`)
+### Step 4: Conflict handling (`resolve` / `reset`)
 If `git brx sync` or `update` encounters a conflict (Exit Code 5):
-1. **To Resolve:** Inspect conflicted files (`git status`), edit and fix markers, then run:
+1. **To resolve:** Inspect conflicted files (`git status`), edit and remove all conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`), then run:
    ```bash
    git brx resolve
    ```
-2. **To Abort:** Restore working copy cleanly to pre-sync state:
+   `resolve` detects that conflict markers are cleared, skips `git mergetool`, stages only the resolved paths, and continues the rebase/merge. Pass `--no-tool` in automated sessions to fail fast listing any files that still have markers.
+2. **To abort:** Abort the in-flight rebase or merge while preserving unpushed local commits:
    ```bash
    git brx reset
    ```
+   *(Running `git brx reset` again when idle discards local commits and resets to `origin/<branch>`.)*
 
 ### Step 5: Publishing (`publish`)
 Push the local branch and configure remote tracking safely:
@@ -92,18 +94,19 @@ git brx publish
 ### Step 6: Code review & pull request (`review`)
 Create the PR with automated reviewer assignment and merge instructions:
 ```bash
-git brx review [<target>]
+git brx review [--draft] [<target>]
 ```
-- Targets default branch (`main`) automatically when `<target>` is omitted. Pass `<target>` explicitly (e.g., `git brx review epic/<E>`) when targeting an integration branch.
-- Assigns reviewers defined in `.git-brx.yaml` (`review.mapping.paths`, `review.mapping.labels`).
+- Resolves `<target>` in order: explicit `<target>`, recorded `branch.<name>.brx-base`, then default branch (`main`).
+- Verifies that `<branch>` matches `origin/<branch>` `HEAD` SHA and `<target>` exists on `origin`.
+- Assigns reviewers via `-r` (repeatable/comma-separated) or `.git-brx.yaml` (`review.mapping.*`, skipped for `--draft`), excluding the author.
 - Child `issue/*` and `feature/*` PRs targeting `epic/*` default to **Squash and merge**, while `epic/*` PRs targeting `main` automatically specify non-squash **Create a merge commit** instructions.
 
 ### Step 7: Post-merge cleanup (`delete`)
-Once the PR is merged and remote branch is deleted on the SCM platform:
+Once the PR is merged (with auto-delete enabled or via `--delete-remote`):
 ```bash
-git brx delete <branch-name>
+git brx delete [<branch-name>]
 ```
-*(Note: When deleting the active branch, `git brx delete` switches the working tree back to `main`.)*
+*(Note: When deleting the active branch, `git brx delete` returns to its recorded `brx-base` or `main` and fast-forwards if clean and behind `origin`, or detaches `HEAD` when that branch is checked out in another worktree.)*
 
 ---
 
@@ -122,23 +125,21 @@ Use an `epic/<E>` branch as a long-lived integration branch when a feature or ep
 2. **Fork a child slice (`issue/<N>`) off an up-to-date `epic/<E>`:**
    ```bash
    git brx select epic/<E>
-   git brx update
    git brx create issue/<N> -y
    ```
+   *(Or fork directly with `git brx create --base epic/<E> issue/<N> -y`; `create` records `branch.issue/<N>.brx-base=epic/<E>`, and `select epic/<E>` fast-forwards clean behind-origin branches automatically.)*
 3. **Sync, publish, and open the child PR against `epic/<E>`:**
-   Always pass `epic/<E>` explicitly to `sync` and `review`; omitting `<target>` defaults to `main`:
+   `git brx sync` and `git brx review` use the recorded `branch.issue/<N>.brx-base` (`epic/<E>`) automatically when `<target>` is omitted:
    ```bash
-   git brx sync epic/<E>
+   git brx sync
    git brx publish
-   git brx review epic/<E>
+   git brx review
    ```
    Child `issue/*` and `feature/*` PRs targeting `epic/<E>` emit **Squash and merge** instructions by default.
 4. **Clean up merged child slice and return to `epic/<E>`:**
-   Because `git brx delete issue/<N>` checks out `main` when deleting the active branch, immediately switch back to `epic/<E>` and pull the newly squashed commit:
+   Because `create` records `branch.issue/<N>.brx-base=epic/<E>`, `git brx delete` switches directly back to `epic/<E>` and fast-forwards it to match `origin/epic/<E>` (or run `git brx select epic/<E>` and `git brx update` if it had local changes):
    ```bash
-   git brx delete issue/<N>
-   git brx select epic/<E>
-   git brx update
+   git brx delete
    ```
 5. **Close the epic branch into `main`:**
    After all child slices merge into `epic/<E>`, sync with `main`, publish, and open the integration PR:

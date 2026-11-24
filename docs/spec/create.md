@@ -7,7 +7,8 @@
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flags:
-    - `-o`, `--offline`: Skip JIRA issue validation and remote Git availability checks.
+    - `-b`, `--base` `<branch>`: Explicit base branch to fork from and record in `branch.<branch>.brx-base`.
+    - `-o`, `--offline`: Skip issue tracker validation and remote Git availability checks.
     - `-y`, `--yes`: Automatically accept confirmation prompts without interactive input.
 
 ## 2. Prerequisites & Environment
@@ -23,26 +24,15 @@
 1. **Argument & Repository Assertions:**
    - Verify argument `<branch>` is provided. If missing, log `[git-brx] Error: No branch name specified` and exit with Exit Code `2`.
    - Verify repository context: `git rev-parse --is-inside-work-tree`.
-2. **Local Branch Collision Check:**
-   - Check if `<branch>` already exists locally:
-     ```bash
-     git show-ref --verify --quiet refs/heads/<branch>
-     ```
-   - If present:
-     - Log: `[git-brx] Branch '<branch>' found (local)`
-     - Log: `[git-brx] Hint: To select that branch, use 'git-brx select <branch>' instead`
+2. **Local & Remote Branch Collision Auto-Switch:**
+   - Check if `<branch>` already exists locally (`git show-ref --verify --quiet refs/heads/<branch>`), or on remote in online mode (`git ls-remote --heads origin <branch>`).
+   - If remote is unreachable in online mode, log `[git-brx] Error: Unable to reach remote; try --offline if working without network access` and fail with Exit Code `4`.
+   - If `<branch>` exists locally or on `origin`:
+     - Enforce `select` preflight safety guards (`NoOrphanedCommits`, checkout collision handling, and dirty-worktree carryover warning; see `docs/spec/select.md`).
+     - If remote-only, fetch `origin` first (`git fetch origin <branch>`).
+     - Switch to `<branch>` (`git checkout <branch>`), auto-fast-forwarding if clean and strictly behind `origin/<branch>`.
+     - Log: `[git-brx] Branch '<branch>' already exists; switched to '<branch>'`
      - Exit with Exit Code `0`.
-3. **Remote Branch Collision Check (Online Mode):**
-   - If `--offline` is NOT set:
-     - Check if `<branch>` already exists on remote:
-       ```bash
-       git ls-remote --heads origin <branch>
-       ```
-     - If remote is unreachable, log `[git-brx] Error: Unable to reach remote; try --offline if working without network access` and fail with Exit Code `4`.
-     - If ref exists on remote:
-       - Log: `[git-brx] Branch '<branch>' found (remote)`
-       - Log: `[git-brx] Hint: To select this branch, use 'git-brx select <branch>' instead`
-       - Exit with Exit Code `0`.
 4. **Configuration & Template Matching:**
    - Load configuration via the layered cascade (User Global `~/.config/git-brx/config.yaml` / `~/.git-brx.yaml` -> Shared Global `GIT_BRX_CONFIG` -> Repo Local `.git-brx.yaml` / `.git-brx/config.yaml` -> zero-config remote origin auto-discovery). If invalid, exit with Exit Code `8`.
    - Compile regular expression template from `config.branch.template` (interpolating `config.tracker.project` if set).
@@ -66,26 +56,47 @@
      - Confirmation prompt (unless `--yes` is specified):
        `Create branch '<branch>' [Y/n]?` (defaults to Yes on Enter).
        - If rejected (`n` / `N`), exit with Exit Code `7`.
-6. **Branch Provisioning:**
-   - Execute checkout to new branch:
-     ```bash
-     git checkout -b <branchPath>/<issueKey>
-     ```
-   - Log: `[git-brx] Hint: Use 'git-brx publish' to publish a new branch`.
+6. **Base Branch Guardrails & Branch Provisioning:**
+   - **Base resolution & validation:**
+     - If `--base <base>` is specified: verify `<base>` exists locally or as `origin/<base>` (fetching if online). If missing, fail with Exit Code `3`. If local `<base>` is clean and strictly behind `origin/<base>`, fast-forward it (or fork directly from `origin/<base>` if `<base>` is checked out in another linked worktree).
+     - If `--base` is omitted: resolve the currently attached branch (or default branch if unborn/detached) as `<base>`.
+       - If the active branch is `issue/*` or `feature/*`, emit `[git-brx] Warning: Creating '<branch>' from topic branch '<current>' instead of default branch` with hint `Pass '--base main' or run 'git-brx select main' first if this was unintentional`.
+       - If online and the active branch is behind `origin/<current>`, emit `[git-brx] Warning: Base branch '<current>' is behind 'origin/<current>'` with hint `Run 'git-brx update' before branching if you need the latest commits`.
+   - **Dirty worktree warning:** If uncommitted local modifications exist (`git diff-index --quiet HEAD --` or untracked tracked-collision risk), emit `[git-brx] Warning: Uncommitted local changes will be carried over to '<branch>'`.
+   - **Checkout & parent tracking:**
+     - Execute checkout to new branch:
+       ```bash
+       git checkout -b <branchPath>/<issueKey> [<start_point>]
+       ```
+     - Record parent base branch in local Git config (when `<base>` is resolved):
+       ```bash
+       git config branch.<branchPath>/<issueKey>.brx-base <base>
+       ```
+   - Log: `[git-brx] Hint: Use 'git-brx publish' to publish your new branch`.
    - Exit with Exit Code `0`.
 
 ## 4. Error Handling & Exit Codes
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
-| `0` | Branch successfully created, or already exists locally/remotely with guidance. | `[git-brx] Creating branch '<branch>'` | None. |
+| `0` | Branch created, or existing branch checked out automatically. | `[git-brx] Creating branch '<branch>'` / `[git-brx] Branch '<branch>' already exists; switched to '<branch>'` | None. |
 | `2` | Missing mandatory `<branch>` positional argument or unknown flag. | `[git-brx] Error: No branch name specified` | None. |
-| `3` | Outside Git repository. | `[git-brx] Error: Not a git repository` | None. |
+| `3` | Outside Git repository or `--base <branch>` not found. | `[git-brx] Error: Not a git repository` / `[git-brx] Error: Base branch '<base>' not found` | None. |
 | `4` | Remote `origin` unreachable in online mode. | `[git-brx] Error: Unable to reach remote` | None. |
-| `6` | JIRA API authentication failure or issue not found. | `[git-brx] Error: Authorization failure` / `[git-brx] Error: Issue not found` | None. |
+| `5` | Active merge/rebase, orphaned detached HEAD commits, or checkout overwrite collision when auto-switching. | `[git-brx] Error: Cannot switch branches during an active <op>` | None. |
+| `6` | Tracker API authentication failure or issue not found. | `[git-brx] Error: Authorization failure` / `[git-brx] Error: Issue not found` | None. |
 | `7` | User aborted creation during interactive confirmation. | `[git-brx] Aborted` | None. |
 | `8` | Configuration file missing or branch name fails regex naming contract. | `[git-brx] Error: Configuration file not found` / `[git-brx] Error: Branch name doesn't match pattern` | None. |
 
 ## 5. Edge Cases & Behavioral Notes
 - **In-Memory Credential Safety:** Tracker credentials are kept strictly in-memory within the process and never passed via command-line arguments or process environments, preventing exposure via `ps aux` or process table inspection.
-- **Pre-existing Branch Idempotency:** When the branch already exists locally or remotely, `create` outputs a hint to use `select` and exits cleanly with status `0`.
+- **Pre-existing Branch Auto-Switch:** When `<branch>` already exists locally or on `origin`, `create` switches directly to `<branch>` (subject to `select` safety checks) and exits `0` so agents and scripts never commit onto the wrong branch.
+- **Parent Base Persistence:** Storing `branch.<name>.brx-base` in local Git config avoids custom metadata files and is automatically pruned by `git branch -D` in `delete`.
 - **Subdirectory Invocation Support:** Configuration loading and repository root resolution operate relative to the top-level repository root (`git rev-parse --show-toplevel`), allowing invocation from any working subdirectory.
+
+## 6. Black-box verification scenarios
+| Scenario ID | Given | When | Then (exit code, output, state) |
+| :--- | :--- | :--- | :--- |
+| `TC-CRT-01` | Currently on `main`, branch `issue/42` already exists locally | `git-brx create issue/42 -y` | Exits `0`, checks out `issue/42`, logs `Branch 'issue/42' already exists; switched to 'issue/42'`. |
+| `TC-CRT-02` | Branch `issue/43` exists only on `origin`, not locally | `git-brx create issue/43 -y` | Fetches `issue/43`, creates local tracking checkout, exits `0`. |
+| `TC-CRT-03` | Currently on `main`, `epic/10` exists locally or on `origin` | `git-brx create issue/44 -y --base epic/10` | Forks `issue/44` from `epic/10` (or `origin/epic/10`), sets `branch.issue/44.brx-base=epic/10`, exits `0`. |
+| `TC-CRT-04` | Currently on `issue/10` with uncommitted edits | `git-brx create issue/45 -y` | Emits topic-branch fork warning and dirty-worktree warning, creates `issue/45`, exits `0`. |
