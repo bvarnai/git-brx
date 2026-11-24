@@ -106,7 +106,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 				if localExists {
 					a.Logger.Warn("Unable to reach remote; falling back to local references")
 				} else {
-					return errcode.NewError(errcode.ErrPreconditionRemote, "Select failed: unable to fetch from origin")
+					return errcode.NewError(errcode.ErrPreconditionRemote, "Unable to fetch from origin")
 				}
 			}
 		} else {
@@ -124,10 +124,10 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 	checkoutErr := a.Operations.Checkout(ctx, rootDir, targetBranch)
 	if checkoutErr != nil {
 		if strings.Contains(checkoutErr.Error(), "would be overwritten by checkout") {
-			return errcode.NewError(errcode.ErrConflict, "Select failed: local modifications would be overwritten by checkout").
+			return errcode.NewError(errcode.ErrConflict, "Local modifications would be overwritten by checkout").
 				WithHint("Commit or stash your changes before switching branches")
 		}
-		return errcode.WrapError(errcode.ErrGeneral, checkoutErr, "Select failed: could not checkout branch '%s'", targetBranch)
+		return errcode.WrapError(errcode.ErrGeneral, checkoutErr, "Failed to checkout branch '%s'", targetBranch)
 	}
 
 	// Postflight feedback: warn if uncommitted changes were carried over to the new branch

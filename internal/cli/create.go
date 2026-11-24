@@ -285,7 +285,7 @@ func (a *App) switchToExistingBranch(ctx context.Context, rootDir, targetBranch 
 
 		if checkoutErr := a.Operations.Checkout(ctx, rootDir, targetBranch); checkoutErr != nil {
 			if strings.Contains(checkoutErr.Error(), "would be overwritten by checkout") {
-				return errcode.NewError(errcode.ErrConflict, "Select failed: local modifications would be overwritten by checkout").
+				return errcode.NewError(errcode.ErrConflict, "Local modifications would be overwritten by checkout").
 					WithHint("Commit or stash your changes before switching branches")
 			}
 			return errcode.WrapError(errcode.ErrGeneral, checkoutErr, "Failed to switch to existing branch '%s'", targetBranch)

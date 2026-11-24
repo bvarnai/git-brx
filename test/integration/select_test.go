@@ -104,7 +104,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "nonexistent-branch"}, &stdout, &stderr)
 
 		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
-		assert.Contains(t, stderr.String(), "[git-brx] Error: Select failed: unable to fetch from origin")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Unable to fetch from origin")
 	})
 
 	t.Run("BranchNotFound", func(t *testing.T) {
@@ -160,7 +160,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "-o", "feature/dirty"}, &stdout, &stderr)
 
 		assert.Equal(t, int(errcode.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "[git-brx] Error: Select failed: local modifications would be overwritten by checkout")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Local modifications would be overwritten by checkout")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Commit or stash your changes before switching branches")
 	})
 
