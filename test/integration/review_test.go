@@ -493,4 +493,71 @@ review:
 		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.Equal(t, []string{"explicit-reviewer"}, requestedReviewers)
 	})
+
+	t.Run("ReviewChildIssueTargetingEpicDefaultsToSquashInstructions", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+
+		originDir := t.TempDir()
+		h.Git("init", "--bare", originDir)
+		h.Git("remote", "add", "origin", originDir)
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/201")
+		h.CommitFile("epic.go", "package epic", "Epic architecture")
+		h.Git("push", "-u", "origin", "epic/201")
+
+		h.CreateBranch("issue/205")
+		h.CommitFile("slice.go", "package epic", "Implement slice")
+		h.Git("push", "-u", "origin", "issue/205")
+
+		var capturedBody, capturedBase, capturedHead string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{"number": 205, "title": "Implement epic slice", "state": "open", "labels": [{"name": "enhancement"}]}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]string
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedBody = body["body"]
+				capturedBase = body["base"]
+				capturedHead = body["head"]
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 22, "html_url": "https://github.com/test-org/test-repo/pull/22"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte(`
+platform: github
+tracker:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+scm:
+  provider: github
+  uri: ` + server.URL + `
+  owner: test-org
+  repo: test-repo
+`)
+		err := os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644)
+		require.NoError(t, err)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "epic/201"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, "epic/201", capturedBase)
+		assert.Equal(t, "issue/205", capturedHead)
+		assert.Contains(t, capturedBody, "Squash and merge")
+		assert.NotContains(t, capturedBody, "Create a merge commit")
+	})
 }

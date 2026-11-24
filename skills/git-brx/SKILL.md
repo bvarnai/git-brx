@@ -22,7 +22,7 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 | :--- | :--- | :--- |
 | **Branch Creation** | `git brx create <branch> -y` | Validates against issue tracker (GitHub/Jira), enforces prefix rules (`issue/`, `feature/`, `epic/`), and creates local topic branch. |
 | **Branch Selection** | `git brx select [<branch>]` | Fetches remotes and switches working tree (defaults to `main` if omitted). |
-| **Upstream Sync** | `git brx sync` | Pulls remote base changes into branch (**rebase** for `issue/`, **merge** for `feature/`). |
+| **Upstream sync** | `git brx sync [<target>]` | Pulls base branch changes (**rebase** for `issue/`, **merge** for `feature/` and `epic/`). Defaults to `main` if omitted. |
 | **Pair Update** | `git brx update` | Pulls colleague commits on the current branch using rebase with `--autostash`. |
 | **Conflict Resolve** | `git brx resolve` | Launches merge tool on conflicted paths and continues in-flight rebase/merge. |
 | **Conflict Abort** | `git brx reset` | Aborts in-flight rebase/merge and resets working copy to clean tracking state. |
@@ -34,14 +34,20 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 
 ## 2. Standard End-to-End Workflow
 
-### Step 1: Topic Branch Creation (`create`)
+### Step 1: Topic branch creation (`create`)
 When starting work on an issue or ticket:
 1. Ensure your local default branch is current:
    ```bash
    git brx select main
+   git brx update
    ```
-2. Propose the branch type from the issue (bug or task $\to$ `issue/`, collaborative $\to$ `feature/`, milestone $\to$ `epic/`). The user confirms it, because the prefix decides the sync and merge strategy.
-3. Create the branch non-interactively using `-y`:
+2. Select the branch prefix based on scope and collaboration model (the prefix determines `sync` and PR merge strategies):
+   - `issue/*`: Single-PR bug fixes, tasks, and individual vertical slices of an epic (rebase sync, squash and merge).
+   - `feature/*`: Collaborative single-PR branches shared by multiple contributors (merge sync, squash and merge).
+   - `epic/*`: Multi-PR integration branches aggregating child slices (merge sync, merge commit into `main`).
+   The user confirms the branch type when creating standalone branches.
+3. **GitHub `epic` label prerequisite:** GitHub repositories do not include an `epic` label by default. Before running `git brx create epic/<E> -y`, ensure the `epic` label exists in the repository's GitHub label settings and is applied to issue `#<E>`. Child slice tickets use standard labels (`enhancement`, `bug`, `feature`, or unlabeled for `issue/*`).
+4. Create the branch non-interactively using `-y`:
    ```bash
    git brx create issue/123 -y
    ```
@@ -83,24 +89,73 @@ git brx publish
 ```
 *(If rejected due to newer remote commits, run `git brx update` first).*
 
-### Step 6: Code Review & Pull Request (`review`)
+### Step 6: Code review & pull request (`review`)
 Create the PR with automated reviewer assignment and merge instructions:
 ```bash
-git brx review
+git brx review [<target>]
 ```
-- Targets default branch (`main`) automatically.
+- Targets default branch (`main`) automatically when `<target>` is omitted. Pass `<target>` explicitly (e.g., `git brx review epic/<E>`) when targeting an integration branch.
 - Assigns reviewers defined in `.git-brx.yaml` (`review.mapping.paths`, `review.mapping.labels`).
-- For `epic/*` branches, it automatically specifies non-squash true merge instructions.
+- Child `issue/*` and `feature/*` PRs targeting `epic/*` default to **Squash and merge**, while `epic/*` PRs targeting `main` automatically specify non-squash **Create a merge commit** instructions.
 
-### Step 7: Post-Merge Cleanup (`delete`)
+### Step 7: Post-merge cleanup (`delete`)
 Once the PR is merged and remote branch is deleted on the SCM platform:
 ```bash
 git brx delete <branch-name>
 ```
+*(Note: When deleting the active branch, `git brx delete` switches the working tree back to `main`.)*
 
 ---
 
-## 3. Automation Guidelines for AI Agents
+## 3. Multi-PR epic workflow (`epic/<E>`)
+
+Use an `epic/<E>` branch as a long-lived integration branch when a feature or epic spans multiple child PRs:
+
+1. **Provision and publish the epic branch from `main`:**
+   Ensure the `epic` label exists on GitHub issue `#<E>`, then create and publish `epic/<E>`:
+   ```bash
+   git brx select main
+   git brx update
+   git brx create epic/<E> -y
+   git brx publish
+   ```
+2. **Fork a child slice (`issue/<N>`) off an up-to-date `epic/<E>`:**
+   ```bash
+   git brx select epic/<E>
+   git brx update
+   git brx create issue/<N> -y
+   ```
+3. **Sync, publish, and open the child PR against `epic/<E>`:**
+   Always pass `epic/<E>` explicitly to `sync` and `review`; omitting `<target>` defaults to `main`:
+   ```bash
+   git brx sync epic/<E>
+   git brx publish
+   git brx review epic/<E>
+   ```
+   Child `issue/*` and `feature/*` PRs targeting `epic/<E>` emit **Squash and merge** instructions by default.
+4. **Clean up merged child slice and return to `epic/<E>`:**
+   Because `git brx delete issue/<N>` checks out `main` when deleting the active branch, immediately switch back to `epic/<E>` and pull the newly squashed commit:
+   ```bash
+   git brx delete issue/<N>
+   git brx select epic/<E>
+   git brx update
+   ```
+5. **Close the epic branch into `main`:**
+   After all child slices merge into `epic/<E>`, sync with `main`, publish, and open the integration PR:
+   ```bash
+   git brx sync
+   git brx publish
+   git brx review
+   ```
+   `git brx review` targets `main` and emits **Create a merge commit** instructions to preserve the squashed slice commits on `main`. After the epic PR merges, clean up:
+   ```bash
+   git brx delete epic/<E>
+   git brx update
+   ```
+
+---
+
+## 4. Automation guidelines for AI agents
 
 - **Flag Usage:** Always pass `-y` / `--yes` to commands that support confirmation prompts (`create`) to avoid hanging non-interactive sessions.
 - **Diagnostic Inspection:** Check exit codes per spec:

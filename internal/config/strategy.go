@@ -42,7 +42,6 @@ func MatchBranchPattern(pattern, branch string) bool {
 // 3. Custom Source strategies in config (review.merge.strategies.sources)
 // 4. Built-in convention:
 //   - Source is epic/* or release/* -> "merge"
-//   - Target is epic/* or release/* -> "merge"
 //
 // 5. Config default (review.merge.strategy, defaults to "squash")
 func ResolveMergeStrategy(mergeCfg *domain.MergeConfig, sourceBranch, targetBranch, cliStrategy string) (string, error) {
@@ -75,10 +74,6 @@ func ResolveMergeStrategy(mergeCfg *domain.MergeConfig, sourceBranch, targetBran
 	// 4. Built-in Smart Conventions:
 	// If source is epic/* or release/* -> merge
 	if epicOrReleaseRegex.MatchString(sourceBranch) {
-		return "merge", nil
-	}
-	// If target is epic/* or release/* -> merge
-	if epicOrReleaseRegex.MatchString(targetBranch) {
 		return "merge", nil
 	}
 

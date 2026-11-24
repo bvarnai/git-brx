@@ -156,8 +156,8 @@ git brx review
      - **Commit:** `fix(#TASK-101): add user authentication API` (all commits squashed into a single commit)
    - **Branch cleanup:** Delete source branch `issue/TASK-101` after merging
    ```
-   - `issue/*` and `feature/*` branches targeting `main` default to **Squash and merge**.
-   - `epic/*` and `release/*` branches (as source or target) default to **Create a merge commit**.
+   - `issue/*` and `feature/*` branches default to **Squash and merge** (whether targeting `main` or `epic/*`).
+   - `epic/*` and `release/*` branches default to **Create a merge commit** when acting as the PR source branch (e.g., `epic/*` into `main`).
    - Override the merge strategy for a specific PR with `-s, --strategy <squash|merge|rebase>`:
      ```bash
      git brx review -s merge

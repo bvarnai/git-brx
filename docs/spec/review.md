@@ -65,7 +65,7 @@
          1. CLI override (`-s, --strategy <squash|merge|rebase>`).
          2. Target branch pattern match (`review.merge.strategies.targets`).
          3. Source branch pattern match (`review.merge.strategies.sources`).
-         4. Built-in convention: Source or target branch starts with `epic/` or `release/` -> `merge` (`Create a merge commit`).
+         4. Built-in convention: Source branch starts with `epic/` or `release/` -> `merge` (`Create a merge commit`).
          5. Global configuration fallback: `review.merge.strategy` (defaults to `squash`).
        - **Supported Strategies:**
          - **`squash` (`Squash and merge (recommended)`):** Commit: `<prTitle>` (or fallback `<issueKey>: <summary>`) (all commits squashed into a single commit).
@@ -80,9 +80,6 @@
              strategy: squash             # Global fallback (squash | merge | rebase)
              strategies:
                sources:                   # Match against PR source branch (HEAD)
-                 "epic/*": merge
-                 "release/*": merge
-               targets:                   # Match against PR target branch (BASE)
                  "epic/*": merge
                  "release/*": merge
          ```
