@@ -156,6 +156,10 @@ The Go implementation must adhere to a strict, application-wide exit code contra
    - **Merge Base Resolution:** Use `git merge-base <branchA> <branchB>`.
    - **Dirty Worktree Check:** Use `git diff-index --quiet HEAD --` (exit code `1` means uncommitted modifications).
    - **Shallow Repository Check:** Use `git rev-parse --is-shallow-repository`.
+   - **Parent Base Metadata:** Use `git config --get branch.<name>.brx-base` and `git config branch.<name>.brx-base <base>` (automatically cleaned up by `git branch -D <name>`).
+   - **Remote HEAD SHA Verification:** Compare `git ls-remote --heads origin <branch>` SHA against `git rev-parse HEAD` to detect unpushed local commits.
+   - **Linked Worktree Detection:** Use `git worktree list --porcelain` to determine whether a branch is currently checked out in another linked worktree.
+   - **Conflict Marker Scanning:** Inspect unmerged paths (`git diff --name-only --diff-filter=U`) in memory for `<<<<<<<`, `=======`, and `>>>>>>>` lines before launching `git mergetool`.
 2. **Execution Boundary & Isolation:**
    - Execute Git binaries directly via Go `os/exec.CommandContext` without invoking an intermediate shell (`/bin/sh` or `cmd.exe`). This eliminates command injection risks and argument quote parsing discrepancies across Linux and Windows.
    - Set child process environment with `LC_ALL=C`.
@@ -246,6 +250,7 @@ classDiagram
         +BranchType Type
         +string IssueKey
         +string UpstreamRef
+        +string BaseBranch
         +string CommitHash
         +bool IsDetached
     }
@@ -285,6 +290,7 @@ classDiagram
         +string SourceBranch
         +string TargetBranch
         +string[] Reviewers
+        +bool Draft
     }
 
     class PullRequestResult {
@@ -294,6 +300,7 @@ classDiagram
 
     class PullRequestDetail {
         +string ID
+        +int Number
         +string URL
         +string Title
         +string State
@@ -358,6 +365,7 @@ Represents an inspected Git branch:
 - `Type`: Classified branch category based on naming convention (`Issue`, `Feature`, `Epic`, `Release`, `Master`, `Custom`).
 - `IssueKey`: Parsed issue identifier extracted via configured pattern (e.g., `VSB-1234`).
 - `UpstreamRef`: Tracking remote ref name (e.g., `origin/issue/VSB-1234`).
+- `BaseBranch`: Recorded parent base branch resolved from `branch.<name>.brx-base` (empty if unset).
 - `CommitHash`: Current HEAD commit SHA of the branch.
 - `IsDetached`: Boolean indicating if HEAD is decoupled from a symbolic ref.
 
@@ -399,8 +407,9 @@ type IssueTracker interface {
 
 ### 5. `PullRequest` & `SCMProvider`
 Provider-agnostic pull request models and interface:
-- `PullRequestRequest`: Input payload specifying `Title`, `Description`, `SourceBranch`, `TargetBranch`, and `Reviewers`.
+- `PullRequestRequest`: Input payload specifying `Title`, `Description`, `SourceBranch`, `TargetBranch`, `Reviewers`, and `Draft`.
 - `PullRequestResult`: Created PR identifiers (`ID` string, `URL` string).
+- `PullRequestDetail`: Resolved PR metadata (`ID`, `Number`, `URL`, `Title`, `State`, `Merged`). When multiple PRs exist for a reused branch name, selection prioritizes `OPEN` > `MERGED` > `CLOSED`.
 
 ```go
 type SCMProvider interface {
@@ -458,3 +467,15 @@ Structured schema parsed from YAML (`.git-brx.yaml` / `.git-brx/config.yaml`):
 7. **Strict CLI Contracts & Argument Parsing:**
    - Native binary argument parsing via Cobra with strict type, argument count, and flag validation.
    - Keeps standard output machine-readable for automation while routing diagnostics to standard error.
+
+8. **Parent base branch tracking (`branch.<name>.brx-base`):**
+   - `create` records the fork base in local Git config (`git config branch.<name>.brx-base <base>`).
+   - Subcommands that accept an optional base or target branch (`sync`, `review`, `history --topic`, `delete`) resolve it in strict order:
+     1. Explicit CLI positional argument (when supported by the subcommand).
+     2. Recorded `branch.<name>.brx-base`.
+     3. Repository default branch (`main`, `master`, or `origin/HEAD`).
+   - If a recorded base branch no longer exists locally or on `origin`, emit a warning and fall back to the repository default branch.
+
+9. **Multi-worktree and shared-branch safety:**
+   - Never fail when a target base branch is checked out in another linked worktree (`git worktree list --porcelain`): `sync`, `history --topic`, and `review` fall back to `origin/<base>`, and `delete` detaches `HEAD` onto `origin/<base>` (or `<base>`) before deleting the active branch.
+   - Protect shared integration branches (`epic/*`, `release/*`) from accidental force-pushes by enforcing standard fast-forward pushes on `epic/*` and `release/*` in `publish`.
