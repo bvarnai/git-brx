@@ -135,14 +135,16 @@ git brx review -s merge
 ## 7. `git-brx delete`
 **Usage:** `git-brx delete [flags] [<branch>]`
 
-Deletes a local topic branch (`issue/*`, `feature/*`, or `epic/*`) after verifying that the remote branch was removed on `origin`, then runs `git remote prune origin`. Defaults to the active branch and switches to `main` (or default base) before deleting.
+Deletes a local topic branch (`issue/*`, `feature/*`, or `epic/*`) after verifying that the remote branch was removed on `origin` (or deleting it safely via `--delete-remote` when its PR is `MERGED`), then runs `git remote prune origin`. Defaults to the active branch; returns to the recorded parent base (`branch.<branch>.brx-base`) or `main` (auto-fast-forwarding if clean and behind `origin`, or detaching `HEAD` when the return branch is checked out in another linked worktree).
 
 ### Flags
 - `-f`, `--force`: Skip checking whether the branch still exists on `origin`.
+- `--delete-remote`: Delete the remote branch on `origin` when the SCM API confirms its pull request is `MERGED`, then delete locally.
 
 ### Examples
 ```bash
 git brx delete
+git brx delete --delete-remote
 git brx delete issue/101
 git brx delete --force
 ```

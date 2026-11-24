@@ -37,6 +37,41 @@ type PullRequestDetail struct {
 	Merged bool             `json:"merged"`
 }
 
+// SelectPullRequest chooses the most relevant pull request from multiple candidates
+// for a reused branch, prioritizing state (OPEN > MERGED > CLOSED) and breaking ties
+// by highest PR number. Returns nil when candidates is empty.
+func SelectPullRequest(candidates []PullRequestDetail) *PullRequestDetail {
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	best := candidates[0]
+	bestPriority := prStatePriority(best.State)
+	for _, pr := range candidates[1:] {
+		prio := prStatePriority(pr.State)
+		if prio > bestPriority || (prio == bestPriority && pr.Number > best.Number) {
+			bestPriority = prio
+			best = pr
+		}
+	}
+
+	selected := best
+	return &selected
+}
+
+func prStatePriority(state PullRequestState) int {
+	switch state {
+	case PRStateOpen:
+		return 3
+	case PRStateMerged:
+		return 2
+	case PRStateClosed:
+		return 1
+	default:
+		return 0
+	}
+}
+
 // MergeInstructionOptions captures metadata needed to format merge instructions.
 type MergeInstructionOptions struct {
 	PRTitle      string

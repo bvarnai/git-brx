@@ -32,6 +32,18 @@ func (o *Operations) Checkout(ctx context.Context, dir, branch string) error {
 	return err
 }
 
+// CheckoutDetach detaches HEAD at the specified ref.
+func (o *Operations) CheckoutDetach(ctx context.Context, dir, ref string) error {
+	_, err := o.runner.Run(ctx, dir, "checkout", "--detach", ref)
+	return err
+}
+
+// DeleteRemoteBranch deletes a branch reference on the specified remote via git push <remote> --delete <branch>.
+func (o *Operations) DeleteRemoteBranch(ctx context.Context, dir, remote, branch string) error {
+	_, err := o.runner.Run(ctx, dir, "push", remote, "--delete", branch)
+	return err
+}
+
 // CreateAndCheckout provisions a new local branch and switches the working tree to it.
 func (o *Operations) CreateAndCheckout(ctx context.Context, dir, branch string) error {
 	_, err := o.runner.Run(ctx, dir, "checkout", "-b", branch)

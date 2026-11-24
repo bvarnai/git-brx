@@ -14,7 +14,7 @@
 | `S2` | `feat(branch): track parent base and add create and select guardrails` | `—` | `global.md` §4–§5, §6.8; `create.md` §1, §3–§6 (`TC-CRT-01`–`04`); `select.md` §1, §3, §6 (`TC-SEL-01`–`04`); `history.md` §1, §3, §6 (`TC-HIS-01`–`02`) | `branch.<name>.brx-base` persistence, `create` auto-switch, `select` `--ff-only`, and `history --topic` pass unit + integration tests | Done (#94) |
 | `S3` | `fix(collab): harden sync, update, and publish for shared and worktree flows` | `S2` | `global.md` §4, §6.8–§6.9; `sync.md` §3, §6 (`TC-SYN-01`–`04`); `update.md` §3, §6 (`TC-UPD-01`–`03`); `publish.md` §1–§3, §5–§6 (`TC-PUB-01`–`02`) | Recorded-base & worktree-safe `sync`, `--rebase-merges` `update`, and FF-only `epic/*` `publish` pass unit + integration tests | Done (#96) |
 | `S4` | `feat(review): add remote checks, draft mode, and reviewer fixes` | `S2`, `S3` | `global.md` §4–§5, §6.8–§6.9; `review.md` §1, §3–§6 (`TC-REV-01`–`07`) | Remote SHA/target checks, multi-`-r`, `--draft`, `409` URL, and `github.md` snippet fix pass unit + integration tests | Done (#98) |
-| `S5` | `feat(delete): support parent return, worktree safety, and --delete-remote` | `S2`, `S3` | `global.md` §4–§5, §6.8–§6.9; `delete.md` §1, §3, §5–§6 (`TC-DEL-01`–`04`) | Multi-PR priority, parent-base return, linked-worktree detach, and `--delete-remote` pass unit + integration tests | Pending |
+| `S5` | `feat(delete): support parent return, worktree safety, and --delete-remote` | `S2`, `S3` | `global.md` §4–§5, §6.8–§6.9; `delete.md` §1, §3, §5–§6 (`TC-DEL-01`–`04`) | Multi-PR priority, parent-base return, linked-worktree detach, and `--delete-remote` pass unit + integration tests | Done (#100) |
 
 ## Slice scope notes
 
