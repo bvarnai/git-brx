@@ -20,8 +20,8 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 
 | Stage | `git-brx` Command | Purpose & Behavior |
 | :--- | :--- | :--- |
-| **Branch Creation** | `git brx create <branch> -y` | Validates against issue tracker (GitHub/Jira), enforces prefix rules (`issue/`, `feature/`, `epic/`), and creates local topic branch. |
-| **Branch Selection** | `git brx select [<branch>]` | Fetches remotes and switches working tree (defaults to `main` if omitted). |
+| **Branch creation** | `git brx create [--base <base>] <branch> -y` | Validates against issue tracker, forks from `<base>` (recording `brx-base`), or auto-switches if `<branch>` already exists. |
+| **Branch selection** | `git brx select [--no-ff] [<branch>]` | Fetches remotes, switches working tree (default: `main`), and fast-forwards clean behind-origin branches. |
 | **Upstream sync** | `git brx sync [<target>]` | Pulls base branch changes (**rebase** for `issue/`, **merge** for `feature/` and `epic/`). Defaults to `main` if omitted. |
 | **Pair Update** | `git brx update` | Pulls colleague commits on the current branch using rebase with `--autostash`. |
 | **Conflict resolve** | `git brx resolve [--no-tool]` | Auto-stages marker-free resolved paths (or launches merge tool) and continues in-flight rebase/merge. |
@@ -47,11 +47,11 @@ When starting work on an issue or ticket:
    - `epic/*`: Multi-PR integration branches aggregating child slices (merge sync, merge commit into `main`).
    The user confirms the branch type when creating standalone branches.
 3. **GitHub `epic` label prerequisite:** GitHub repositories do not include an `epic` label by default. Before running `git brx create epic/<E> -y`, ensure the `epic` label exists in the repository's GitHub label settings and is applied to issue `#<E>`. Child slice tickets use standard labels (`enhancement`, `bug`, `feature`, or unlabeled for `issue/*`).
-4. Create the branch non-interactively using `-y`:
+4. Create the branch non-interactively using `-y` (pass `--base <branch>` to fork from a specific base such as `epic/<E>` without switching first):
    ```bash
    git brx create issue/123 -y
    ```
-   *(If offline or bypassing tracker validation, add `-o`/`--offline`)*
+   *(If the branch already exists locally or on `origin`, `create` switches to it automatically. If offline or bypassing tracker validation, add `-o`/`--offline`.)*
 
 ### Step 2: Local Commits
 - Make incremental changes.
@@ -124,9 +124,9 @@ Use an `epic/<E>` branch as a long-lived integration branch when a feature or ep
 2. **Fork a child slice (`issue/<N>`) off an up-to-date `epic/<E>`:**
    ```bash
    git brx select epic/<E>
-   git brx update
    git brx create issue/<N> -y
    ```
+   *(Or fork directly with `git brx create --base epic/<E> issue/<N> -y`; `create` records `branch.issue/<N>.brx-base=epic/<E>`, and `select epic/<E>` fast-forwards clean behind-origin branches automatically.)*
 3. **Sync, publish, and open the child PR against `epic/<E>`:**
    Always pass `epic/<E>` explicitly to `sync` and `review`; omitting `<target>` defaults to `main`:
    ```bash

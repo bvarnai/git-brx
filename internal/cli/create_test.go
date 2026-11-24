@@ -45,30 +45,40 @@ func TestCreateCommand_UnitTable(t *testing.T) {
 			errSubstr:    "Not a git repository",
 		},
 		{
-			name: "local branch already exists exits 0 with select hint",
+			name: "local branch already exists auto-switches and exits 0",
 			args: []string{"create", "issue/VSB-100"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                    {out: "true"},
 				"rev-parse --show-toplevel":                          {out: "/repo"},
 				"rev-parse --git-dir":                                {out: "/repo/.git"},
 				"show-ref --verify --quiet refs/heads/issue/VSB-100": {out: ""}, // exists locally
+				"remote get-url origin":                              {err: errors.New("no origin")},
+				"symbolic-ref -q HEAD":                               {out: "refs/heads/master"},
+				"symbolic-ref --short -q HEAD":                       {out: "master"},
+				"checkout issue/VSB-100":                             {out: ""},
 			},
 			expectedCode: int(errcode.ExitSuccess),
-			outSubstr:    "Branch 'issue/VSB-100' found (local)",
+			outSubstr:    "Branch 'issue/VSB-100' already exists; switched to 'issue/VSB-100'",
 		},
 		{
-			name: "remote branch already exists in online mode exits 0 with select hint",
+			name: "remote branch already exists in online mode fetches, switches, and exits 0",
 			args: []string{"create", "issue/VSB-101"},
 			mockResponses: map[string]mockGitResponse{
-				"rev-parse --is-inside-work-tree":                    {out: "true"},
-				"rev-parse --show-toplevel":                          {out: "/repo"},
-				"rev-parse --git-dir":                                {out: "/repo/.git"},
-				"show-ref --verify --quiet refs/heads/issue/VSB-101": {out: "", err: errors.New("not local")},
-				"remote get-url origin":                              {out: "https://github.com/org/repo.git"},
-				"ls-remote --heads origin issue/VSB-101":             {out: "abc1234 refs/heads/issue/VSB-101"},
+				"rev-parse --is-inside-work-tree":                                    {out: "true"},
+				"rev-parse --show-toplevel":                                          {out: "/repo"},
+				"rev-parse --git-dir":                                                {out: "/repo/.git"},
+				"show-ref --verify --quiet refs/heads/issue/VSB-101":                 {out: "", err: errors.New("not local")},
+				"remote get-url origin":                                              {out: "https://github.com/org/repo.git"},
+				"ls-remote --heads origin issue/VSB-101":                             {out: "abc1234 refs/heads/issue/VSB-101"},
+				"symbolic-ref -q HEAD":                                               {out: "refs/heads/master"},
+				"symbolic-ref --short -q HEAD":                                       {out: "master"},
+				"fetch origin":                                                       {out: ""},
+				"checkout issue/VSB-101":                                             {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/issue/VSB-101":        {out: ""},
+				"rev-list --left-right --count issue/VSB-101...origin/issue/VSB-101": {out: "0\t0"},
 			},
 			expectedCode: int(errcode.ExitSuccess),
-			outSubstr:    "Branch 'issue/VSB-101' found (remote)",
+			outSubstr:    "Branch 'issue/VSB-101' already exists; switched to 'issue/VSB-101'",
 		},
 		{
 			name: "remote unreachable in online mode returns exit code 4",
@@ -142,4 +152,77 @@ func TestCreateCommand_UnitTable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateCommand_BaseAndGuardrails(t *testing.T) {
+	t.Run("missing --base branch returns code 3", func(t *testing.T) {
+		runner := &mockGitRunner{
+			responses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                        {out: "true"},
+				"rev-parse --show-toplevel":                              {out: "/repo"},
+				"rev-parse --git-dir":                                    {out: "/repo/.git"},
+				"show-ref --verify --quiet refs/heads/issue/44":          {err: errors.New("not found")},
+				"remote get-url origin":                                  {out: "https://github.com/org/repo.git"},
+				"show-ref --verify --quiet refs/heads/epic/999":          {err: errors.New("not found")},
+				"show-ref --verify --quiet refs/remotes/origin/epic/999": {err: errors.New("not found")},
+			},
+		}
+		var stdout, stderr bytes.Buffer
+		app := cli.NewApp(&stdout, &stderr, runner)
+		app.RootCmd.SetArgs([]string{"create", "--offline", "--base", "epic/999", "issue/44"})
+
+		err := app.Execute(context.Background())
+		require.Error(t, err)
+		var appErr *errcode.AppError
+		require.ErrorAs(t, err, &appErr)
+		assert.Equal(t, int(errcode.ExitPreconditionRepo), int(errcode.ExitCode(appErr)))
+		assert.Contains(t, appErr.Message, "Base branch 'epic/999' not found")
+	})
+
+	t.Run("--base epic/10 forks from epic/10 and records brx-base", func(t *testing.T) {
+		runner := &mockGitRunner{
+			responses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                       {out: "true"},
+				"rev-parse --show-toplevel":                             {out: "/repo"},
+				"rev-parse --git-dir":                                   {out: "/repo/.git"},
+				"show-ref --verify --quiet refs/heads/issue/44":         {err: errors.New("not found")},
+				"remote get-url origin":                                 {out: "https://github.com/org/repo.git"},
+				"show-ref --verify --quiet refs/heads/epic/10":          {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10": {err: errors.New("not remote")},
+				"checkout -b issue/44 epic/10":                          {out: ""},
+				"config --local branch.issue/44.brx-base epic/10":       {out: ""},
+			},
+		}
+		var stdout, stderr bytes.Buffer
+		app := cli.NewApp(&stdout, &stderr, runner)
+		app.RootCmd.SetArgs([]string{"create", "--offline", "--base", "epic/10", "issue/44"})
+
+		require.NoError(t, app.Execute(context.Background()))
+		assert.Contains(t, runner.executed, "checkout -b issue/44 epic/10")
+		assert.Contains(t, runner.executed, "config --local branch.issue/44.brx-base epic/10")
+	})
+
+	t.Run("forking from topic branch with dirty worktree emits warnings", func(t *testing.T) {
+		runner := &mockGitRunner{
+			responses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                  {out: "true"},
+				"rev-parse --show-toplevel":                        {out: "/repo"},
+				"rev-parse --git-dir":                              {out: "/repo/.git"},
+				"show-ref --verify --quiet refs/heads/issue/45":    {err: errors.New("not found")},
+				"remote get-url origin":                            {out: "https://github.com/org/repo.git"},
+				"symbolic-ref --short -q HEAD":                     {out: "issue/10"},
+				"show-ref --verify --quiet refs/heads/main":        {out: ""},
+				"status --porcelain":                               {out: " M dirty.go"},
+				"checkout -b issue/45":                             {out: ""},
+				"config --local branch.issue/45.brx-base issue/10": {out: ""},
+			},
+		}
+		var stdout, stderr bytes.Buffer
+		app := cli.NewApp(&stdout, &stderr, runner)
+		app.RootCmd.SetArgs([]string{"create", "--offline", "issue/45"})
+
+		require.NoError(t, app.Execute(context.Background()))
+		assert.Contains(t, stderr.String(), "Creating 'issue/45' from topic branch 'issue/10' instead of default branch")
+		assert.Contains(t, stderr.String(), "Uncommitted local changes will be carried over to 'issue/45'")
+	})
 }

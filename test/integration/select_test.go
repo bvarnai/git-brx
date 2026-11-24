@@ -104,7 +104,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "nonexistent-branch"}, &stdout, &stderr)
 
 		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
-		assert.Contains(t, stderr.String(), "[git-brx] Error: Select failed: unable to fetch from origin")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Unable to fetch from origin")
 	})
 
 	t.Run("BranchNotFound", func(t *testing.T) {
@@ -160,7 +160,7 @@ func TestSelectIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "-o", "feature/dirty"}, &stdout, &stderr)
 
 		assert.Equal(t, int(errcode.ExitConflict), code)
-		assert.Contains(t, stderr.String(), "[git-brx] Error: Select failed: local modifications would be overwritten by checkout")
+		assert.Contains(t, stderr.String(), "[git-brx] Error: Local modifications would be overwritten by checkout")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Commit or stash your changes before switching branches")
 	})
 
@@ -236,7 +236,7 @@ func TestSelectIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Abort with 'git revert --abort'")
 	})
 
-	t.Run("AlreadyOnBranch_BehindHint", func(t *testing.T) {
+	t.Run("AlreadyOnBranch_AutoFastForwardsWhenCleanAndNoFFSkips", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")
 		remoteDir := h.SetupRemoteBare()
@@ -250,13 +250,23 @@ func TestSelectIntegration(t *testing.T) {
 		h2.Git("config", "user.email", "test@example.com")
 		h2.CommitFile("remote_update.txt", "update", "Commit from second repo")
 		h2.Git("push", "origin", "master")
+		remoteSha := strings.TrimSpace(h2.Git("rev-parse", "HEAD"))
 
+		// --no-ff skips fast-forward and emits update hint
 		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "master"}, &stdout, &stderr)
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "--no-ff", "master"}, &stdout, &stderr)
 
 		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Already on 'master'")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Your branch is behind 'origin/master' by 1 commit(s). Run 'git-brx update' to update.")
+
+		// Default select fast-forwards clean branch automatically
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "master"}, &stdout, &stderr)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Fast-forwarded 'master' to match 'origin/master' (1 new commit)")
+		assert.Equal(t, remoteSha, strings.TrimSpace(h.Git("rev-parse", "HEAD")))
 	})
 
 	t.Run("DirtyChangesCarriedOverWarning", func(t *testing.T) {
@@ -291,5 +301,53 @@ func TestSelectIntegration(t *testing.T) {
 		assert.Equal(t, int(errcode.ExitPreconditionRepo), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Error: Branch 'featrue/login' not found")
 		assert.Contains(t, stderr.String(), "[git-brx] Hint: Did you mean 'feature/login'?")
+	})
+
+	t.Run("SwitchAutoFastForwardsAndHandlesDivergedAndDirtyBranches", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteDir := h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/10")
+		h.CommitFile("epic1.txt", "1", "Epic 1")
+		h.Git("push", "-u", "origin", "epic/10")
+
+		h.CreateBranch("issue/20")
+		h.CommitFile("issue1.txt", "1", "Issue 1")
+		h.Git("push", "-u", "origin", "issue/20")
+		h.Git("checkout", "master")
+
+		// Push ahead on epic/10 and issue/20 from a second clone
+		secondRepo := t.TempDir()
+		h2 := &Harness{T: t, RepoDir: secondRepo}
+		h2.Git("clone", remoteDir, secondRepo)
+		h2.Git("config", "user.name", "Test User")
+		h2.Git("config", "user.email", "test@example.com")
+		h2.Git("checkout", "epic/10")
+		h2.CommitFile("epic2.txt", "2", "Epic 2 from remote")
+		h2.Git("push", "origin", "epic/10")
+		remoteEpicSha := strings.TrimSpace(h2.Git("rev-parse", "HEAD"))
+
+		h2.Git("checkout", "issue/20")
+		h2.CommitFile("issue2.txt", "2", "Issue 2 from remote")
+		h2.Git("push", "origin", "issue/20")
+
+		// TC-SEL-01: clean switch to epic/10 auto-fast-forwards
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "epic/10"}, &stdout, &stderr)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Fast-forwarded 'epic/10' to match 'origin/epic/10' (1 new commit)")
+		assert.Equal(t, remoteEpicSha, strings.TrimSpace(h.Git("rev-parse", "HEAD")))
+
+		// TC-SEL-04: dirty worktree switching to behind issue/20 skips FF and warns
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, "dirty.txt"), []byte("wip"), 0644))
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"select", "issue/20"}, &stdout, &stderr)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "uncommitted local changes that were carried over")
+		assert.Contains(t, stderr.String(), "Run 'git-brx update' to update.")
+		assert.NotContains(t, stderr.String(), "Fast-forwarded")
 	})
 }

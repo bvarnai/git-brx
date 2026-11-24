@@ -223,3 +223,68 @@ func TestInspector_MergeToolConfigured(t *testing.T) {
 		assert.Empty(t, tool)
 	})
 }
+
+func TestInspector_BranchBaseAndSetBranchBase(t *testing.T) {
+	ctx := context.Background()
+	runner := git.NewExecRunner()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	_, err := runner.Run(ctx, dir, "init", "-b", "main")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "config", "user.name", "Test")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "config", "user.email", "test@example.com")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0644))
+	_, err = runner.Run(ctx, dir, "add", "a.txt")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "commit", "-m", "init")
+	require.NoError(t, err)
+
+	ops := git.NewOperations(runner)
+	inspector := git.NewInspector(runner)
+
+	require.NoError(t, ops.CreateAndCheckout(ctx, dir, "issue/44"))
+	require.NoError(t, ops.SetBranchBase(ctx, dir, "issue/44", "epic/10"))
+
+	assert.Equal(t, "epic/10", inspector.BranchBase(ctx, dir, "issue/44"))
+	curr, err := inspector.CurrentBranch(ctx, dir)
+	require.NoError(t, err)
+	assert.Equal(t, "epic/10", curr.BaseBranch)
+
+	// Deleting branch cleans up branch.<name>.brx-base automatically
+	require.NoError(t, ops.Checkout(ctx, dir, "main"))
+	_, err = runner.Run(ctx, dir, "branch", "-D", "issue/44")
+	require.NoError(t, err)
+	assert.Equal(t, "", inspector.BranchBase(ctx, dir, "issue/44"))
+}
+
+func TestInspector_IsBranchCheckedOutInOtherWorktree(t *testing.T) {
+	ctx := context.Background()
+	runner := git.NewExecRunner()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	_, err := runner.Run(ctx, dir, "init", "-b", "main")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "config", "user.name", "Test")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "config", "user.email", "test@example.com")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0644))
+	_, err = runner.Run(ctx, dir, "add", "a.txt")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "commit", "-m", "init")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "branch", "epic/10")
+	require.NoError(t, err)
+
+	linkedDir := filepath.Join(t.TempDir(), "wt-epic")
+	_, err = runner.Run(ctx, dir, "worktree", "add", linkedDir, "epic/10")
+	require.NoError(t, err)
+
+	inspector := git.NewInspector(runner)
+	assert.True(t, inspector.IsBranchCheckedOutInOtherWorktree(ctx, dir, "epic/10"))
+	assert.False(t, inspector.IsBranchCheckedOutInOtherWorktree(ctx, dir, "main"))
+}

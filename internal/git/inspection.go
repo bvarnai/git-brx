@@ -62,14 +62,73 @@ func (i *Inspector) CurrentBranch(ctx context.Context, dir string) (*domain.Bran
 	branchType := ClassifyBranch(branchName)
 	hash, _ := i.runner.Run(ctx, dir, "rev-parse", "--short", "HEAD")
 	upstream, _ := i.runner.Run(ctx, dir, "for-each-ref", "--format=%(upstream:short)", "refs/heads/"+branchName)
+	baseBranch := i.BranchBase(ctx, dir, branchName)
 
 	return &domain.BranchRecord{
 		Name:        branchName,
 		Type:        branchType,
 		UpstreamRef: upstream,
+		BaseBranch:  baseBranch,
 		CommitHash:  hash,
 		IsDetached:  false,
 	}, nil
+}
+
+// BranchBase returns the recorded parent base branch for branch from local Git config, or "".
+func (i *Inspector) BranchBase(ctx context.Context, dir, branch string) string {
+	if strings.TrimSpace(branch) == "" {
+		return ""
+	}
+	out, err := i.runner.Run(ctx, dir, "config", "--local", "--get", "branch."+branch+".brx-base")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// IsBranchCheckedOutInOtherWorktree reports whether branch is currently checked out in a different linked worktree.
+func (i *Inspector) IsBranchCheckedOutInOtherWorktree(ctx context.Context, rootDir, branch string) bool {
+	if strings.TrimSpace(branch) == "" {
+		return false
+	}
+	lines, err := i.runner.RunLines(ctx, rootDir, "worktree", "list", "--porcelain")
+	if err != nil {
+		return false
+	}
+
+	cleanRoot := canonicalPath(rootDir)
+	targetRef := "refs/heads/" + branch
+	var currentWorktree string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			currentWorktree = ""
+			continue
+		}
+		if strings.HasPrefix(trimmed, "worktree ") {
+			currentWorktree = canonicalPath(strings.TrimPrefix(trimmed, "worktree "))
+			continue
+		}
+		if strings.HasPrefix(trimmed, "branch ") && currentWorktree != "" {
+			ref := strings.TrimPrefix(trimmed, "branch ")
+			if ref == targetRef && currentWorktree != cleanRoot {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func canonicalPath(p string) string {
+	if p == "" {
+		return ""
+	}
+	cleaned := filepath.Clean(p)
+	if resolved, err := filepath.EvalSymlinks(cleaned); err == nil {
+		return resolved
+	}
+	return cleaned
 }
 
 // ClassifyBranch identifies branch type from prefix convention.
