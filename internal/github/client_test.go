@@ -293,6 +293,48 @@ func TestClient_GetPullRequestForBranch(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, pr)
 	})
+
+	t.Run("PrioritizesOpenOverMergedAndClosed", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"number": 10, "html_url": "https://github.com/my-org/my-repo/pull/10", "state": "closed", "merged_at": null},
+				{"number": 20, "html_url": "https://github.com/my-org/my-repo/pull/20", "state": "closed", "merged_at": "2026-10-09T08:00:00Z"},
+				{"number": 30, "html_url": "https://github.com/my-org/my-repo/pull/30", "state": "open", "merged_at": null}
+			]`))
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL(server.URL))
+		pr, err := client.GetPullRequestForBranch(context.Background(), "issue/reused")
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		assert.Equal(t, 30, pr.Number)
+		assert.Equal(t, domain.PRStateOpen, pr.State)
+		assert.False(t, pr.Merged)
+	})
+
+	t.Run("PrioritizesMergedOverClosedAndBreaksTiesByNumber", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`[
+				{"number": 10, "html_url": "https://github.com/my-org/my-repo/pull/10", "state": "closed", "merged_at": null},
+				{"number": 15, "html_url": "https://github.com/my-org/my-repo/pull/15", "state": "closed", "merged_at": "2026-10-01T08:00:00Z"},
+				{"number": 25, "html_url": "https://github.com/my-org/my-repo/pull/25", "state": "closed", "merged_at": "2026-10-09T08:00:00Z"}
+			]`))
+		}))
+		defer server.Close()
+
+		client := github.NewClient("my-org", "my-repo", "token", github.WithBaseURL(server.URL))
+		pr, err := client.GetPullRequestForBranch(context.Background(), "issue/reused")
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		assert.Equal(t, 25, pr.Number)
+		assert.Equal(t, domain.PRStateMerged, pr.State)
+		assert.True(t, pr.Merged)
+	})
 }
 
 func TestClient_WithBaseURL_NormalizesGithubCom(t *testing.T) {

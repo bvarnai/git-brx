@@ -285,23 +285,26 @@ func (c *Client) GetPullRequestForBranch(ctx context.Context, branch string) (*d
 		return nil, nil // No PR found for branch
 	}
 
-	pr := rawList[0]
-	state := domain.PRStateOpen
-	merged := pr.MergedAt != nil && *pr.MergedAt != ""
+	details := make([]domain.PullRequestDetail, 0, len(rawList))
+	for _, pr := range rawList {
+		state := domain.PRStateOpen
+		merged := pr.MergedAt != nil && *pr.MergedAt != ""
+		if merged {
+			state = domain.PRStateMerged
+		} else if strings.EqualFold(pr.State, "closed") {
+			state = domain.PRStateClosed
+		}
 
-	if merged {
-		state = domain.PRStateMerged
-	} else if strings.EqualFold(pr.State, "closed") {
-		state = domain.PRStateClosed
+		details = append(details, domain.PullRequestDetail{
+			ID:     strconv.Itoa(pr.Number),
+			Number: pr.Number,
+			URL:    pr.HTMLURL,
+			State:  state,
+			Merged: merged,
+		})
 	}
 
-	return &domain.PullRequestDetail{
-		ID:     strconv.Itoa(pr.Number),
-		Number: pr.Number,
-		URL:    pr.HTMLURL,
-		State:  state,
-		Merged: merged,
-	}, nil
+	return domain.SelectPullRequest(details), nil
 }
 
 // GetCurrentUser retrieves the authenticated GitHub user's login handle.

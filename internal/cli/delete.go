@@ -9,13 +9,13 @@ import (
 	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/errcode"
 	"github.com/bvarnai/git-brx/internal/git"
-	"github.com/bvarnai/git-brx/internal/github"
 	"github.com/spf13/cobra"
 )
 
 // DeleteOptions stores flags for the delete command.
 type DeleteOptions struct {
-	Force bool
+	Force        bool
+	DeleteRemote bool
 }
 
 // newDeleteCmd constructs the 'delete' subcommand.
@@ -40,6 +40,7 @@ remote verification if deleting an abandoned branch.`,
 	}
 
 	cmd.Flags().BoolVarP(&opts.Force, "force", "f", false, "Skip verification that the remote branch has already been deleted on origin")
+	cmd.Flags().BoolVar(&opts.DeleteRemote, "delete-remote", false, "Delete remote branch on origin if its pull request is merged")
 
 	return cmd
 }
@@ -117,7 +118,7 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 		targetBranch = currBranch.Name
 		shouldSwitch = true
 	}
-	a.Logger.Debug("Target branch to delete: %s (shouldSwitch=%v, force=%v)", targetBranch, shouldSwitch, opts.Force)
+	a.Logger.Debug("Target branch to delete: %s (shouldSwitch=%v, force=%v, deleteRemote=%v)", targetBranch, shouldSwitch, opts.Force, opts.DeleteRemote)
 
 	if !opts.Force {
 		existsOnServer, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, targetBranch)
@@ -127,25 +128,61 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 		if existsOnServer {
 			a.Logger.Log("Branch '%s' found on remote origin", targetBranch)
 
-			// Try SCM diagnostic lookup if configured
-			if scmErr := a.checkSCMPullRequestState(ctx, rootDir, targetBranch); scmErr != nil {
+			// Try SCM diagnostic lookup (and optional --delete-remote when MERGED) if configured
+			deletedRemote, scmErr := a.checkSCMPullRequestState(ctx, rootDir, targetBranch, opts.DeleteRemote)
+			if scmErr != nil {
 				return scmErr
 			}
-
-			return errcode.NewError(errcode.ErrPreconditionRepo, "Branch must be deleted on remote first (e.g., after merging pull request)").
-				WithHint("Delete the remote branch on origin first, or use '--force' to delete the local branch anyway")
+			if !deletedRemote {
+				return errcode.NewError(errcode.ErrPreconditionRepo, "Branch must be deleted on remote first (e.g., after merging pull request)").
+					WithHint("Delete the remote branch on origin first, or use '--force' to delete the local branch anyway")
+			}
 		}
 	}
 
-	baseBranch := a.Inspector.DefaultBranch(ctx, rootDir)
-	if baseBranch == "" {
-		baseBranch = "main"
-	}
+	// Resolve return branch before deleting targetBranch so branch.<target>.brx-base is still readable
+	returnBase := a.resolveBaseBranch(ctx, rootDir, targetBranch, "")
+	baseBranch := returnBase.Name
 
+	detached := false
+	fastForwarded := false
 	if shouldSwitch {
-		checkoutErr := a.Operations.Checkout(ctx, rootDir, baseBranch)
-		if checkoutErr != nil {
-			return errcode.WrapError(errcode.ErrConflict, checkoutErr, "Unable to switch to '%s' branch", baseBranch)
+		localReturnExists, remoteReturnExists, _ := a.Inspector.BranchExists(ctx, rootDir, baseBranch)
+		inOtherWorktree := localReturnExists && a.Inspector.IsBranchCheckedOutInOtherWorktree(ctx, rootDir, baseBranch)
+
+		if inOtherWorktree || !localReturnExists {
+			detachRef := baseBranch
+			if remoteReturnExists {
+				detachRef = "origin/" + baseBranch
+			}
+			if detachErr := a.Operations.CheckoutDetach(ctx, rootDir, detachRef); detachErr != nil {
+				return errcode.WrapError(errcode.ErrConflict, detachErr, "Unable to switch to '%s' branch", baseBranch)
+			}
+			detached = true
+			a.Logger.Log("Branch '%s' is unavailable for checkout (checked out in another worktree or remote-only); detached HEAD before deleting '%s'", baseBranch, targetBranch)
+		} else {
+			if checkoutErr := a.Operations.Checkout(ctx, rootDir, baseBranch); checkoutErr != nil {
+				return errcode.WrapError(errcode.ErrConflict, checkoutErr, "Unable to switch to '%s' branch", baseBranch)
+			}
+
+			// Best-effort auto-fast-forward when clean and strictly behind origin/<baseBranch>
+			if isDirty, dirtyErr := a.Inspector.IsDirty(ctx, rootDir); dirtyErr == nil && !isDirty {
+				_ = a.Operations.FetchRef(ctx, rootDir, "origin", baseBranch)
+				_, hasRemoteReturn, _ := a.Inspector.BranchExists(ctx, rootDir, baseBranch)
+				if hasRemoteReturn {
+					delta, deltaErr := a.Inspector.ComputeDelta(ctx, rootDir, baseBranch, "origin/"+baseBranch)
+					if deltaErr == nil && delta != nil && delta.AheadCount == 0 && delta.BehindCount > 0 {
+						if _, ffErr := a.Operations.MergeFFOnly(ctx, rootDir, "origin/"+baseBranch); ffErr == nil {
+							fastForwarded = true
+							unit := "commits"
+							if delta.BehindCount == 1 {
+								unit = "commit"
+							}
+							a.Logger.Log("Fast-forwarded '%s' to match 'origin/%s' (%d new %s)", baseBranch, baseBranch, delta.BehindCount, unit)
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -157,59 +194,48 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 	_, _ = a.Runner.Run(ctx, rootDir, "remote", "prune", "origin")
 
 	a.Logger.Log("Deleted local branch '%s' and pruned origin", targetBranch)
-	if shouldSwitch {
+	if shouldSwitch && !detached && !fastForwarded {
 		a.Logger.Hint("Your local '%s' may not be up-to-date. Use 'git-brx update' to update changes", baseBranch)
 	}
 
 	return nil
 }
 
-func (a *App) checkSCMPullRequestState(ctx context.Context, rootDir, branch string) error {
+func (a *App) checkSCMPullRequestState(ctx context.Context, rootDir, branch string, deleteRemote bool) (bool, error) {
 	_, originURL, _ := a.Inspector.HasOrigin(ctx, rootDir)
 	cfg, err := config.Load(rootDir, originURL)
 	if err != nil || cfg == nil {
-		return nil
+		return false, nil
 	}
 
 	scm, err := a.resolveSCM(cfg)
 	if err != nil || scm == nil {
-		return nil
+		return false, nil
 	}
 
 	pr, err := scm.GetPullRequestForBranch(ctx, branch)
 	if err != nil || pr == nil {
-		return nil
+		return false, nil
 	}
 
 	switch pr.State {
 	case domain.PRStateOpen:
-		return errcode.NewError(errcode.ErrPreconditionRepo, "Pull request #%d is still OPEN (%s)", pr.Number, pr.URL).
+		return false, errcode.NewError(errcode.ErrPreconditionRepo, "Pull request #%d is still OPEN (%s)", pr.Number, pr.URL).
 			WithHint("Merge and close the pull request on %s before deleting the branch", scm.Name())
 	case domain.PRStateMerged:
-		return errcode.NewError(errcode.ErrPreconditionRepo, "Pull request #%d is MERGED, but remote branch '%s' has not been deleted yet", pr.Number, branch).
-			WithHint("Delete the branch on %s (%s) or use '--force' to clean up the local branch now", scm.Name(), pr.URL)
+		if deleteRemote {
+			if delErr := a.Operations.DeleteRemoteBranch(ctx, rootDir, "origin", branch); delErr != nil {
+				return false, errcode.WrapError(errcode.ErrPreconditionRemote, delErr, "Unable to delete remote branch 'origin/%s'", branch)
+			}
+			a.Logger.Log("Deleted remote branch 'origin/%s'", branch)
+			return true, nil
+		}
+		return false, errcode.NewError(errcode.ErrPreconditionRepo, "Pull request #%d is MERGED, but remote branch '%s' has not been deleted yet", pr.Number, branch).
+			WithHint("Re-run with '--delete-remote', delete the branch on %s (%s), or use '--force'", scm.Name(), pr.URL)
 	case domain.PRStateClosed:
-		return errcode.NewError(errcode.ErrPreconditionRepo, "Pull request #%d was CLOSED without merging (%s)", pr.Number, pr.URL).
+		return false, errcode.NewError(errcode.ErrPreconditionRepo, "Pull request #%d was CLOSED without merging (%s)", pr.Number, pr.URL).
 			WithHint("Use '--force' to bypass the remote check if you intend to delete this abandoned branch")
 	}
 
-	return nil
-}
-
-func (a *App) resolveSCM(cfg *domain.ProjectConfig) (domain.SCMProvider, error) {
-	provider := strings.ToLower(cfg.SCM.Provider)
-	switch provider {
-	case "github":
-		token := github.ResolveToken(context.Background(), a.Runner, "github.com")
-		opts := []github.Option{}
-		if cfg.SCM.URI != "" && cfg.SCM.URI != "https://github.com" && cfg.SCM.URI != "http://github.com" {
-			opts = append(opts, github.WithBaseURL(cfg.SCM.URI))
-		}
-		opts = append(opts, github.WithReviewConfig(&cfg.Review))
-		return github.NewClient(cfg.SCM.Owner, cfg.SCM.Repo, token, opts...), nil
-	case "", "none":
-		return nil, nil
-	default:
-		return nil, nil
-	}
+	return false, nil
 }

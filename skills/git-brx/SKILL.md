@@ -28,7 +28,7 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 | **Conflict abort** | `git brx reset` | Aborts in-flight rebase/merge preserving local commits; resets to `origin/<branch>` when idle. |
 | **Publishing** | `git brx publish` | Pushes branch (`--force-with-lease` on `issue/`/`feature/`, fast-forward-only on `epic/`/`release/`) and binds upstream tracking. |
 | **Code Review / PR** | `git brx review [--draft] [<target>]` | Verifies pushed `HEAD` and remote `<target>`, resolves recorded `brx-base`, assigns reviewers, and opens PR. |
-| **Branch Cleanup** | `git brx delete <branch>` | Verifies remote deletion, switches to default branch, and prunes local branch. |
+| **Branch Cleanup** | `git brx delete [--delete-remote] [<branch>]` | Checks remote deletion (or deletes merged remote with `--delete-remote`), returns to recorded `brx-base`/`main` (detaching in busy worktrees), and prunes local branch. |
 
 ---
 
@@ -102,11 +102,11 @@ git brx review [--draft] [<target>]
 - Child `issue/*` and `feature/*` PRs targeting `epic/*` default to **Squash and merge**, while `epic/*` PRs targeting `main` automatically specify non-squash **Create a merge commit** instructions.
 
 ### Step 7: Post-merge cleanup (`delete`)
-Once the PR is merged and remote branch is deleted on the SCM platform:
+Once the PR is merged (with auto-delete enabled or via `--delete-remote`):
 ```bash
-git brx delete <branch-name>
+git brx delete [<branch-name>]
 ```
-*(Note: When deleting the active branch, `git brx delete` switches the working tree back to `main`.)*
+*(Note: When deleting the active branch, `git brx delete` returns to its recorded `brx-base` or `main` and fast-forwards if clean and behind `origin`, or detaches `HEAD` when that branch is checked out in another worktree.)*
 
 ---
 
@@ -137,11 +137,9 @@ Use an `epic/<E>` branch as a long-lived integration branch when a feature or ep
    ```
    Child `issue/*` and `feature/*` PRs targeting `epic/<E>` emit **Squash and merge** instructions by default.
 4. **Clean up merged child slice and return to `epic/<E>`:**
-   Because `git brx delete issue/<N>` checks out `main` when deleting the active branch, immediately switch back to `epic/<E>` and pull the newly squashed commit:
+   Because `create` records `branch.issue/<N>.brx-base=epic/<E>`, `git brx delete` switches directly back to `epic/<E>` and fast-forwards it to match `origin/epic/<E>` (or run `git brx select epic/<E>` and `git brx update` if it had local changes):
    ```bash
-   git brx delete issue/<N>
-   git brx select epic/<E>
-   git brx update
+   git brx delete
    ```
 5. **Close the epic branch into `main`:**
    After all child slices merge into `epic/<E>`, sync with `main`, publish, and open the integration PR:

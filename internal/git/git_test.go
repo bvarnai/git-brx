@@ -352,3 +352,47 @@ func TestInspector_RemoteBranchSHAAndChangedFilesRemoteTarget(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"internal/ui/view.go"}, changed)
 }
+
+func TestOperations_DeleteRemoteBranchAndCheckoutDetach(t *testing.T) {
+	ctx := context.Background()
+	runner := git.NewExecRunner()
+	dir := t.TempDir()
+	remote := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	_, err := runner.Run(ctx, remote, "init", "--bare")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "init", "-b", "main")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "config", "user.name", "Test")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "config", "user.email", "test@example.com")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "remote", "add", "origin", remote)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "init.txt"), []byte("init"), 0644))
+	_, err = runner.Run(ctx, dir, "add", "init.txt")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "commit", "-m", "init")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "push", "-u", "origin", "main")
+	require.NoError(t, err)
+
+	ops := git.NewOperations(runner)
+	inspector := git.NewInspector(runner)
+
+	require.NoError(t, ops.CreateAndCheckout(ctx, dir, "issue/del-ops"))
+	_, err = runner.Run(ctx, dir, "push", "-u", "origin", "issue/del-ops")
+	require.NoError(t, err)
+
+	require.NoError(t, ops.CheckoutDetach(ctx, dir, "main"))
+	curr, err := inspector.CurrentBranch(ctx, dir)
+	require.NoError(t, err)
+	assert.True(t, curr.IsDetached)
+
+	require.NoError(t, ops.DeleteRemoteBranch(ctx, dir, "origin", "issue/del-ops"))
+	sha, err := inspector.RemoteBranchSHA(ctx, dir, "issue/del-ops")
+	require.NoError(t, err)
+	assert.Empty(t, sha)
+}

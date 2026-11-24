@@ -177,12 +177,12 @@ git brx delete
 
 ### Execution steps
 1. **Remote deletion check:** Verifies via `git ls-remote --heads origin <branch>` that the branch has already been deleted on `origin`.
-2. **SCM status check:** If the branch still exists on `origin`, `git-brx` queries the SCM API:
-   - **PR still open:** Blocks deletion and prints the open PR URL.
-   - **PR merged (remote branch still present):** Informs you that the PR is merged and prompts you to delete the remote branch on the server or pass `--force` (`-f`).
-3. **Switch to base branch:** Checks out `main` (or `master`) if you are currently on the branch being deleted.
+2. **SCM status check & `--delete-remote`:** If the branch still exists on `origin`, `git-brx` queries the SCM API (prioritizing `OPEN > MERGED > CLOSED` across reused branch names):
+   - **PR still open:** Blocks deletion (even with `--delete-remote`) and prints the open PR URL.
+   - **PR merged (remote branch still present):** Pass `--delete-remote` to delete `origin/<branch>` automatically before removing the local branch, or delete it manually / pass `--force` (`-f`).
+3. **Switch to parent or default base branch:** If currently on `<branch>`, returns to the recorded `branch.<branch>.brx-base` (or `main`/`master`) and fast-forwards it automatically when clean and behind `origin`. In linked worktrees where the return branch is checked out elsewhere (or remote-only), detaches `HEAD` onto `origin/<return>` instead of failing checkout.
 4. **Local cleanup:** Runs `git branch -D <branch>` and `git remote prune origin`.
-5. **Update hint:**
+5. **Update hint:** When switched to an unfetched/dirty return branch without auto-fast-forwarding, prints a hint to run `git-brx update`.
    ```text
    [git-brx] Deleted local branch 'issue/TASK-101' and pruned origin
    [git-brx] Hint: Your local 'main' may not be up-to-date. Use 'git-brx update' to update changes
