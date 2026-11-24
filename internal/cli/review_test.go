@@ -251,10 +251,16 @@ func TestComposeReviewDescription(t *testing.T) {
 		assert.Contains(t, desc, "Create a merge commit")
 	})
 
-	t.Run("targeting epic branch produces merge commit instructions by convention", func(t *testing.T) {
+	t.Run("targeting epic branch produces squash instructions by convention", func(t *testing.T) {
 		cfg := &domain.ProjectConfig{}
 		desc := app.ComposeReviewDescription(cfg, scm, "10", "Sub task", "feature/10", "epic/1", "")
-		assert.Contains(t, desc, "Create a merge commit")
+		assert.Contains(t, desc, "Squash and merge")
+	})
+
+	t.Run("issue targeting epic branch produces squash instructions by convention", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescription(cfg, scm, "10", "Sub task", "issue/10", "epic/1", "")
+		assert.Contains(t, desc, "Squash and merge")
 	})
 
 	t.Run("explicit strategy override produces rebase instructions", func(t *testing.T) {

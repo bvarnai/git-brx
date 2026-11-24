@@ -42,16 +42,22 @@ func TestResolveMergeStrategy_BuiltInConventions(t *testing.T) {
 			wantStrategy: "merge",
 		},
 		{
-			name:         "feature into epic defaults to merge",
+			name:         "feature into epic defaults to squash",
 			source:       "feature/101",
 			target:       "epic/1",
-			wantStrategy: "merge",
+			wantStrategy: "squash",
 		},
 		{
-			name:         "issue into release defaults to merge",
+			name:         "issue into epic defaults to squash",
+			source:       "issue/101",
+			target:       "epic/1",
+			wantStrategy: "squash",
+		},
+		{
+			name:         "issue into release defaults to squash",
 			source:       "issue/101",
 			target:       "release/1.0",
-			wantStrategy: "merge",
+			wantStrategy: "squash",
 		},
 	}
 
@@ -76,6 +82,19 @@ func TestResolveMergeStrategy_ConfigurationOverrides(t *testing.T) {
 		got, err := config.ResolveMergeStrategy(cfg, "feature/1", "epic/1", "")
 		require.NoError(t, err)
 		assert.Equal(t, "rebase", got)
+	})
+
+	t.Run("custom target strategy merge overrides default squash for epic target", func(t *testing.T) {
+		cfg := &domain.MergeConfig{
+			Strategies: domain.MergeStrategies{
+				Targets: map[string]string{
+					"epic/*": "merge",
+				},
+			},
+		}
+		got, err := config.ResolveMergeStrategy(cfg, "issue/1", "epic/1", "")
+		require.NoError(t, err)
+		assert.Equal(t, "merge", got)
 	})
 
 	t.Run("custom source strategy takes precedence", func(t *testing.T) {
