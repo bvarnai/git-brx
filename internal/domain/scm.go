@@ -9,12 +9,14 @@ type PullRequestRequest struct {
 	SourceBranch string   `json:"source_branch"`
 	TargetBranch string   `json:"target_branch"`
 	Reviewers    []string `json:"reviewers,omitempty"`
+	Draft        bool     `json:"draft,omitempty"`
 }
 
 // PullRequestResult captures the identifiers of a created pull request.
 type PullRequestResult struct {
-	ID  string `json:"id"`
-	URL string `json:"url"`
+	ID       string   `json:"id"`
+	URL      string   `json:"url"`
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // PullRequestState defines the lifecycle state of a pull request.

@@ -292,11 +292,45 @@ func (i *Inspector) BranchExists(ctx context.Context, dir, branch string) (local
 // Returns (true, nil) if ref exists on remote origin.
 // Returns (false, err) if git ls-remote fails (e.g. network/remote unreachable).
 func (i *Inspector) RemoteBranchExistsOnServer(ctx context.Context, dir, branch string) (bool, error) {
-	out, err := i.runner.RunWithEnv(ctx, dir, []string{"GIT_TERMINAL_PROMPT=0"}, "ls-remote", "--heads", "origin", branch)
+	sha, err := i.RemoteBranchSHA(ctx, dir, branch)
 	if err != nil {
 		return false, err
 	}
-	return strings.TrimSpace(out) != "", nil
+	return sha != "", nil
+}
+
+// RemoteBranchSHA queries origin via git ls-remote --heads origin <branch> and returns
+// the remote commit SHA, or "" if the branch does not exist on origin.
+func (i *Inspector) RemoteBranchSHA(ctx context.Context, dir, branch string) (string, error) {
+	out, err := i.runner.RunWithEnv(ctx, dir, []string{"GIT_TERMINAL_PROMPT=0"}, "ls-remote", "--heads", "origin", branch)
+	if err != nil {
+		return "", err
+	}
+
+	expectedRef := "refs/heads/" + branch
+	var singleToken string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[1] == expectedRef {
+			return fields[0], nil
+		}
+		if len(fields) == 1 && singleToken == "" {
+			singleToken = fields[0]
+		}
+	}
+	if singleToken != "" {
+		return singleToken, nil
+	}
+	return "", nil
+}
+
+// HeadSHA returns the commit SHA of local HEAD.
+func (i *Inspector) HeadSHA(ctx context.Context, dir string) (string, error) {
+	out, err := i.runner.Run(ctx, dir, "rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
 }
 
 // HasOrphanedCommits checks if HEAD is detached and contains commits not reachable from any local or remote branch.
@@ -442,16 +476,38 @@ func (i *Inspector) MergeToolConfigured(ctx context.Context, dir string) (string
 }
 
 // ChangedFiles returns the list of file paths modified between baseBranch and HEAD.
+// Prefers origin/<baseBranch>...HEAD so remote-only targets resolve without a local branch ref.
 func (i *Inspector) ChangedFiles(ctx context.Context, dir, baseBranch string) ([]string, error) {
 	if strings.TrimSpace(baseBranch) == "" {
 		baseBranch = "main"
 	}
-	out, err := i.runner.Run(ctx, dir, "diff", "--name-only", baseBranch+"...HEAD")
-	if err != nil {
-		out, err = i.runner.Run(ctx, dir, "diff", "--name-only", baseBranch, "HEAD")
-		if err != nil {
-			return nil, fmt.Errorf("failed to determine changed files relative to %s: %w", baseBranch, err)
+
+	var candidates [][]string
+	if strings.HasPrefix(baseBranch, "origin/") {
+		candidates = [][]string{
+			{"diff", "--name-only", baseBranch + "...HEAD"},
+			{"diff", "--name-only", baseBranch, "HEAD"},
 		}
+	} else {
+		remoteBase := "origin/" + baseBranch
+		candidates = [][]string{
+			{"diff", "--name-only", remoteBase + "...HEAD"},
+			{"diff", "--name-only", baseBranch + "...HEAD"},
+			{"diff", "--name-only", remoteBase, "HEAD"},
+			{"diff", "--name-only", baseBranch, "HEAD"},
+		}
+	}
+
+	var out string
+	var err error
+	for _, args := range candidates {
+		out, err = i.runner.Run(ctx, dir, args...)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine changed files relative to %s: %w", baseBranch, err)
 	}
 
 	var files []string
