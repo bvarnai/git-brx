@@ -60,7 +60,7 @@ git brx select -o feature/offline # Switch without fetching from origin
 ## 3. `git-brx sync`
 **Usage:** `git-brx sync [flags] [<branch>]`
 
-Syncs the current branch with a base branch (`main` by default). Rebases `issue/*` branches and merges `main` into `feature/*` and `epic/*` branches.
+Syncs the current branch with its recorded base branch (`branch.<name>.brx-base`), an explicit `<branch>`, or `main` by default (including remote-only `origin/<base>` or bases checked out in another linked worktree). Rebases `issue/*` branches and merges into `feature/*` and `epic/*` branches.
 
 ### Flags
 - `-m`, `--merge`: Force a merge instead of the branch's default strategy.
@@ -81,7 +81,7 @@ git brx sync -a
 ## 4. `git-brx update`
 **Usage:** `git-brx update [flags]`
 
-Fetches and rebases the current branch onto `origin/<current-branch>`.
+Queries `origin` directly, fetches, and rebases the current branch onto `origin/<current-branch>` (preserving 3-way merge commits with `--rebase-merges` on `feature/*` and `epic/*` branches).
 
 ### Flags
 - `-a`, `--autostash`: Stash local changes before rebasing and reapply afterward.
@@ -97,7 +97,7 @@ git brx update --autostash
 ## 5. `git-brx publish`
 **Usage:** `git-brx publish [flags]`
 
-Pushes the current branch to `origin` with `--force-with-lease` and sets upstream tracking (`origin/<branch>`).
+Pushes the current branch to `origin` and sets upstream tracking (`origin/<branch>`). Uses `--force-with-lease` by default on `issue/*`, `feature/*`, and custom branches, and enforces fast-forward-only pushes on `epic/*` and `release/*` integration branches.
 
 ### Flags
 - `--no-force`: Push without `--force-with-lease` (fast-forward only).

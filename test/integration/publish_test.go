@@ -89,4 +89,28 @@ func TestPublishIntegration(t *testing.T) {
 		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "[git-brx] Branch 'master' successfully published to origin")
 	})
+
+	t.Run("EpicBranchFastForwardOnlyRejectsNonFF", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/ff-guard")
+		h.CommitFile("epic.txt", "v1", "Epic v1")
+
+		var out1, err1 bytes.Buffer
+		code1 := cli.RunInDir(context.Background(), h.RepoDir, []string{"publish"}, &out1, &err1)
+		require.Equal(t, int(errcode.ExitSuccess), code1)
+
+		// Rewrite local history so push requires non-FF
+		h.Git("commit", "--amend", "-m", "Rewritten epic commit")
+
+		var out2, err2 bytes.Buffer
+		code2 := cli.RunInDir(context.Background(), h.RepoDir, []string{"publish"}, &out2, &err2)
+
+		assert.Equal(t, int(errcode.ExitPreconditionRemote), code2)
+		assert.Contains(t, err2.String(), "Publish rejected: remote has newer commits")
+		assert.Contains(t, err2.String(), "Run 'git-brx update' to incorporate remote changes before publishing")
+	})
 }

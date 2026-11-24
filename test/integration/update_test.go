@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bvarnai/git-brx/internal/cli"
@@ -180,5 +181,61 @@ func TestUpdateIntegration(t *testing.T) {
 
 		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stderr.String(), "Fast-forwarded 'issue/VSB-205' to match 'origin/issue/VSB-205' (2 new commits)")
+	})
+
+	t.Run("DiscoversRemoteBranchWithoutLocalTrackingRef", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteBare := h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h2 := CloneHarness(t, remoteBare)
+		h2.Git("checkout", "-b", "issue/remote-created")
+		h2.CommitFile("colleague.txt", "from colleague", "Colleague commit")
+		h2.Git("push", "-u", "origin", "issue/remote-created")
+
+		// Create local branch at master without any local origin/issue/remote-created tracking ref
+		h.CreateBranch("issue/remote-created")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stderr.String(), "Fast-forwarded 'issue/remote-created' to match 'origin/issue/remote-created' (1 new commit)")
+		assert.FileExists(t, filepath.Join(h.RepoDir, "colleague.txt"))
+	})
+
+	t.Run("PreservesMergeCommitsOnEpicUpdate", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteBare := h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/shared")
+		h.CommitFile("epic1.txt", "e1", "Epic 1")
+		h.Git("push", "-u", "origin", "epic/shared")
+
+		h2 := CloneHarness(t, remoteBare)
+		h2.Git("checkout", "epic/shared")
+		h2.CommitFile("teammate.txt", "t1", "Teammate commit")
+		h2.Git("push", "origin", "epic/shared")
+
+		h.Git("checkout", "master")
+		h.CommitFile("master2.txt", "m2", "Master advance")
+		h.Git("push", "origin", "master")
+
+		h.Git("checkout", "epic/shared")
+		var syncOut, syncErr bytes.Buffer
+		syncCode := cli.RunInDir(context.Background(), h.RepoDir, []string{"sync", "master"}, &syncOut, &syncErr)
+		require.Equal(t, int(errcode.ExitSuccess), syncCode)
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"update"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.FileExists(t, filepath.Join(h.RepoDir, "teammate.txt"))
+		assert.FileExists(t, filepath.Join(h.RepoDir, "master2.txt"))
+		mergeCount := strings.TrimSpace(h.Git("rev-list", "--merges", "--count", "HEAD"))
+		assert.Equal(t, "1", mergeCount)
 	})
 }

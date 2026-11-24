@@ -44,7 +44,7 @@
 4. **Conflict Interception:**
    - If `git rebase` exits with a non-zero code due to merge conflicts:
      - Log diagnostic message: `[git-brx] Error: Update failed due to conflicts`
-     - Log actionable hint: `[git-brx] Hint: Use 'git-brx resolve' to resolve conflicts or 'git-brx reset' to abort`
+     - Log actionable hint: `[git-brx] Hint: Use 'git-brx resolve' to resolve conflicts, or 'git-brx reset' to abort without losing commits`
      - Terminate with Exit Code `5`.
 5. **Completion:**
    - Log informational success:
@@ -62,7 +62,7 @@
 | `0` | Branch successfully updated and rebased onto remote tip. | `[git-brx] Fast-forwarded ...` / `[git-brx] Rebased ...` / `[git-brx] Branch ... is already up to date with ...` | None. |
 | `2` | Positional arguments or unknown flags supplied. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Outside repository or detached HEAD. | `[git-brx] Error: You are in detached HEAD state, this means you are not on any branch` | None. |
-| `4` | Origin missing, unreachable, or branch not published on remote. | `[git-brx] Error: Your repository has no remote origin` / `[git-brx] Error: Branch not found on remote` | None. |
+| `4` | Origin missing, unreachable, or branch not published on remote. | `[git-brx] Error: Your repository has no remote origin` / `[git-brx] Error: Branch '<branch>' has not been published to origin yet` / `[git-brx] Error: Unable to query remote 'origin'` | None. |
 | `5` | Active rebase/merge already in progress or conflicts hit during rebase. | `[git-brx] Error: You are in a middle of a rebase/merge` / `[git-brx] Error: Update failed due to conflicts` | Leave in conflicted rebase state for `resolve`. |
 
 ## 5. Edge Cases & Behavioral Notes

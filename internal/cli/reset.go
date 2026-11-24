@@ -63,12 +63,12 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 		if op == "merge" {
 			a.Logger.Log("Aborting in-progress merge")
 			if abortErr := a.Operations.AbortMerge(ctx, rootDir); abortErr != nil {
-				return errcode.WrapError(errcode.ErrConflict, abortErr, "Reset failed: unable to abort merge")
+				return errcode.WrapError(errcode.ErrConflict, abortErr, "Unable to abort merge")
 			}
 		} else {
 			a.Logger.Log("Aborting in-progress rebase")
 			if abortErr := a.Operations.AbortRebase(ctx, rootDir); abortErr != nil {
-				return errcode.WrapError(errcode.ErrConflict, abortErr, "Reset failed: unable to abort rebase")
+				return errcode.WrapError(errcode.ErrConflict, abortErr, "Unable to abort rebase")
 			}
 		}
 
@@ -95,19 +95,19 @@ func (a *App) runReset(ctx context.Context, opts ResetOptions, args []string) er
 	a.Logger.Debug("Active branch: %s, target remoteRef: %s (clean=%v)", currBranch.Name, remoteRef, opts.Clean)
 	_, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, currBranch.Name)
 	if !remoteExists {
-		return errcode.NewError(errcode.ErrPreconditionRemote, "Reset failed: remote reference '%s' does not exist", remoteRef).
+		return errcode.NewError(errcode.ErrPreconditionRemote, "Remote reference '%s' does not exist", remoteRef).
 			WithHint("Your branch may not have been published yet. Use 'git-brx publish' to publish it")
 	}
 
 	// Hard reset to remote ref
 	if resetErr := a.Operations.ResetHard(ctx, rootDir, remoteRef); resetErr != nil {
-		return errcode.WrapError(errcode.ErrGeneral, resetErr, "Reset failed: unable to reset working copy to '%s'", remoteRef)
+		return errcode.WrapError(errcode.ErrGeneral, resetErr, "Unable to reset working copy to '%s'", remoteRef)
 	}
 
 	// Clean untracked files if requested
 	if opts.Clean {
 		if cleanErr := a.Operations.Clean(ctx, rootDir); cleanErr != nil {
-			return errcode.WrapError(errcode.ErrGeneral, cleanErr, "Reset failed: unable to clean untracked files")
+			return errcode.WrapError(errcode.ErrGeneral, cleanErr, "Unable to clean untracked files")
 		}
 	}
 

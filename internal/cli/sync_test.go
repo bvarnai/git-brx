@@ -19,6 +19,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 		mockResponses map[string]mockGitResponse
 		expectedCode  int
 		errSubstr     string
+		hintSubstr    string
 		expectStderr  string
 	}{
 		{
@@ -138,7 +139,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				"show-ref --verify --quiet refs/remotes/origin/non-existent-base": {err: errors.New("not found")},
 			},
 			expectedCode: int(errcode.ExitPreconditionRepo),
-			errSubstr:    "Base branch 'non-existent-base' does not exist locally",
+			errSubstr:    "Base branch 'non-existent-base' does not exist locally or on origin",
 		},
 		{
 			name: "diverged base branch from origin returns code 5",
@@ -158,6 +159,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 			},
 			expectedCode: int(errcode.ExitConflict),
 			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
+			hintSubstr:   "Switch to 'master', run 'git-brx update', and then 'git-brx publish' first",
 		},
 		{
 			name: "base branch with unpushed commits returns code 5",
@@ -177,6 +179,7 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 			},
 			expectedCode: int(errcode.ExitConflict),
 			errSubstr:    "Base branch 'master' is not up-to-date with 'origin/master'",
+			hintSubstr:   "Switch to 'master' and run 'git-brx publish' first",
 		},
 		{
 			name: "clean base branch behind origin with --no-auto-update-base returns code 5",
@@ -279,6 +282,83 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 			expectedCode: int(errcode.ExitSuccess),
 			expectStderr: "Branch 'issue/VSB-100' is already up to date with 'master'",
 		},
+		{
+			name: "TC-SYN-01 recorded brx-base used when base argument omitted",
+			args: []string{"sync"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                        {out: "true"},
+				"rev-parse --show-toplevel":                              {out: "/repo"},
+				"rev-parse --git-dir":                                    {out: "/repo/.git"},
+				"rev-parse --is-shallow-repository":                      {out: "false"},
+				"symbolic-ref --short -q HEAD":                           {out: "issue/44"},
+				"rev-parse --short HEAD":                                 {out: "abc1234"},
+				"remote get-url origin":                                  {out: "https://remote.example.com/repo.git"},
+				"fetch origin":                                           {out: ""},
+				"config --local --get branch.issue/44.brx-base":          {out: "epic/10"},
+				"show-ref --verify --quiet refs/heads/epic/10":           {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10":  {out: ""},
+				"rev-list --left-right --count epic/10...origin/epic/10": {out: "0\t0"},
+				"rebase epic/10":                                         {out: "Successfully rebased"},
+			},
+			expectedCode: int(errcode.ExitSuccess),
+			expectStderr: "Syncing 'issue/44' with recorded base 'epic/10'",
+		},
+		{
+			name: "TC-SYN-02 remote-only base falls back to origin/base",
+			args: []string{"sync", "epic/10"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                       {out: "true"},
+				"rev-parse --show-toplevel":                             {out: "/repo"},
+				"rev-parse --git-dir":                                   {out: "/repo/.git"},
+				"rev-parse --is-shallow-repository":                     {out: "false"},
+				"symbolic-ref --short -q HEAD":                          {out: "issue/44"},
+				"rev-parse --short HEAD":                                {out: "abc1234"},
+				"remote get-url origin":                                 {out: "https://remote.example.com/repo.git"},
+				"fetch origin":                                          {out: ""},
+				"show-ref --verify --quiet refs/heads/epic/10":          {err: errors.New("not found")},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10": {out: ""},
+				"rebase origin/epic/10":                                 {out: "Successfully rebased"},
+			},
+			expectedCode: int(errcode.ExitSuccess),
+			expectStderr: "Successfully rebased 'issue/44' onto 'origin/epic/10'",
+		},
+		{
+			name: "TC-SYN-03 base checked out in another worktree falls back to origin/base",
+			args: []string{"sync", "epic/10"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                        {out: "true"},
+				"rev-parse --show-toplevel":                              {out: "/repo"},
+				"rev-parse --git-dir":                                    {out: "/repo/.git"},
+				"rev-parse --is-shallow-repository":                      {out: "false"},
+				"symbolic-ref --short -q HEAD":                           {out: "issue/44"},
+				"rev-parse --short HEAD":                                 {out: "abc1234"},
+				"remote get-url origin":                                  {out: "https://remote.example.com/repo.git"},
+				"fetch origin":                                           {out: ""},
+				"show-ref --verify --quiet refs/heads/epic/10":           {out: ""},
+				"show-ref --verify --quiet refs/remotes/origin/epic/10":  {out: ""},
+				"rev-list --left-right --count epic/10...origin/epic/10": {out: "0\t2"},
+				"worktree list --porcelain":                              {out: "worktree /repo\nbranch refs/heads/issue/44\n\nworktree /repo-wt\nbranch refs/heads/epic/10\n"},
+				"rebase origin/epic/10":                                  {out: "Successfully rebased"},
+			},
+			expectedCode: int(errcode.ExitSuccess),
+			expectStderr: "Base branch 'epic/10' is checked out in another worktree; syncing directly against 'origin/epic/10'",
+		},
+		{
+			name: "fetch origin failure omits Sync failed prefix",
+			args: []string{"sync", "master"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":   {out: "true"},
+				"rev-parse --show-toplevel":         {out: "/repo"},
+				"rev-parse --git-dir":               {out: "/repo/.git"},
+				"rev-parse --is-shallow-repository": {out: "false"},
+				"symbolic-ref --short -q HEAD":      {out: "issue/VSB-100"},
+				"rev-parse --short HEAD":            {out: "abc1234"},
+				"remote get-url origin":             {out: "https://remote.example.com/repo.git"},
+				"fetch origin":                      {err: errors.New("network error")},
+			},
+			expectedCode: int(errcode.ExitPreconditionRemote),
+			errSubstr:    "Unable to fetch from origin",
+		},
 	}
 
 	for _, tt := range tests {
@@ -298,6 +378,9 @@ func TestSyncCommand_UnitTable(t *testing.T) {
 				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
+				}
+				if tt.hintSubstr != "" {
+					assert.Contains(t, appErr.Hint, tt.hintSubstr)
 				}
 			}
 			if tt.expectStderr != "" {

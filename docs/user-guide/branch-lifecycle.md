@@ -119,7 +119,7 @@ git brx publish
 ### Default `--force-with-lease` protection
 Raw `git push` fails after a rebase, while `git push --force` blindly overwrites commits pushed by teammates.
 
-`git brx publish` pushes with **`--force-with-lease`** by default:
+`git brx publish` pushes with **`--force-with-lease`** by default on `issue/*`, `feature/*`, and custom branches, and always enforces **fast-forward-only** pushes (never `--force-with-lease`) on shared `epic/*` and `release/*` integration branches so child branches forked from them stay intact:
 - Sets upstream tracking (`--set-upstream origin <branch>`) on first push.
 - Rejects the push if `origin/<branch>` has commits you haven't fetched yet:
   ```text
