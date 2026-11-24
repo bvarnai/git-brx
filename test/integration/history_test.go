@@ -243,4 +243,35 @@ func TestHistoryIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "No commits found matching the specified criteria")
 		assert.Empty(t, stdout.String())
 	})
+
+	t.Run("TopicBranchUsesRecordedEpicBaseAndOriginFallback", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("base.txt", "base", "Base master commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/10")
+		h.CommitFile("epic.txt", "epic", "Epic integration commit")
+		h.Git("push", "-u", "origin", "epic/10")
+
+		h.CreateBranch("issue/44")
+		h.Git("config", "--local", "branch.issue/44.brx-base", "epic/10")
+		h.CommitFile("slice.txt", "slice", "Slice 44 commit")
+
+		// TC-HIS-01: local epic/10 exists -> diffs epic/10..issue/44 (excludes Epic integration commit)
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stdout.String(), "Slice 44 commit")
+		assert.NotContains(t, stdout.String(), "Epic integration commit")
+
+		// TC-HIS-02: delete local epic/10 -> falls back to origin/epic/10..issue/44
+		h.Git("branch", "-D", "epic/10")
+		stdout.Reset()
+		stderr.Reset()
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Contains(t, stdout.String(), "Slice 44 commit")
+		assert.NotContains(t, stdout.String(), "Epic integration commit")
+	})
 }

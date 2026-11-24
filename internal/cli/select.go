@@ -13,6 +13,7 @@ import (
 // SelectOptions stores flags for the select command.
 type SelectOptions struct {
 	Offline bool
+	NoFF    bool
 }
 
 // newSelectCmd constructs the 'select' subcommand.
@@ -23,7 +24,7 @@ func (a *App) newSelectCmd() *cobra.Command {
 		Use:   "select [flags] [<branch>]",
 		Short: "Select and switch to an existing branch (default: repository base branch)",
 		Long: `Select and switch to an existing branch. In online mode, fetches updates
-from origin before switching.`,
+from origin before switching and fast-forwards clean branches when strictly behind.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runSelect(cmd.Context(), opts, args)
@@ -32,6 +33,7 @@ from origin before switching.`,
 	}
 
 	cmd.Flags().BoolVarP(&opts.Offline, "offline", "o", false, "Skip remote fetch and switch between existing local references only")
+	cmd.Flags().BoolVar(&opts.NoFF, "no-ff", false, "Skip automatic fast-forward when the selected branch is strictly behind origin")
 
 	return cmd
 }
@@ -79,22 +81,27 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 
 	// Handle case where user is already on the target branch
 	if prevBranch != "" && prevBranch == targetBranch {
+		fetchFailed := false
 		if !opts.Offline {
 			if hasOrigin, _, _ := a.Inspector.HasOrigin(ctx, rootDir); hasOrigin {
-				_ = a.Operations.Fetch(ctx, rootDir, "origin")
+				if err := a.Operations.Fetch(ctx, rootDir, "origin"); err != nil {
+					fetchFailed = true
+				}
 			}
 		}
 		a.Logger.Log("Already on '%s'", targetBranch)
-		a.hintUpstreamSync(ctx, rootDir, targetBranch)
+		a.syncOrHintUpstream(ctx, rootDir, targetBranch, opts.Offline || fetchFailed, opts.NoFF)
 		return nil
 	}
 
 	// Remote synchronization (online mode)
+	fetchOK := !opts.Offline
 	if !opts.Offline {
 		hasOrigin, _, _ := a.Inspector.HasOrigin(ctx, rootDir)
 		if hasOrigin {
 			fetchErr := a.Operations.Fetch(ctx, rootDir, "origin")
 			if fetchErr != nil {
+				fetchOK = false
 				localExists, _, _ := a.Inspector.BranchExists(ctx, rootDir, targetBranch)
 				if localExists {
 					a.Logger.Warn("Unable to reach remote; falling back to local references")
@@ -102,6 +109,8 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 					return errcode.NewError(errcode.ErrPreconditionRemote, "Select failed: unable to fetch from origin")
 				}
 			}
+		} else {
+			fetchOK = false
 		}
 	}
 
@@ -123,6 +132,7 @@ func (a *App) runSelect(ctx context.Context, opts SelectOptions, args []string) 
 
 	// Postflight feedback: warn if uncommitted changes were carried over to the new branch
 	a.warnDirtyWorktree(wasDirty, prevBranch, targetBranch)
+	a.syncOrHintUpstream(ctx, rootDir, targetBranch, opts.Offline || !fetchOK, opts.NoFF)
 
 	return nil
 }
@@ -134,21 +144,34 @@ func (a *App) warnDirtyWorktree(wasDirty bool, prevBranch, newBranch string) {
 	}
 }
 
-func (a *App) hintUpstreamSync(ctx context.Context, rootDir, branch string) {
+func (a *App) syncOrHintUpstream(ctx context.Context, rootDir, branch string, offline, noFF bool) {
+	if offline {
+		return
+	}
 	_, remoteExists, _ := a.Inspector.BranchExists(ctx, rootDir, branch)
 	if !remoteExists {
 		return
 	}
 
 	delta, err := a.Inspector.ComputeDelta(ctx, rootDir, branch, "origin/"+branch)
-	if err == nil && delta != nil && delta.BehindCount > 0 {
-		isBase := branch == "main" || branch == "master" || branch == a.Inspector.DefaultBranch(ctx, rootDir)
-		if isBase {
-			a.Logger.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx update' to update.", branch, delta.BehindCount)
-		} else {
-			a.Logger.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx sync' to update.", branch, delta.BehindCount)
+	if err != nil || delta == nil || delta.BehindCount == 0 {
+		return
+	}
+
+	if !noFF && delta.AheadCount == 0 {
+		if dirty, dirtyErr := a.Inspector.IsDirty(ctx, rootDir); dirtyErr == nil && !dirty {
+			if _, ffErr := a.Operations.MergeFFOnly(ctx, rootDir, "origin/"+branch); ffErr == nil {
+				unit := "commits"
+				if delta.BehindCount == 1 {
+					unit = "commit"
+				}
+				a.Logger.Log("Fast-forwarded '%s' to match 'origin/%s' (%d new %s)", branch, branch, delta.BehindCount, unit)
+				return
+			}
 		}
 	}
+
+	a.Logger.Hint("Your branch is behind 'origin/%s' by %d commit(s). Run 'git-brx update' to update.", branch, delta.BehindCount)
 }
 
 func (a *App) branchNotFoundError(ctx context.Context, rootDir, targetBranch string) error {

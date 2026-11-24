@@ -39,14 +39,14 @@ git brx create issue/TASK-101
 
 ### Execution steps
 1. **Worktree check:** Verifies that you are inside a Git worktree with no in-flight merge or rebase.
-2. **Name validation:** Matches the branch name against `branch.template` (e.g., `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`).
-3. **Collision checks:**
-   - If the branch already exists locally or on `origin`, `git-brx` exits cleanly and prints a hint to run `git brx select issue/TASK-101`.
+2. **Collision auto-switch:**
+   - If the branch already exists locally or on `origin`, `git-brx` fetches if needed, safely switches to that branch (fast-forwarding clean branches behind `origin/<branch>`), and exits `0`.
+3. **Name validation:** Matches the branch name against `branch.template` (e.g., `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`).
 4. **Issue tracker lookup:**
    - Queries Jira or GitHub Issues for `TASK-101`.
    - Verifies that the issue type/labels are allowed for the target branch prefix (e.g., `bug` $\to$ `issue/`) and prints the issue title, status, assignee, and URL.
    - Prompts `Create branch 'issue/TASK-101' [Y/n]?` (pass `-y` / `--yes` to skip the prompt in scripts).
-5. **Checkout:** Runs `git checkout -b issue/TASK-101`.
+5. **Base guardrails & checkout:** Validates `--base <branch>` if provided (or warns when forking from another topic branch, a behind-origin base, or a dirty worktree), runs `git checkout -b issue/TASK-101 [<base>]`, and records `branch.<name>.brx-base` in local `.git/config`.
 
 ### Offline mode
 When working without network access, pass `--offline` (`-o`):
@@ -70,7 +70,7 @@ git brx select issue/TASK-101
 
 **What `select` does:**
 - **Fetches remotes:** Runs `git fetch` before switching (unless `--offline` is passed).
-- **Behind-upstream hint:** If you are already on the target branch and it is behind `origin`, `git-brx` prints a hint:
+- **Auto-fast-forward & behind-upstream hint:** When online and clean, if the target branch is strictly behind `origin/<branch>`, `git-brx` automatically fast-forwards it (`--ff-only`, unless `--no-ff` is passed). When dirty, diverged, or `--no-ff` is active, it prints a hint:
   ```text
   [git-brx] Already on 'issue/TASK-101'
   [git-brx] Hint: Your branch is behind 'origin/issue/TASK-101' by 2 commit(s). Run 'git-brx update' to update.

@@ -38,6 +38,26 @@ func (o *Operations) CreateAndCheckout(ctx context.Context, dir, branch string) 
 	return err
 }
 
+// CreateAndCheckoutFrom provisions a new local branch from startPoint (or HEAD if empty) and switches to it.
+func (o *Operations) CreateAndCheckoutFrom(ctx context.Context, dir, branch, startPoint string) error {
+	if startPoint == "" {
+		return o.CreateAndCheckout(ctx, dir, branch)
+	}
+	_, err := o.runner.Run(ctx, dir, "checkout", "-b", branch, startPoint)
+	return err
+}
+
+// SetBranchBase records the parent base branch for branch in repository-local Git config.
+func (o *Operations) SetBranchBase(ctx context.Context, dir, branch, base string) error {
+	_, err := o.runner.Run(ctx, dir, "config", "--local", "branch."+branch+".brx-base", base)
+	return err
+}
+
+// MergeFFOnly fast-forwards the current branch to upstream using git merge --ff-only.
+func (o *Operations) MergeFFOnly(ctx context.Context, dir, upstream string) (string, error) {
+	return o.runner.Run(ctx, dir, "merge", "--ff-only", upstream)
+}
+
 // Push pushes commits for the given branch to remote with optional upstream tracking and leased force.
 func (o *Operations) Push(ctx context.Context, dir, remote, branch string, setUpstream, forceWithLease bool) (string, error) {
 	args := []string{"push"}

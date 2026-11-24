@@ -21,15 +21,17 @@ Accepted across all commands:
 ## 1. `git-brx create`
 **Usage:** `git-brx create [flags] <branch>`
 
-Creates and checks out a new local topic branch after validating the branch name and issue status against the configured issue tracker.
+Creates and checks out a new local topic branch after validating the branch name and issue status against the configured issue tracker, and records the fork base in `branch.<branch>.brx-base`. If `<branch>` already exists locally or on `origin`, automatically switches to it.
 
 ### Flags
+- `-b`, `--base <branch>`: Explicit base branch to fork from and record as parent base.
 - `-o`, `--offline`: Skip remote ref checks and issue tracker API validation.
 - `-y`, `--yes`: Accept confirmation prompts non-interactively.
 
 ### Examples
 ```bash
 git brx create issue/VSB-101
+git brx create --base epic/10 issue/VSB-103 -y
 git brx create --offline feature/NEW-FEATURE
 git brx create -y issue/VSB-102
 ```
@@ -39,15 +41,17 @@ git brx create -y issue/VSB-102
 ## 2. `git-brx select`
 **Usage:** `git-brx select [flags] [<branch>]`
 
-Switches the working tree to an existing branch (`main` by default). Fetches from `origin`, warns when uncommitted changes are carried over, and suggests close branch names on typos.
+Switches the working tree to an existing branch (`main` by default). Fetches from `origin`, automatically fast-forwards clean branches when strictly behind `origin/<branch>`, warns when uncommitted changes are carried over, and suggests close branch names on typos.
 
 ### Flags
 - `-o`, `--offline`: Skip `git fetch` and switch using local refs only.
+- `--no-ff`: Skip automatic fast-forward when the selected branch is strictly behind `origin`.
 
 ### Examples
 ```bash
 git brx select                    # Switch to default base branch (main/master)
 git brx select issue/VSB-101      # Switch to issue/VSB-101
+git brx select --no-ff main       # Switch without fast-forwarding
 git brx select -o feature/offline # Switch without fetching from origin
 ```
 
@@ -186,7 +190,7 @@ Prints a formatted commit graph with commit hashes, timestamps, authors, and ref
 ### Flags
 - `-l`, `--limit <N>`: Maximum number of commits to show.
 - `-b`, `--branch <name>`: Show history for a specific branch.
-- `--topic`: Show only commits on the current topic branch since diverging from base (`<base>..HEAD`).
+- `--topic`: Show only commits on the current topic branch since diverging from its recorded parent base (`branch.<name>.brx-base`) or the repository default base (`<base>..HEAD`).
 - `-s`, `--search <query>`: Filter commits by commit message (case-insensitive).
 - `--stat`: Include file diffstats for each commit.
 - `-p`, `--patch`: Include full diffs for each commit.
