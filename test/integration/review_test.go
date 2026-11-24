@@ -560,4 +560,302 @@ scm:
 		assert.Contains(t, capturedBody, "Squash and merge")
 		assert.NotContains(t, capturedBody, "Create a merge commit")
 	})
+
+	t.Run("RejectsUnpushedLocalCommits", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/50")
+		h.CommitFile("f1.txt", "v1", "Published commit")
+		h.Git("push", "-u", "origin", "issue/50")
+		h.CommitFile("f2.txt", "v2", "Unpushed commit")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
+		assert.Contains(t, stderr.String(), "has unpushed local commits (out of sync with origin)")
+		assert.Contains(t, stderr.String(), "Run 'git-brx publish'")
+	})
+
+	t.Run("RejectsMissingRemoteTargetBranchWithSuggestion", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/10")
+		h.CommitFile("epic.txt", "epic", "Epic")
+		h.Git("push", "-u", "origin", "epic/10")
+
+		h.CreateBranch("issue/50")
+		h.CommitFile("slice.txt", "slice", "Slice")
+		h.Git("push", "-u", "origin", "issue/50")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "epic/19", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitPreconditionRemote), code)
+		assert.Contains(t, stderr.String(), "Target branch 'epic/19' does not exist on remote origin")
+		assert.Contains(t, stderr.String(), "Did you mean 'epic/10'?")
+	})
+
+	t.Run("UsesRecordedBrxBaseWhenTargetOmitted", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/10")
+		h.CommitFile("epic.txt", "epic", "Epic")
+		h.Git("push", "-u", "origin", "epic/10")
+
+		h.CreateBranch("issue/51")
+		h.Git("config", "branch.issue/51.brx-base", "epic/10")
+		h.CommitFile("slice.txt", "slice", "Slice work")
+		h.Git("push", "-u", "origin", "issue/51")
+
+		var capturedBase, capturedBody string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 51, "title": "Recorded base slice", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]any
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedBase, _ = body["base"].(string)
+				capturedBody, _ = body["body"].(string)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 51, "html_url": "https://github.com/test-org/test-repo/pull/51"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, "epic/10", capturedBase)
+		assert.Contains(t, stderr.String(), "Selecting recorded base 'epic/10' as target branch")
+		assert.Contains(t, capturedBody, "Squash and merge")
+	})
+
+	t.Run("MultiReviewerDeduplicatesAndWarnsOn422", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/52")
+		h.CommitFile("work.txt", "work", "Work")
+		h.Git("push", "-u", "origin", "issue/52")
+
+		var capturedReviewers []string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 52, "title": "Multi reviewer test", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 52, "html_url": "https://github.com/test-org/test-repo/pull/52"}`))
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/requested_reviewers") && r.Method == http.MethodPost {
+				var req struct {
+					Reviewers []string `json:"reviewers"`
+				}
+				_ = json.NewDecoder(r.Body).Decode(&req)
+				capturedReviewers = req.Reviewers
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				_, _ = w.Write([]byte(`{"message": "Review cannot be requested from pull request author."}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "-r", "alice,bob", "-r", "bob", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Equal(t, []string{"alice", "bob"}, capturedReviewers)
+		assert.Contains(t, stderr.String(), "Warning: Pull request created, but failed to assign reviewers")
+		assert.Equal(t, "https://github.com/test-org/test-repo/pull/52\n", stdout.String())
+	})
+
+	t.Run("DraftSkipsAutoMappingAndHonorsExplicitReviewer", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/53")
+		h.CommitFile("work.txt", "work", "Work")
+		h.Git("push", "-u", "origin", "issue/53")
+
+		var capturedDraft bool
+		var requestedReviewers []string
+		reviewerPostCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 53, "title": "Draft mode issue", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]any
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedDraft, _ = body["draft"].(bool)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 53, "html_url": "https://github.com/test-org/test-repo/pull/53"}`))
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/requested_reviewers") && r.Method == http.MethodPost {
+				reviewerPostCount++
+				var req struct {
+					Reviewers []string `json:"reviewers"`
+				}
+				_ = json.NewDecoder(r.Body).Decode(&req)
+				requestedReviewers = req.Reviewers
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nreview:\n  mapping:\n    default: [team-lead]\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		// Without -r, --draft skips automated review.mapping
+		var stdout1, stderr1 bytes.Buffer
+		code1 := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--draft", "--no-color"}, &stdout1, &stderr1)
+		assert.Equal(t, int(errcode.ExitSuccess), code1, "stderr: %s", stderr1.String())
+		assert.True(t, capturedDraft)
+		assert.Equal(t, 0, reviewerPostCount)
+		assert.Equal(t, "https://github.com/test-org/test-repo/pull/53\n", stdout1.String())
+
+		// With explicit -r alice, --draft still sends draft: true and assigns alice
+		capturedDraft = false
+		var stdout2, stderr2 bytes.Buffer
+		code2 := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--draft", "-r", "alice", "--no-color"}, &stdout2, &stderr2)
+		assert.Equal(t, int(errcode.ExitSuccess), code2, "stderr: %s", stderr2.String())
+		assert.True(t, capturedDraft)
+		assert.Equal(t, 1, reviewerPostCount)
+		assert.Equal(t, []string{"alice"}, requestedReviewers)
+	})
+
+	t.Run("DuplicatePRIncludesExistingURL", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("issue/54")
+		h.CommitFile("work.txt", "work", "Work")
+		h.Git("push", "-u", "origin", "issue/54")
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 54, "title": "Duplicate PR", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				_, _ = w.Write([]byte(`{"message": "Validation Failed", "errors": [{"message": "A pull request already exists for test-org:issue/54."}]}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodGet {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`[{"number": 77, "html_url": "https://github.com/test-org/test-repo/pull/77", "state": "open", "merged_at": null}]`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitAPIError), code)
+		assert.Contains(t, stderr.String(), "A pull request for branch 'issue/54' already exists (https://github.com/test-org/test-repo/pull/77)")
+	})
+
+	t.Run("RemoteOnlyTargetComputesChangedFilesFromOrigin", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		remoteBare := h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h2 := CloneHarness(t, remoteBare)
+		h2.Git("checkout", "-b", "epic/remote-10")
+		h2.CommitFile("epic.txt", "epic", "Remote epic base")
+		h2.Git("push", "-u", "origin", "epic/remote-10")
+
+		// Fetch origin so origin/epic/remote-10 exists without a local epic/remote-10 branch
+		h.Git("fetch", "origin")
+		h.CreateBranch("issue/55")
+		h.CommitFile("internal/ui/widget.go", "package ui", "Add UI widget")
+		h.Git("push", "-u", "origin", "issue/55")
+
+		var requestedReviewers []string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/repos/test-org/test-repo/issues/") {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 55, "title": "Widget work", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 55, "html_url": "https://github.com/test-org/test-repo/pull/55"}`))
+				return
+			}
+			if strings.HasSuffix(r.URL.Path, "/requested_reviewers") && r.Method == http.MethodPost {
+				var req struct {
+					Reviewers []string `json:"reviewers"`
+				}
+				_ = json.NewDecoder(r.Body).Decode(&req)
+				requestedReviewers = req.Reviewers
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nreview:\n  mapping:\n    paths:\n      \"internal/ui/**\": [carol]\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "epic/remote-10", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Equal(t, []string{"carol"}, requestedReviewers)
+	})
 }

@@ -23,6 +23,7 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 		mockResponses map[string]mockGitResponse
 		expectedCode  int
 		errSubstr     string
+		hintSubstr    string
 		expectStderr  string
 	}{
 		{
@@ -120,6 +121,46 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 			expectedCode: int(errcode.ExitPreconditionRemote),
 			errSubstr:    "Branch 'issue/VSB-101' has not been pushed to remote origin",
 		},
+		{
+			name: "TC-REV-01 unpushed local commits returns code 4 with publish hint",
+			args: []string{"review"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                                  {out: "true"},
+				"rev-parse --show-toplevel":                                        {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                                       {out: "abc1234"},
+				"remote get-url origin":                                            {out: "git@github.com:org/repo.git"},
+				"symbolic-ref --short -q HEAD":                                     {out: "issue/VSB-101"},
+				"rev-parse --short HEAD":                                           {out: "bbbb222"},
+				"for-each-ref --format=%(upstream:short) refs/heads/issue/VSB-101": {out: "origin/issue/VSB-101"},
+				"ls-remote --heads origin issue/VSB-101":                           {out: "aaaa111111111111111111111111111111111111\trefs/heads/issue/VSB-101"},
+				"rev-parse HEAD":                                                   {out: "bbbb222222222222222222222222222222222222"},
+			},
+			expectedCode: int(errcode.ExitPreconditionRemote),
+			errSubstr:    "Branch 'issue/VSB-101' has unpushed local commits (out of sync with origin)",
+			hintSubstr:   "Run 'git-brx publish'",
+		},
+		{
+			name: "TC-REV-02 missing remote target returns code 4 with suggestion hint",
+			args: []string{"review", "epic/19"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree":                                       {out: "true"},
+				"rev-parse --show-toplevel":                                             {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":                                            {out: "abc1234"},
+				"remote get-url origin":                                                 {out: "git@github.com:org/repo.git"},
+				"symbolic-ref --short -q HEAD":                                          {out: "issue/VSB-101"},
+				"rev-parse --short HEAD":                                                {out: "aaaa111"},
+				"for-each-ref --format=%(upstream:short) refs/heads/issue/VSB-101":      {out: "origin/issue/VSB-101"},
+				"ls-remote --heads origin issue/VSB-101":                                {out: "aaaa111111111111111111111111111111111111\trefs/heads/issue/VSB-101"},
+				"rev-parse HEAD":                                                        {out: "aaaa111111111111111111111111111111111111"},
+				"show-ref --verify --quiet refs/heads/epic/19":                          {err: errors.New("not found")},
+				"show-ref --verify --quiet refs/remotes/origin/epic/19":                 {err: errors.New("not found")},
+				"ls-remote --heads origin epic/19":                                      {out: ""},
+				"for-each-ref --format=%(refname:short) refs/heads refs/remotes/origin": {out: "main\nepic/10"},
+			},
+			expectedCode: int(errcode.ExitPreconditionRemote),
+			errSubstr:    "Target branch 'epic/19' does not exist on remote origin",
+			hintSubstr:   "Did you mean 'epic/10'?",
+		},
 	}
 
 	for _, tt := range tests {
@@ -142,6 +183,9 @@ func TestReviewCommand_UnitTable(t *testing.T) {
 				assert.Equal(t, tt.expectedCode, int(errcode.ExitCode(appErr)))
 				if tt.errSubstr != "" {
 					assert.Contains(t, appErr.Message, tt.errSubstr)
+				}
+				if tt.hintSubstr != "" {
+					assert.Contains(t, appErr.Hint, tt.hintSubstr)
 				}
 			}
 		})

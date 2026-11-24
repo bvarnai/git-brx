@@ -288,3 +288,67 @@ func TestInspector_IsBranchCheckedOutInOtherWorktree(t *testing.T) {
 	assert.True(t, inspector.IsBranchCheckedOutInOtherWorktree(ctx, dir, "epic/10"))
 	assert.False(t, inspector.IsBranchCheckedOutInOtherWorktree(ctx, dir, "main"))
 }
+
+func TestInspector_RemoteBranchSHAAndChangedFilesRemoteTarget(t *testing.T) {
+	ctx := context.Background()
+	runner := git.NewExecRunner()
+	dir := t.TempDir()
+	remote := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	_, err := runner.Run(ctx, remote, "init", "--bare")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "init", "-b", "main")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "config", "user.name", "Test")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "config", "user.email", "test@example.com")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "remote", "add", "origin", remote)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "init.txt"), []byte("init"), 0644))
+	_, err = runner.Run(ctx, dir, "add", "init.txt")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "commit", "-m", "init")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "push", "-u", "origin", "main")
+	require.NoError(t, err)
+
+	ops := git.NewOperations(runner)
+	inspector := git.NewInspector(runner)
+
+	require.NoError(t, ops.CreateAndCheckout(ctx, dir, "epic/remote-10"))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "epic.txt"), []byte("epic"), 0644))
+	_, err = runner.Run(ctx, dir, "add", "epic.txt")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "commit", "-m", "epic base")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "push", "-u", "origin", "epic/remote-10")
+	require.NoError(t, err)
+
+	headSHA, err := inspector.HeadSHA(ctx, dir)
+	require.NoError(t, err)
+	remoteSHA, err := inspector.RemoteBranchSHA(ctx, dir, "epic/remote-10")
+	require.NoError(t, err)
+	assert.Equal(t, headSHA, remoteSHA)
+
+	missingSHA, err := inspector.RemoteBranchSHA(ctx, dir, "epic/nonexistent")
+	require.NoError(t, err)
+	assert.Empty(t, missingSHA)
+
+	// Fork child branch, then delete local epic/remote-10 so only origin/epic/remote-10 remains
+	require.NoError(t, ops.CreateAndCheckout(ctx, dir, "issue/child"))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "internal", "ui"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "internal", "ui", "view.go"), []byte("package ui"), 0644))
+	_, err = runner.Run(ctx, dir, "add", "internal/ui/view.go")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "commit", "-m", "add ui view")
+	require.NoError(t, err)
+	_, err = runner.Run(ctx, dir, "branch", "-D", "epic/remote-10")
+	require.NoError(t, err)
+
+	changed, err := inspector.ChangedFiles(ctx, dir, "epic/remote-10")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"internal/ui/view.go"}, changed)
+}

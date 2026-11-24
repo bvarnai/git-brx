@@ -11,7 +11,6 @@
     - `--title` (`-t` `<title>`): Override default pull request title.
     - `--strategy` (`-s` `<strategy>`): Override merge strategy (`squash`, `merge`, or `rebase`).
     - `--draft`: Create the pull request in draft state (skips automated `review.mapping` reviewer assignment unless `--reviewer` is explicitly provided).
-    - `--dry-run`: Resolve target branch, title, reviewers, and description and print a preview without creating the pull request via the SCM API.
     - `--merge-instructions`: Explicitly enable merge instructions in PR body.
     - `--no-merge-instructions`: Explicitly disable merge instructions in PR body.
 
@@ -98,10 +97,8 @@
                  "epic/*": merge
                  "release/*": merge
          ```
-7. **Pull Request Submission (or `--dry-run` Preview):**
-   - If `--dry-run` is set:
-     - Write a structured preview (`Target`, `Draft`, `Title`, `Reviewers`, `Body`) without calling `SCMProvider.CreatePullRequest` and exit with Exit Code `0`.
-   - Otherwise, submit PR via the configured `SCMProvider` (GitHub Pull Requests API, Bitbucket Server REST API, etc.).
+7. **Pull Request Submission:**
+   - Submit PR via the configured `SCMProvider` (GitHub Pull Requests API, Bitbucket Server REST API, etc.).
    - Standard payload fields:
      - `title`: `<type>(#<issueKey>): <summary>` (Conventional Commits scope format, or `<branch>` if unlinked, or custom `--title`)
      - `description`: `<reviewDescription>`
@@ -126,7 +123,7 @@
 ## 4. Error Handling & Exit Codes
 | Exit Code | Scenario | Emitted Stderr Pattern | Side Effect Cleanup |
 | :--- | :--- | :--- | :--- |
-| `0` | Pull request created successfully (or `--dry-run` preview rendered). | `[git-brx] Created pull-request:` (URL emitted to stdout) | None. |
+| `0` | Pull request created successfully. | `[git-brx] Created pull-request:` (URL emitted to stdout) | None. |
 | `2` | Excess positional arguments or unknown flags. | `[git-brx] Error: Unexpected argument: <arg>` | None. |
 | `3` | Detached HEAD or unpermitted branch type (e.g. running on `main` or `master`). | `[git-brx] Error: You must be on an 'issue', 'feature', or 'epic' branch` | None. |
 | `4` | Source branch missing/out-of-sync on `origin`, or target branch missing on `origin`. | `[git-brx] Error: Branch '<branch>' has not been pushed to remote origin` / `...has unpushed local commits` | None. |
@@ -146,6 +143,6 @@
 | `TC-REV-02` | Published `issue/50` targeting non-existent `epic/999` | `git-brx review epic/999` | Exits `4` reporting missing target branch on `origin`. |
 | `TC-REV-03` | `issue/50` has `branch.issue/50.brx-base=epic/10` | `git-brx review` | Opens PR with `base=epic/10` and `Squash and merge` instructions without explicit `<target>`. |
 | `TC-REV-04` | Published `issue/50` and reviewer API returns 422 | `git-brx review -r alice,bob -r bob` | Sends `["alice", "bob"]` to reviewer endpoint, logs stderr warning, still emits PR URL and exits `0`. |
-| `TC-REV-05` | Published `issue/50` with `review.mapping.default` configured | `git-brx review --draft --dry-run` | Prints preview showing `Draft: true` and empty reviewers (skipped for draft; `-r alice` still includes `alice`), makes zero HTTP POST calls, exits `0`. |
+| `TC-REV-05` | Published `issue/50` with `review.mapping.default` configured | `git-brx review --draft` / `git-brx review --draft -r alice` | Sends `draft: true` in PR payload; skips automated `review.mapping` reviewers when `-r` is omitted and assigns `["alice"]` when `-r alice` is explicitly passed, exits `0`. |
 | `TC-REV-06` | `issue/50` already has an open PR `#77` | `git-brx review` | Queries existing PR and exits `6` with URL for `#77`. |
 | `TC-REV-07` | `origin/epic/10` exists remotely, no local `epic/10` | `git-brx review epic/10` | Computes `ChangedFiles` against `origin/epic/10...HEAD` for `review.mapping.paths`. |

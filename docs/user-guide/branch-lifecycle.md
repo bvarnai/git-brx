@@ -138,11 +138,11 @@ git brx review
 ```
 
 ### How `review` builds the pull request
-1. **Remote sync check:** Verifies that your local branch is pushed to `origin` and up to date with `origin/<branch>`.
+1. **Remote sync & target check:** Verifies that local `HEAD` matches `origin/<branch>`, resolves `<target_branch>` (explicit argument $\to$ recorded `branch.<name>.brx-base` $\to$ default branch), and verifies `<target_branch>` exists on `origin`.
 2. **Issue metadata lookup:** Extracts the issue key from the branch name and fetches the issue title and labels from Jira or GitHub.
-3. **Reviewer routing:** Evaluates `review.mapping` in `.git-brx.yaml` in order of precedence:
-   - **CLI override:** `-r, --reviewer <user>` (repeatable or comma-separated).
-   - **Changed file paths (`mapping.paths`):** Matches modified files against glob patterns (e.g., `internal/ui/**`, `docs/**`) and aggregates all matched reviewers.
+3. **Reviewer routing:** Evaluates `review.mapping` in `.git-brx.yaml` in order of precedence (skipped when `--draft` is set unless `-r` is passed):
+   - **CLI override:** `-r, --reviewer <user>` (repeatable or comma-separated, deduplicated).
+   - **Changed file paths (`mapping.paths`):** Matches modified files against `origin/<target>...HEAD` (falling back to `<target>...HEAD`) globs (e.g., `internal/ui/**`, `docs/**`) and aggregates all matched reviewers.
    - **Issue labels (`mapping.labels`):** If no path rules match, checks Jira components or GitHub labels.
    - **Branch globs (`mapping.branches`):** If no label rules match, checks the source branch name (e.g., `epic/*`).
    - **Default fallback (`mapping.default`):** Used when no earlier rules match.
@@ -158,11 +158,12 @@ git brx review
    ```
    - `issue/*` and `feature/*` branches default to **Squash and merge** (whether targeting `main` or `epic/*`).
    - `epic/*` and `release/*` branches default to **Create a merge commit** when acting as the PR source branch (e.g., `epic/*` into `main`).
-   - Override the merge strategy for a specific PR with `-s, --strategy <squash|merge|rebase>`:
+   - Override the merge strategy for a specific PR with `-s, --strategy <squash|merge|rebase>` or create a draft PR with `--draft`:
      ```bash
      git brx review -s merge
+     git brx review --draft
      ```
-5. **API submission:** Creates the PR via the GitHub or Bitbucket Server REST API and prints the PR URL to `stdout`.
+5. **API submission:** Creates the PR via the GitHub or Bitbucket Server REST API (emitting a warning if reviewer assignment returns an API error, or including the existing PR URL on 409 conflicts) and prints the PR URL to `stdout`.
 
 ---
 

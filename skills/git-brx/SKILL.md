@@ -27,7 +27,7 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 | **Conflict resolve** | `git brx resolve [--no-tool]` | Auto-stages marker-free resolved paths (or launches merge tool) and continues in-flight rebase/merge. |
 | **Conflict abort** | `git brx reset` | Aborts in-flight rebase/merge preserving local commits; resets to `origin/<branch>` when idle. |
 | **Publishing** | `git brx publish` | Pushes branch (`--force-with-lease` on `issue/`/`feature/`, fast-forward-only on `epic/`/`release/`) and binds upstream tracking. |
-| **Code Review / PR** | `git brx review [<target>]` | Opens Pull Request via API, evaluates path/label reviewer mappings, and excludes author. |
+| **Code Review / PR** | `git brx review [--draft] [<target>]` | Verifies pushed `HEAD` and remote `<target>`, resolves recorded `brx-base`, assigns reviewers, and opens PR. |
 | **Branch Cleanup** | `git brx delete <branch>` | Verifies remote deletion, switches to default branch, and prunes local branch. |
 
 ---
@@ -94,10 +94,11 @@ git brx publish
 ### Step 6: Code review & pull request (`review`)
 Create the PR with automated reviewer assignment and merge instructions:
 ```bash
-git brx review [<target>]
+git brx review [--draft] [<target>]
 ```
-- Targets default branch (`main`) automatically when `<target>` is omitted. Pass `<target>` explicitly (e.g., `git brx review epic/<E>`) when targeting an integration branch.
-- Assigns reviewers defined in `.git-brx.yaml` (`review.mapping.paths`, `review.mapping.labels`).
+- Resolves `<target>` in order: explicit `<target>`, recorded `branch.<name>.brx-base`, then default branch (`main`).
+- Verifies that `<branch>` matches `origin/<branch>` `HEAD` SHA and `<target>` exists on `origin`.
+- Assigns reviewers via `-r` (repeatable/comma-separated) or `.git-brx.yaml` (`review.mapping.*`, skipped for `--draft`), excluding the author.
 - Child `issue/*` and `feature/*` PRs targeting `epic/*` default to **Squash and merge**, while `epic/*` PRs targeting `main` automatically specify non-squash **Create a merge commit** instructions.
 
 ### Step 7: Post-merge cleanup (`delete`)
@@ -128,11 +129,11 @@ Use an `epic/<E>` branch as a long-lived integration branch when a feature or ep
    ```
    *(Or fork directly with `git brx create --base epic/<E> issue/<N> -y`; `create` records `branch.issue/<N>.brx-base=epic/<E>`, and `select epic/<E>` fast-forwards clean behind-origin branches automatically.)*
 3. **Sync, publish, and open the child PR against `epic/<E>`:**
-   `git brx sync` uses the recorded `branch.issue/<N>.brx-base` (`epic/<E>`) automatically when `<target>` is omitted; pass `epic/<E>` explicitly to `review` (omitting `<target>` on `review` defaults to `main`):
+   `git brx sync` and `git brx review` use the recorded `branch.issue/<N>.brx-base` (`epic/<E>`) automatically when `<target>` is omitted:
    ```bash
    git brx sync
    git brx publish
-   git brx review epic/<E>
+   git brx review
    ```
    Child `issue/*` and `feature/*` PRs targeting `epic/<E>` emit **Squash and merge** instructions by default.
 4. **Clean up merged child slice and return to `epic/<E>`:**

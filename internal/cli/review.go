@@ -12,13 +12,15 @@ import (
 	"github.com/bvarnai/git-brx/internal/config"
 	"github.com/bvarnai/git-brx/internal/domain"
 	"github.com/bvarnai/git-brx/internal/errcode"
+	"github.com/bvarnai/git-brx/internal/suggest"
 	"github.com/spf13/cobra"
 )
 
 // ReviewOptions stores flags for the review command.
 type ReviewOptions struct {
-	Reviewer            string
+	Reviewers           []string
 	Title               string
+	Draft               bool
 	MergeInstructions   bool
 	NoMergeInstructions bool
 	Strategy            string
@@ -58,8 +60,9 @@ the pull request on the configured SCM platform (e.g. GitHub or Bitbucket).`,
 		ValidArgsFunction: a.completeBranchNames,
 	}
 
-	cmd.Flags().StringVarP(&opts.Reviewer, "reviewer", "r", "", "Designate an explicit reviewer instead of component mapping")
+	cmd.Flags().StringArrayVarP(&opts.Reviewers, "reviewer", "r", nil, "Designate explicit reviewer(s) instead of component mapping (repeatable or comma-separated)")
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "Override default pull request title")
+	cmd.Flags().BoolVar(&opts.Draft, "draft", false, "Create pull request in draft state")
 	cmd.Flags().BoolVar(&opts.MergeInstructions, "merge-instructions", false, "Append merge instructions to the pull request description")
 	cmd.Flags().BoolVar(&opts.NoMergeInstructions, "no-merge-instructions", false, "Do not append merge instructions to the pull request description")
 	cmd.Flags().StringVarP(&opts.Strategy, "strategy", "s", "", "Merge strategy override (squash, merge, rebase)")
@@ -104,28 +107,48 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		return errcode.NewError(errcode.ErrPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to create a review")
 	}
 
-	// 2. Publication Precondition Check
-	existsOnServer, err := a.Inspector.RemoteBranchExistsOnServer(ctx, rootDir, currBranch.Name)
+	// 2. Publication & Up-to-Date Precondition Check
+	remoteSHA, err := a.Inspector.RemoteBranchSHA(ctx, rootDir, currBranch.Name)
 	if err != nil {
 		return errcode.WrapError(errcode.ErrPreconditionRemote, err, "Unable to reach remote; are you offline?")
 	}
-	if !existsOnServer {
+	if remoteSHA == "" {
 		return errcode.NewError(errcode.ErrPreconditionRemote, "Branch '%s' has not been pushed to remote origin", currBranch.Name).
 			WithHint("Run 'git-brx publish' to push your branch before creating a review")
 	}
+	headSHA, headErr := a.Inspector.HeadSHA(ctx, rootDir)
+	if headErr == nil && headSHA != "" && remoteSHA != headSHA {
+		return errcode.NewError(errcode.ErrPreconditionRemote, "Branch '%s' has unpushed local commits (out of sync with origin)", currBranch.Name).
+			WithHint("Run 'git-brx publish' to push your latest commits before creating a review")
+	}
 
-	// 3. Resolve Target Branch
-	targetBranch := ""
-	if len(args) == 1 && strings.TrimSpace(args[0]) != "" {
-		targetBranch = args[0]
-	} else {
-		targetBranch = a.Inspector.DefaultBranch(ctx, rootDir)
-		if targetBranch == "" {
-			targetBranch = "main"
-		}
+	// 3. Resolve Target Branch & Validate Remote Existence
+	explicitTarget := ""
+	if len(args) == 1 {
+		explicitTarget = strings.TrimSpace(args[0])
+	}
+	base := a.resolveBaseBranch(ctx, rootDir, currBranch.Name, explicitTarget)
+	targetBranch := base.Name
+	if base.FromConfig {
+		a.Logger.Log("Selecting recorded base '%s' as target branch", targetBranch)
+	} else if base.FromDefault {
 		a.Logger.Log("Selecting '%s' target branch by default", targetBranch)
 	}
 	a.Logger.Debug("Review branches: source=%s, target=%s", currBranch.Name, targetBranch)
+
+	targetSHA, err := a.Inspector.RemoteBranchSHA(ctx, rootDir, targetBranch)
+	if err != nil {
+		return errcode.WrapError(errcode.ErrPreconditionRemote, err, "Unable to reach remote; are you offline?")
+	}
+	if targetSHA == "" {
+		missingErr := errcode.NewError(errcode.ErrPreconditionRemote, "Target branch '%s' does not exist on remote origin", targetBranch)
+		if candidates, listErr := a.Inspector.ListAllBranchNames(ctx, rootDir); listErr == nil {
+			if closest := suggest.Closest(targetBranch, candidates, 3); closest != "" {
+				missingErr.WithHint("Did you mean '%s'?", closest)
+			}
+		}
+		return missingErr
+	}
 
 	// 4. Configuration & Issue Loading
 	cfg, err := config.Load(rootDir, originURL)
@@ -175,9 +198,12 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 	}
 
 	// 5. Reviewer Resolution
+	explicitReviewers := parseReviewers(opts.Reviewers)
 	var reviewers []string
-	if opts.Reviewer != "" {
-		reviewers = []string{opts.Reviewer}
+	if len(explicitReviewers) > 0 {
+		reviewers = explicitReviewers
+	} else if opts.Draft {
+		reviewers = nil
 	} else {
 		var components []string
 		if issue != nil {
@@ -231,20 +257,48 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		SourceBranch: currBranch.Name,
 		TargetBranch: targetBranch,
 		Reviewers:    reviewers,
+		Draft:        opts.Draft,
 	}
 
 	result, err := scm.CreatePullRequest(ctx, req)
 	if err != nil {
-		if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "409") {
+		if strings.Contains(strings.ToLower(err.Error()), "already exists") || strings.Contains(err.Error(), "409") {
+			if existing, lookupErr := scm.GetPullRequestForBranch(ctx, currBranch.Name); lookupErr == nil && existing != nil && existing.URL != "" {
+				return errcode.NewError(errcode.ErrAPI, "A pull request for branch '%s' already exists (%s)", currBranch.Name, existing.URL)
+			}
 			return errcode.NewError(errcode.ErrAPI, "A pull request for branch '%s' already exists", currBranch.Name)
 		}
 		return err
 	}
 
+	for _, w := range result.Warnings {
+		a.Logger.Warn("%s", w)
+	}
 	a.Logger.Log("Created pull-request:")
 	a.Logger.Out("%s", result.URL)
 
 	return nil
+}
+
+// parseReviewers splits comma-separated entries, trims whitespace, drops empty strings,
+// and deduplicates handles while preserving order.
+func parseReviewers(raw []string) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+	seen := make(map[string]bool)
+	var out []string
+	for _, entry := range raw {
+		for _, part := range strings.Split(entry, ",") {
+			trimmed := strings.TrimSpace(part)
+			if trimmed == "" || seen[trimmed] {
+				continue
+			}
+			seen[trimmed] = true
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 // ComposeReviewDescription constructs the PR description text.
