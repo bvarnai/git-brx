@@ -3,8 +3,8 @@
 When working in this repository, always follow the `git-brx` workflow and use the `git-brx` CLI (or `git brx`) for all branch management operations:
 
 1. **Branch Creation:**
-   - Always create topic branches via `git brx create <branch> -y`.
-   - Never use raw `git checkout -b` or `git switch -c` directly for topic branches.
+   - Always create work branches via `git brx create <branch> -y`.
+   - Never use raw `git checkout -b` or `git switch -c` directly for work branches.
 
 2. **Upstream Synchronization:**
    - Synchronize with the base branch (`main`) using `git brx sync`.

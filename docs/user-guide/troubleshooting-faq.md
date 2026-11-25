@@ -21,7 +21,7 @@ This skips remote network checks and issue tracker API calls.
 **A:** No. `git-brx` reads your existing Git configuration, credential helpers, and merge tools without modifying `~/.gitconfig`.
 
 ### Q: What is the difference between `sync` and `update`?
-- **`git brx sync`**: Pulls new commits from the **base branch** into your topic branch (e.g., `main` $\to$ `issue/task-101`).
+- **`git brx sync`**: Pulls new commits from the **base branch** into your current branch (e.g., `main` $\to$ `issue/task-101`).
 - **`git brx update`**: Pulls remote commits from **your current branch's upstream** (e.g., `origin/issue/task-101` $\to$ `issue/task-101`).
 
 ---

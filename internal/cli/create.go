@@ -29,7 +29,7 @@ func (a *App) newCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [flags] <branch>",
 		Short: "Create and checkout a new local development branch",
-		Long: `Validate an issue against the issue tracker and provision a new topic branch
+		Long: `Validate an issue against the issue tracker and provision a new local branch
 following repository branching conventions.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -356,7 +356,7 @@ func (a *App) prepareCreateBase(ctx context.Context, rootDir, targetBranch, expl
 		resolvedBase = curr.Name
 		if curr.Type == domain.BranchTypeIssue || curr.Type == domain.BranchTypeFeature {
 			def := a.Inspector.DefaultBranch(ctx, rootDir)
-			a.Logger.Warn("Creating '%s' from topic branch '%s' instead of default branch", targetBranch, curr.Name)
+			a.Logger.Warn("Creating '%s' from '%s' instead of default branch", targetBranch, curr.Name)
 			a.Logger.Hint("Pass '--base %s' or run 'git-brx select %s' first if this was unintentional", def, def)
 		}
 		if !offline && hasOrigin {

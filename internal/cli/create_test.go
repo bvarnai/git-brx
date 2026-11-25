@@ -202,7 +202,7 @@ func TestCreateCommand_BaseAndGuardrails(t *testing.T) {
 		assert.Contains(t, runner.executed, "config --local branch.issue/44.brx-base epic/10")
 	})
 
-	t.Run("forking from topic branch with dirty worktree emits warnings", func(t *testing.T) {
+	t.Run("forking from issue branch with dirty worktree emits warnings", func(t *testing.T) {
 		runner := &mockGitRunner{
 			responses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                  {out: "true"},
@@ -222,7 +222,7 @@ func TestCreateCommand_BaseAndGuardrails(t *testing.T) {
 		app.RootCmd.SetArgs([]string{"create", "--offline", "issue/45"})
 
 		require.NoError(t, app.Execute(context.Background()))
-		assert.Contains(t, stderr.String(), "Creating 'issue/45' from topic branch 'issue/10' instead of default branch")
+		assert.Contains(t, stderr.String(), "Creating 'issue/45' from 'issue/10' instead of default branch")
 		assert.Contains(t, stderr.String(), "Uncommitted local changes will be carried over to 'issue/45'")
 	})
 }

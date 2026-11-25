@@ -24,8 +24,8 @@ func (a *App) newDeleteCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "delete [flags] [<branch>]",
-		Short: "Delete a topic branch after remote merge and prune origin",
-		Long: `Safely deletes a topic branch (issue/*, feature/*, or epic/*)
+		Short: "Delete a work branch after remote merge and prune origin",
+		Long: `Safely deletes a work branch (issue/*, feature/*, or epic/*)
 after it has been merged and removed on origin.
 
 If no branch is specified, the current active branch is deleted. Checks that
@@ -95,7 +95,7 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 		targetType := git.ClassifyBranch(targetBranch)
 		switch targetType {
 		case domain.BranchTypeIssue, domain.BranchTypeFeature, domain.BranchTypeEpic:
-			// Allowed topic branch types
+			// Allowed work branch types
 		default:
 			return errcode.NewError(errcode.ErrPreconditionRepo, "You can only delete an 'issue', 'feature', or 'epic' branch")
 		}
@@ -110,7 +110,7 @@ func (a *App) runDelete(ctx context.Context, opts DeleteOptions, args []string) 
 
 		switch currBranch.Type {
 		case domain.BranchTypeIssue, domain.BranchTypeFeature, domain.BranchTypeEpic:
-			// Allowed topic branch types
+			// Allowed work branch types
 		default:
 			return errcode.NewError(errcode.ErrPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to delete it")
 		}

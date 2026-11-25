@@ -211,7 +211,7 @@ func TestSelectCommand_FastForwardAndHints(t *testing.T) {
 		assert.Contains(t, stderr.String(), "Run 'git-brx update' to update.")
 	})
 
-	t.Run("diverged topic or epic branch emits update hint instead of sync", func(t *testing.T) {
+	t.Run("diverged work or epic branch emits update hint instead of sync", func(t *testing.T) {
 		runner := &mockGitRunner{
 			responses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                        {out: "true"},

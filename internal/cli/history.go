@@ -17,7 +17,7 @@ import (
 type HistoryOptions struct {
 	Limit  int
 	Branch string
-	Topic  bool
+	Delta  bool
 	Search string
 	Stat   bool
 	Patch  bool
@@ -35,7 +35,7 @@ to stdout using standard git log formatting.
 
 Supports scoping to a specific file or directory path (following renames),
 viewing history for a specific branch (-b / --branch <name>), filtering to
-unmerged topic branch commits (--topic), searching commit messages (-s / --search),
+branch commits since diverging from base (--delta), searching commit messages (-s / --search),
 limiting output count (-l / --limit), and peeking file stats (--stat) or patches (-p).`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -45,7 +45,7 @@ limiting output count (-l / --limit), and peeking file stats (--stat) or patches
 
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "l", 0, "Limit the number of commits rendered in the graph")
 	cmd.Flags().StringVarP(&opts.Branch, "branch", "b", "", "Scope history to a specific branch")
-	cmd.Flags().BoolVar(&opts.Topic, "topic", false, "Show only commits on active topic branch relative to base branch")
+	cmd.Flags().BoolVar(&opts.Delta, "delta", false, "Show only commits on the current branch relative to its base branch")
 	cmd.Flags().StringVarP(&opts.Search, "search", "s", "", "Filter commits whose message matches the query string")
 	cmd.Flags().BoolVar(&opts.Stat, "stat", false, "Show diffstat summary of changed files for each commit")
 	cmd.Flags().BoolVarP(&opts.Patch, "patch", "p", false, "Show code diff patch for each commit")
@@ -135,8 +135,8 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 		pathIsDir = statErr == nil && fi.IsDir()
 	}
 
-	if opts.Topic && opts.Branch != "" {
-		return errcode.NewError(errcode.ErrUsage, "Cannot specify both --branch and --topic")
+	if opts.Delta && opts.Branch != "" {
+		return errcode.NewError(errcode.ErrUsage, "Cannot specify both --branch and --delta")
 	}
 
 	if opts.Branch != "" {
@@ -145,7 +145,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 			return errcode.NewError(errcode.ErrPreconditionRepo, "Branch '%s' not found", opts.Branch)
 		}
 		logArgs = append(logArgs, opts.Branch)
-	} else if opts.Topic {
+	} else if opts.Delta {
 		currBranch, branchErr := a.Inspector.CurrentBranch(ctx, rootDir)
 		if branchErr == nil {
 			base := a.resolveBaseBranch(ctx, rootDir, currBranch.Name, "")
@@ -154,7 +154,7 @@ func (a *App) runHistory(ctx context.Context, opts HistoryOptions, args []string
 			} else if currBranch.Name != base.Name {
 				logArgs = append(logArgs, fmt.Sprintf("%s..%s", base.Ref, currBranch.Name))
 			} else {
-				a.Logger.Log("You are on base branch '%s'; there is no topic branch delta to display", base.Name)
+				a.Logger.Log("You are on base branch '%s'; there is no branch delta to display", base.Name)
 				return nil
 			}
 		}

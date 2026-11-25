@@ -21,7 +21,7 @@ Accepted across all commands:
 ## 1. `git-brx create`
 **Usage:** `git-brx create [flags] <branch>`
 
-Creates and checks out a new local topic branch after validating the branch name and issue status against the configured issue tracker, and records the fork base in `branch.<branch>.brx-base`. If `<branch>` already exists locally or on `origin`, automatically switches to it.
+Creates and checks out a new local branch after validating the branch name and issue status against the configured issue tracker, and records the fork base in `branch.<branch>.brx-base`. If `<branch>` already exists locally or on `origin`, automatically switches to it.
 
 ### Flags
 - `-b`, `--base <branch>`: Explicit base branch to fork from and record as parent base.
@@ -135,7 +135,7 @@ git brx review -s merge
 ## 7. `git-brx delete`
 **Usage:** `git-brx delete [flags] [<branch>]`
 
-Deletes a local topic branch (`issue/*`, `feature/*`, or `epic/*`) after verifying that the remote branch was removed on `origin` (or deleting it safely via `--delete-remote` when its PR is `MERGED`), then runs `git remote prune origin`. Defaults to the active branch; returns to the recorded parent base (`branch.<branch>.brx-base`) or `main` (auto-fast-forwarding if clean and behind `origin`, or detaching `HEAD` when the return branch is checked out in another linked worktree).
+Deletes a local branch (`issue/*`, `feature/*`, or `epic/*`) after verifying that the remote branch was removed on `origin` (or deleting it safely via `--delete-remote` when its PR is `MERGED`), then runs `git remote prune origin`. Defaults to the active branch; returns to the recorded parent base (`branch.<branch>.brx-base`) or `main` (auto-fast-forwarding if clean and behind `origin`, or detaching `HEAD` when the return branch is checked out in another linked worktree).
 
 ### Flags
 - `-f`, `--force`: Skip checking whether the branch still exists on `origin`.
@@ -194,7 +194,7 @@ Prints a formatted commit graph with commit hashes, timestamps, authors, and ref
 ### Flags
 - `-l`, `--limit <N>`: Maximum number of commits to show.
 - `-b`, `--branch <name>`: Show history for a specific branch.
-- `--topic`: Show only commits on the current topic branch since diverging from its recorded parent base (`branch.<name>.brx-base`) or the repository default base (`<base>..HEAD`).
+- `--delta`: Show only commits on the current branch since diverging from its recorded parent base (`branch.<name>.brx-base`) or the repository default base (`<base>..HEAD`).
 - `-s`, `--search <query>`: Filter commits by commit message (case-insensitive).
 - `--stat`: Include file diffstats for each commit.
 - `-p`, `--patch`: Include full diffs for each commit.
@@ -202,7 +202,7 @@ Prints a formatted commit graph with commit hashes, timestamps, authors, and ref
 ### Examples
 ```bash
 git brx history -l 10
-git brx history --topic
+git brx history --delta
 git brx history -s "fix memory leak"
 git brx history --stat src/api
 ```

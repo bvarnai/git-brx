@@ -1,6 +1,6 @@
 # The branch lifecycle
 
-This guide walks through the lifecycle of a branch in `git-brx`, from creating a validated topic branch to cleaning it up after merge.
+This guide walks through the lifecycle of a branch in `git-brx`, from creating a validated work branch to cleaning it up after merge.
 
 ---
 
@@ -25,13 +25,13 @@ This guide walks through the lifecycle of a branch in `git-brx`, from creating a
 > **Convention over configuration:** Tracked branches follow the `<type>/<id>` pattern so `git-brx` knows how to sync, review, and clean them up. For local throwaway experiments, use standard Git (`git checkout -b scratch-spike`).
 
 > [!TIP]
-> **Branch protection & force-pushes:** Protect base branches (`main`, `master`, `release/*`) against direct pushes and deletions, while allowing `--force-with-lease` pushes on topic branches (`issue/*`, `feature/*`). See [Branch protection rules & repository permissions](multi-platform.md#5-branch-protection-rules--repository-permissions) for details.
+> **Branch protection & force-pushes:** Protect base branches (`main`, `master`, `release/*`) against direct pushes, deletions, and force-pushes, and protect integration branches (`epic/*`) against force-pushes (fast-forward only), while allowing `--force-with-lease` pushes on `issue/*` and `feature/*` branches. See [Branch protection rules & repository permissions](multi-platform.md#5-branch-protection-rules--repository-permissions) for details.
 
 ---
 
 ## 2. Branch creation (`git brx create`)
 
-Create a new topic branch linked to an issue:
+Create a new branch linked to an issue:
 
 ```bash
 git brx create issue/task-101
@@ -46,7 +46,7 @@ git brx create issue/task-101
    - Queries GitHub Issues or Jira for `task-101`.
    - Verifies that the issue type/labels are allowed for the target branch prefix (e.g., `bug` $\to$ `issue/`) and prints the issue title, status, assignee, and URL.
    - Prompts `Create branch 'issue/task-101' [Y/n]?` (pass `-y` / `--yes` to skip the prompt in scripts).
-5. **Base guardrails & checkout:** Validates `--base <branch>` if provided (or warns when forking from another topic branch, a behind-origin base, or a dirty worktree), runs `git checkout -b issue/task-101 [<base>]`, and records `branch.<name>.brx-base` in local `.git/config`.
+5. **Base guardrails & checkout:** Validates `--base <branch>` if provided (or warns when forking from another `issue/*` or `feature/*` branch, a behind-origin base, or a dirty worktree), runs `git checkout -b issue/task-101 [<base>]`, and records `branch.<name>.brx-base` in local `.git/config`.
 
 ### Offline mode
 When working without network access, pass `--offline` (`-o`):
@@ -96,8 +96,8 @@ Renders a compact commit graph:
 # Show the last 10 commits:
 git brx history -l 10
 
-# Show only commits on the current topic branch since diverging from main:
-git brx history --topic
+# Show only commits on the current branch since diverging from base:
+git brx history --delta
 
 # Search commit messages:
 git brx history -s "database migration"

@@ -149,8 +149,19 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | feature commit [Test User]\n",
 		},
 		{
-			name: "topic flag filters to current branch delta vs master",
-			args: []string{"history", "--topic", "--no-color"},
+			name: "branch and delta flags are mutually exclusive",
+			args: []string{"history", "--branch", "feature/auth", "--delta", "--no-color"},
+			mockResponses: map[string]mockGitResponse{
+				"rev-parse --is-inside-work-tree": {out: "true"},
+				"rev-parse --show-toplevel":       {out: "/mock/repo"},
+				"rev-parse --verify -q HEAD":      {out: "abc1234"},
+			},
+			expectedCode: int(errcode.ExitUsageError),
+			errSubstr:    "Cannot specify both --branch and --delta",
+		},
+		{
+			name: "delta flag filters to current branch delta vs master",
+			args: []string{"history", "--delta", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                                  {out: "true"},
 				"rev-parse --show-toplevel":                                        {out: "/mock/repo"},
@@ -167,8 +178,8 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | issue commit [Test User]\n",
 		},
 		{
-			name: "topic flag uses recorded brx-base epic branch",
-			args: []string{"history", "--topic", "--no-color"},
+			name: "delta flag uses recorded brx-base epic branch",
+			args: []string{"history", "--delta", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                       {out: "true"},
 				"rev-parse --show-toplevel":                             {out: "/mock/repo"},
@@ -185,8 +196,8 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | slice commit [Test User]\n",
 		},
 		{
-			name: "topic flag falls back to origin/recorded-base when local base is missing",
-			args: []string{"history", "--topic", "--no-color"},
+			name: "delta flag falls back to origin/recorded-base when local base is missing",
+			args: []string{"history", "--delta", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                       {out: "true"},
 				"rev-parse --show-toplevel":                             {out: "/mock/repo"},
@@ -203,8 +214,8 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStdout: "* abc1234 2026-10-09 | slice commit [Test User]\n",
 		},
 		{
-			name: "topic flag warns and falls back to master when recorded base no longer exists",
-			args: []string{"history", "--topic", "--no-color"},
+			name: "delta flag warns and falls back to master when recorded base no longer exists",
+			args: []string{"history", "--delta", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                         {out: "true"},
 				"rev-parse --show-toplevel":                               {out: "/mock/repo"},
@@ -223,8 +234,8 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			expectStderr: "Recorded base branch 'epic/gone' no longer exists; falling back to default branch",
 		},
 		{
-			name: "topic flag when already on master logs notice and exits cleanly",
-			args: []string{"history", "--topic", "--no-color"},
+			name: "delta flag when already on master logs notice and exits cleanly",
+			args: []string{"history", "--delta", "--no-color"},
 			mockResponses: map[string]mockGitResponse{
 				"rev-parse --is-inside-work-tree":                           {out: "true"},
 				"rev-parse --show-toplevel":                                 {out: "/mock/repo"},
@@ -236,7 +247,7 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			},
 			expectedCode: int(errcode.ExitSuccess),
 			expectStdout: "",
-			expectStderr: "You are on base branch 'master'; there is no topic branch delta to display",
+			expectStderr: "You are on base branch 'master'; there is no branch delta to display",
 		},
 		{
 			name: "path scoping appends follow to regular file",
@@ -339,4 +350,15 @@ func TestHistoryCommand_UnitTable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHistoryRejectsRemovedTopicFlag(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	runner := &mockGitRunner{responses: map[string]mockGitResponse{}}
+	app := cli.NewApp(&stdout, &stderr, runner)
+	app.RootCmd.SetArgs([]string{"history", "--topic", "--no-color"})
+
+	err := app.Execute(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown flag: --topic")
 }

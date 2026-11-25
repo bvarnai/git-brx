@@ -19,7 +19,7 @@ func TestPublishIntegration(t *testing.T) {
 		h.SetupRemoteBare()
 		h.Git("push", "-u", "origin", "master")
 
-		// Create local topic branch
+		// Create local work branch
 		h.CreateBranch("issue/publish-test")
 		h.CommitFile("feature.txt", "feature content", "Add feature")
 

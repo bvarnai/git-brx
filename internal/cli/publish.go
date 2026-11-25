@@ -71,7 +71,7 @@ func (a *App) runPublish(ctx context.Context, opts PublishOptions, args []string
 	// Protected branch safety assertion
 	if (currBranch.Name == "master" || currBranch.Name == "main") && !opts.NoForce {
 		return errcode.NewError(errcode.ErrUsage, "Refusing to force-push with lease directly to protected '%s' branch", currBranch.Name).
-			WithHint("Use standard push for default branches or switch to a topic branch")
+			WithHint("Use standard push for default branches or switch to a work branch")
 	}
 
 	// Check upstream tracking association

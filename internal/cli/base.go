@@ -13,7 +13,7 @@ type resolvedBase struct {
 	FromDefault bool
 }
 
-// resolveBaseBranch determines the base branch for a topic branch in strict order:
+// resolveBaseBranch determines the base branch for the current branch in strict order:
 // 1. explicitBase (CLI positional/flag argument)
 // 2. recorded branch.<currentBranch>.brx-base (if it still exists locally or on origin)
 // 3. repository default branch (main, master, or origin/HEAD)

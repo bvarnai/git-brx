@@ -43,7 +43,7 @@ Without a clear boundary between issues and pull requests, scope debates spill i
 | **The issue** | Product, QA, engineers | **Defines *What* and *Why*:** Specifications, acceptance criteria, reproduction steps, and test plans | Requirements, edge cases, scope, user impact |
 | **The pull request** | Engineering peers | **Reviews *How*:** Architecture, correctness, test coverage, and performance | Implementation details, code structure, edge-case handling, tests |
 
-When you run `git brx create issue/task-101`, `git-brx` queries the issue tracker, checks that `task-101` exists and matches the branch prefix, and creates the local topic branch.
+When you run `git brx create issue/task-101`, `git-brx` queries the issue tracker, checks that `task-101` exists and matches the branch prefix, and creates the local branch.
 
 ---
 
@@ -74,11 +74,11 @@ Once you name a branch, `git-brx` selects the matching `sync` strategy and PR me
 ```mermaid
 flowchart TD
     subgraph S1 ["Stage 1: Create"]
-        Issue["Tracker Issue<br/>(task-101)"] -->|"git brx create"| TopicBranch["Topic Branch<br/>(issue/task-101)"]
+        Issue["Tracker Issue<br/>(task-101)"] -->|"git brx create"| WorkBranch["Branch<br/>(issue/task-101)"]
     end
 
     subgraph S2 ["Stage 2: Sync & Publish"]
-        TopicBranch -->|"Write code"| LocalCommits["Local commits"]
+        WorkBranch -->|"Write code"| LocalCommits["Local commits"]
         LocalCommits -->|"git brx sync"| Rebased["Rebased onto base"]
         Rebased -->|"git brx publish"| RemoteBranch["Leased push to origin"]
     end
@@ -109,4 +109,4 @@ When the change is ready for review, `git brx review` opens a pull request:
 4. Appends merge strategy instructions (`Squash and merge` or `Create a merge commit`).
 
 ### Stage 4: Delete (`git brx delete`)
-After the PR is merged and the remote branch is removed on `origin`, `git brx delete` switches your working tree back to `main`, deletes the local topic branch, and prunes stale `origin/*` tracking refs.
+After the PR is merged and the remote branch is removed on `origin`, `git brx delete` switches your working tree back to `main`, deletes the local branch, and prunes stale `origin/*` tracking refs.

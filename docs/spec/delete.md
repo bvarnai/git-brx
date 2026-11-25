@@ -3,7 +3,7 @@
 ## 1. Command Signature
 - **Usage:** `git-brx delete [flags] [<branch>]`
 - **Arguments:**
-  - `[<branch>]` (optional): Name of the topic branch to delete. Defaults to the current active branch if omitted.
+  - `[<branch>]` (optional): Name of the work branch to delete. Defaults to the current active branch if omitted.
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flags:
@@ -18,7 +18,7 @@
   - Must be inside a Git working tree (`git rev-parse --is-inside-work-tree` == `true`).
   - Remote `origin` must be configured (`git remote get-url origin`).
   - If deleting current branch (no argument): Must NOT be in a detached HEAD state (`git symbolic-ref -q HEAD`).
-  - Target branch MUST be a deletable topic branch (`issue/*`, `feature/*`, or `epic/*`). Deletion of `main`, `master`, or `release/*` is strictly forbidden.
+  - Target branch MUST be a deletable branch (`issue/*`, `feature/*`, or `epic/*`). Deletion of `main`, `master`, or `release/*` is strictly forbidden.
   - If checked out on target branch: Working tree must be clean enough to permit switching back to default branch (`main`/`master`).
 
 ## 3. Core Execution Flow
@@ -98,7 +98,7 @@
 
 ## 5. Edge Cases & Behavioral Notes
 - **Accurate Remote Verification:** Remote branch existence and accessibility are verified using standard `git ls-remote --heads origin <branch>`, emitting clean diagnostic messages if unreachable or offline.
-- **Default Branch Divergence Hint:** After deleting the topic branch and switching to default (`main` / `master`), `delete` emits a clear hint suggesting running `git-brx update` to fast-forward any newly squashed/merged remote commits.
+- **Default Branch Divergence Hint:** After deleting the branch and switching to default (`main` / `master`), `delete` emits a clear hint suggesting running `git-brx update` to fast-forward any newly squashed/merged remote commits.
 - **Direct Git Branch Switching:** Switching to the parent/default branch is performed directly through internal Git operations rather than indirect command dispatch, with linked-worktree detach fallback.
 - **SCM Pull Request Context Awareness:** If the remote branch still exists on the server, `delete` queries the SCM provider API (prioritizing `OPEN` > `MERGED` > `CLOSED` across reused branch names) and advises or executes `--delete-remote` when `MERGED`.
 

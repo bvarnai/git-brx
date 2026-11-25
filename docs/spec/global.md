@@ -18,7 +18,7 @@
 | `sync` | Synchronizes branch with target base (rebase for issues, merge for features). |
 | `reset` | Aborts active merges/rebases and hard-resets working copy to remote tracking ref. |
 | `resolve` | Launches interactive merge tool and continues in-flight rebase or merge. |
-| `create` | Validates against issue tracker (GitHub, Jira) and provisions local topic branch. |
+| `create` | Validates against issue tracker (GitHub, Jira) and provisions local branch. |
 | `publish` | Pushes branch to remote with lease and configures upstream tracking. |
 | `delete` | Validates remote branch deletion, switches to `main`, and deletes local branch. |
 | `review` | Creates a pull request on configured SCM platform (GitHub, Bitbucket) via REST API with reviewer mapping. |
@@ -426,7 +426,7 @@ Structured schema parsed from YAML (`.git-brx.yaml` / `.git-brx/config.yaml`):
 - `Platform`: Preset identifier (`github`, `gitlab`, `bitbucket`) when one platform serves both tracking and SCM.
 - `Tracker`: Issue tracker settings (`Provider`, `URI`, `Project`, `Owner`, `Repo`).
 - `SCM`: SCM / code review settings (`Provider`, `URI`, `Project`, `Repo`, `Owner`).
-- `Branch`: Topic branch naming rules (`Template` regex, `Mapping` between issue types and branch prefixes).
+- `Branch`: Work branch naming rules (`Template` regex, `Mapping` between issue types and branch prefixes).
 - `Review`: Code review settings (`Mapping` between components and reviewers, `Template` checklist markdown).
 
 ---
@@ -470,12 +470,12 @@ Structured schema parsed from YAML (`.git-brx.yaml` / `.git-brx/config.yaml`):
 
 8. **Parent base branch tracking (`branch.<name>.brx-base`):**
    - `create` records the fork base in local Git config (`git config branch.<name>.brx-base <base>`).
-   - Subcommands that accept an optional base or target branch (`sync`, `review`, `history --topic`, `delete`) resolve it in strict order:
+   - Subcommands that accept an optional base or target branch (`sync`, `review`, `history --delta`, `delete`) resolve it in strict order:
      1. Explicit CLI positional argument (when supported by the subcommand).
      2. Recorded `branch.<name>.brx-base`.
      3. Repository default branch (`main`, `master`, or `origin/HEAD`).
    - If a recorded base branch no longer exists locally or on `origin`, emit a warning and fall back to the repository default branch.
 
 9. **Multi-worktree and shared-branch safety:**
-   - Never fail when a target base branch is checked out in another linked worktree (`git worktree list --porcelain`): `sync`, `history --topic`, and `review` fall back to `origin/<base>`, and `delete` detaches `HEAD` onto `origin/<base>` (or `<base>`) before deleting the active branch.
+   - Never fail when a target base branch is checked out in another linked worktree (`git worktree list --porcelain`): `sync`, `history --delta`, and `review` fall back to `origin/<base>`, and `delete` detaches `HEAD` onto `origin/<base>` (or `<base>`) before deleting the active branch.
    - Protect shared integration branches (`epic/*`, `release/*`) from accidental force-pushes by enforcing standard fast-forward pushes on `epic/*` and `release/*` in `publish`.
