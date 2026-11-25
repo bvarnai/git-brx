@@ -65,7 +65,8 @@ To plain Git, all branch names are identical—`fix-typo` and `cloud-migration` 
 Once you name a branch, `git-brx` selects the matching `sync` strategy and PR merge instructions automatically.
 
 > [!NOTE]
-> **Local spikes and experiments:** For quick prototypes without an issue ticket, use standard Git (`git checkout -b scratch-test`).
+> - **Local spikes and experiments:** For quick prototypes without an issue ticket, use standard Git (`git checkout -b scratch-test`).
+> - **Optional `release/*` branches:** Most projects release by tagging `main` directly. Only create `release/<version>` branches when you need release stabilization or retroactive maintenance/backporting for an older version—see [Optional release branches](branch-lifecycle.md#optional-release-branches).
 
 ---
 

@@ -63,7 +63,7 @@ Configure branch protection rules according to each branch role:
 
 | Branch category | Target branches | Recommended protection rules | Why |
 | :--- | :--- | :--- | :--- |
-| **Base branches** | `main`, `master`, `release/*` | • Require pull requests before merging<br>• Block direct pushes<br>• Block branch deletion<br>• Block force-pushes | Base branches are updated only through merged pull requests (`git brx review`). |
+| **Base branches** | `main`, `master`, `release/*` *(if used)* | • Require pull requests before merging<br>• Block direct pushes<br>• Block branch deletion<br>• Block force-pushes | Base branches are updated only through merged pull requests (`git brx review`). |
 | **Integration branches** | `epic/*` | • Block force-pushes (fast-forward only)<br>• Allow branch deletion on merge | `git brx sync` merges into `epic/*`, and `git brx publish` enforces fast-forward-only pushes so child branches and open PRs targeting the epic are never orphaned. |
 | **Issue & feature branches** | `issue/*`, `feature/*` | • Allow force-pushes (`--force-with-lease`)<br>• Allow branch deletion on merge | `git brx sync` rebases `issue/*` (and merges `feature/*`), and `git brx update` rebases unpushed commits on both, requiring `--force-with-lease` on `git brx publish`. |
 

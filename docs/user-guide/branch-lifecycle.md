@@ -13,13 +13,20 @@ This guide walks through the lifecycle of a branch in `git-brx`, from creating a
 | **`issue/<id>`** | Bug fixes, small tasks, tech debt | Short-lived | **Rebase** (`git rebase`) | **Squash & Merge** |
 | **`feature/<id>`** | Backlog stories, multi-person features | Short-to-medium | **Merge** (`git merge`) | **Squash & Merge** *(or Merge commit)* |
 | **`epic/<id>`** | Multi-PR initiatives | Long-lived | **Merge** (`git merge`) | **Merge commit (`--no-ff`)** |
-| **`release/<milestone>`** | Release stabilization | Maintained / temporary | N/A | Tagged & archived |
+| **`release/<version>`** *(optional)* | Optional release stabilization or maintenance / backporting | On demand / maintained | N/A *(or explicit `--merge`)* | Tagged *(not required for simple releases)* |
 | **`main` / `master`** | Default base branch | Permanent | N/A | Protected base branch |
 
 ### Why `sync` strategies differ by prefix
 * **`issue/*` $\to$ Rebase:** Bug fixes and small tasks are usually single-author branches. Rebasing onto `main` keeps commit history linear and prepares the branch for a clean squash merge.
 * **`feature/*` and `epic/*` $\to$ Merge:** Shared or long-running branches often have multiple contributors. Merging `main` into the branch avoids rewriting commit history under teammates working on the same branch.
 * **Overriding the default:** Pass `--rebase` (`-r`) or `--merge` (`-m`) to `git brx sync` at any time.
+
+### Optional release branches
+`release/*` branches are **not required** for every project or release:
+* **Default (tag `main` directly):** For single-version services, libraries, or CLIs that ship forward from `main`, tag releases directly on `main` (e.g., `v1.3.0`) without creating a `release/*` branch.
+* **On-demand maintenance & backporting:** You do not need to pre-create `release/*` branches up front. If an older release ever needs a patch after `main` has moved on, create `release/<version>` retroactively from the release tag (`git checkout -b release/1.x v1.3.0`).
+* **Upfront release stabilization:** Branch `release/<version>` from `main` before tagging only when a release requires an isolated QA or stabilization window while `main` stays open for new work.
+* **Built-in `git-brx` support when used:** Fork fixes with `git brx create --base release/1.x issue/<id>` so `sync`, `history --delta`, `review`, and `delete` automatically target `release/1.x`. `git brx publish` enforces fast-forward-only pushes on `release/*`, and `git brx delete` blocks accidental deletion.
 
 > [!NOTE]
 > **Convention over configuration:** Tracked branches follow the `<type>/<id>` pattern so `git-brx` knows how to sync, review, and clean them up. For local throwaway experiments, use standard Git (`git checkout -b scratch-spike`).
