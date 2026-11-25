@@ -47,8 +47,8 @@ The setup script uses three tokens:
 
 | Token role | Environment variable | Account | Required scope / permissions | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| **Admin Token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained PAT | Creates/resets `git-brx-sandbox`, invites `alexvarnai` as collaborator, and seeds issues |
-| **Primary Developer** | `ME_GITHUB_TOKEN` | Primary (`bvarnai`) | **Fine-grained PAT** (`git-brx-sandbox`):<br>• **Contents:** `Read-only` *(required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` | Written to `env.sh` for commands run in `git-brx-sandbox/me` (`create`, `publish`, `review`, `delete`) |
+| **Admin token** | `ADMIN_GITHUB_TOKEN` | Primary (`bvarnai`) | **Classic PAT** (`repo`, `admin:repo_hook`) or Admin fine-grained PAT | Creates/resets `git-brx-sandbox`, invites `alexvarnai` as collaborator, and seeds issues |
+| **Primary developer** | `ME_GITHUB_TOKEN` | Primary (`bvarnai`) | **Fine-grained PAT** (`git-brx-sandbox`):<br>• **Contents:** `Read-only` *(required for private repos)*<br>• **Pull requests:** `Read and write`<br>• **Issues:** `Read-only`<br>• **Metadata:** `Read-only` | Written to `env.sh` for commands run in `git-brx-sandbox/me` (`create`, `publish`, `review`, `delete`) |
 | **Colleague** | `ALEX_GITHUB_TOKEN` | Colleague (`alexvarnai`) | **Classic PAT** (`repo` scope) *(required for personal private repos)*<br>or Fine-grained PAT *(GitHub Organizations)* | Written to `env-colleague.sh` for Alex's commands in `git-brx-sandbox/colleague` |
 
 > [!NOTE]
@@ -124,7 +124,7 @@ sequenceDiagram
 > `[Alex Varnai]:`
 > Checked out `issue/1` in `~/workspace/git-brx-sandbox/colleague`, added `func Subtract(a, b int) int` in `calc.go`, published, and merged into `origin/main` (commit `e434c2f`).
 >
-> **Your Turn:**
+> **Your turn:**
 > In `~/workspace/git-brx-sandbox/me`, run:
 > ```bash
 > git brx sync
@@ -142,7 +142,7 @@ sequenceDiagram
 > `[Alex Varnai]:`
 > Updated line 4 of `config.json` in `~/workspace/git-brx-sandbox/colleague` to `"retries": 10`, committed as `Alex Varnai`, and pushed to `origin/main` (commit `3b8d104`).
 >
-> **Your Turn:**
+> **Your turn:**
 > In `~/workspace/git-brx-sandbox/me`, run:
 > ```bash
 > git brx sync
@@ -160,7 +160,7 @@ sequenceDiagram
 > `[Alex Varnai]:`
 > Pushed an update to `origin/main`.
 >
-> **Your Turn:**
+> **Your turn:**
 > In `~/workspace/git-brx-sandbox/me`, run:
 > ```bash
 > git brx sync
@@ -178,7 +178,7 @@ sequenceDiagram
 > `[Alex Varnai]:`
 > Ran `git brx select feature/4` in `~/workspace/git-brx-sandbox/colleague`, added `Stage 2: Validation` to `calc.go`, and pushed commit `8c91d2e` to `origin/feature/4`.
 >
-> **Your Turn:**
+> **Your turn:**
 > In `~/workspace/git-brx-sandbox/me`, run:
 > ```bash
 > git brx update
@@ -200,7 +200,7 @@ sequenceDiagram
 > `[Alex Varnai]:`
 > Created `feature/6` in `~/workspace/git-brx-sandbox/colleague`, updated `calc.go`, and ran `git brx review`. Since `calc.go` doesn't match `docs/**`, `git-brx` assigned `bvarnai` via `mapping.default`.
 >
-> **Your Turn:**
+> **Your turn:**
 > In `~/workspace/git-brx-sandbox/me`, create `feature/5` for Issue #5, edit `docs/architecture.md`, publish, and run `git brx review`. `git-brx` will match `docs/**` and assign `alexvarnai`.
 
 ---
@@ -224,7 +224,7 @@ sequenceDiagram
 > ```
 > Merged the PR using **Create a merge commit** (commit `9d31f0e`) and deleted the remote branch.
 >
-> **Your Turn:**
+> **Your turn:**
 > In `~/workspace/git-brx-sandbox/me`, run `git brx delete epic/7` and `git brx update`.
 
 ---

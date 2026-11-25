@@ -27,7 +27,7 @@ review:
 
 ---
 
-## 2. Authentication & Personal Access Token (PAT) setup
+## 2. Authentication & personal access token (PAT) setup
 
 `git-brx` calls GitHub's REST API during three commands:
 - `git brx create <branch>`: Fetches issue titles, status, and labels.
@@ -86,9 +86,9 @@ export GH_TOKEN="github_pat_xxxxxxxxxxxxxxxxxxxx"
 
 Using an SSH remote does not conflict with using a GitHub API token. `git-brx` separates Git transport from API calls:
 
-| Layer | Transport / Client | Credential Used | Used By |
+| Layer | Transport / client | Credential used | Used by |
 | :--- | :--- | :--- | :--- |
-| **Git Transport** | Git over SSH (`git@github.com:...`) or HTTPS (`https://github.com/...`) | SSH key (`~/.ssh/id_*` / `ssh-agent`) or Git Credential Manager | `git fetch`, `git brx publish`, `git brx sync`, and `git brx update`. |
+| **Git transport** | Git over SSH (`git@github.com:...`) or HTTPS (`https://github.com/...`) | SSH key (`~/.ssh/id_*` / `ssh-agent`) or Git Credential Manager | `git fetch`, `git brx publish`, `git brx sync`, and `git brx update`. |
 | **GitHub REST API** | HTTPS requests to `api.github.com` | Personal Access Token (`GITHUB_TOKEN` / `GH_TOKEN`) | Issue lookup (`git brx create`), PR creation (`git brx review`), and PR state checks (`git brx delete`). |
 
 > [!NOTE]
@@ -114,7 +114,7 @@ Enable **Automatically delete head branches** so GitHub deletes the remote branc
 
 1. Under **Pull Requests**, check **Automatically delete head branches**.
 
-With this enabled, running `git brx delete` after merging a PR sees that the remote branch is already gone, switches back to `main`, deletes the local branch, and prunes `origin`—without needing `--force` or manual cleanup on GitHub.
+With this enabled, running `git brx delete` after merging a PR sees that the remote branch is already gone, returns to the recorded parent base or `main`, deletes the local branch, and prunes `origin`—without needing `--force` or manual cleanup on GitHub. If auto-delete is disabled, run `git brx delete --delete-remote` to remove the merged remote branch and delete locally in one step.
 
 ---
 

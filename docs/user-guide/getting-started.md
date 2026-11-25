@@ -54,14 +54,14 @@ Git resolves any executable named `git-<name>` on your `PATH` as a Git subcomman
 
 ```bash
 # Direct binary invocation:
-git-brx create issue/VSB-101
+git-brx create issue/task-101
 
 # Git subcommand dispatch:
-git brx create issue/VSB-101
+git brx create issue/task-101
 ```
 
 ### Shell completion
-`git-brx` generates completion scripts for subcommands, flags, and dynamic branch names (`select`, `sync`, `review`, `delete`, and `history -b`).
+`git-brx` generates completion scripts for subcommands, flags, and dynamic branch names (`create --base`, `select`, `sync`, `review`, `delete`, and `history -b`).
 
 #### Bash (Linux, WSL, and Git Bash on Windows)
 ```bash
@@ -130,10 +130,14 @@ scm:
   owner: my-org # auto-discovered from remote origin
   repo: my-service # auto-discovered from remote origin
 branch:
-  template: ^(issue|feature|epic)/[A-Za-z0-9_-]+$ # default convention
+  template: ^(issue|feature|epic)/[1-9][0-9]*$ # platform default (github)
   mapping: # platform default (github)
     bug: issue
-    enhancement: feature
+    enhancement:
+      - issue
+      - feature
+    epic: epic
+    feature: feature
 ```
 
 To list only the configuration sources:

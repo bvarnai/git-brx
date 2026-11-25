@@ -52,6 +52,7 @@ This skips remote network checks and issue tracker API calls.
 - **Cause:** You ran `git brx delete`, but `refs/heads/<branch>` still exists on `origin`.
 - **Fix:**
   - Merge the PR and delete the remote branch on GitHub/Bitbucket (or enable **Automatically delete head branches** in your GitHub repo settings).
+  - If the PR is already merged, pass `--delete-remote` to remove the remote branch and delete locally in one step: `git brx delete --delete-remote`.
   - To delete the local branch anyway (e.g., an abandoned branch):
     ```bash
     git brx delete --force

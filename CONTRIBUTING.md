@@ -11,7 +11,7 @@ Bug reports, documentation improvements, and pull requests are welcome. Before o
 3. **Stream separation:**
    - `stdout` is reserved for primary command output, machine-readable data (`name`, `config`), and `--help`/`--version`.
    - `stderr` is used for progress logs (`[git-brx]`), warnings, hints, and errors.
-4. **Minimal dependencies:** Stick to the Go standard library (`os`, `strings`, `bufio`, `regexp`, `context`, `net/http`) and approved CLI packages (`github.com/spf13/cobra`, `gopkg.in/yaml.v3`). Do not import heavyweight Git libraries (`go-git`) or shell out to external script runtimes.
+4. **Minimal dependencies:** Stick to the Go standard library (`os`, `strings`, `bufio`, `regexp`, `context`, `net/http`) and approved CLI/test packages (`github.com/spf13/cobra`, `github.com/stretchr/testify`, `gopkg.in/yaml.v3`). Do not import heavyweight Git libraries (`go-git`) or shell out to external script runtimes.
 
 ---
 
@@ -75,10 +75,10 @@ go build -o ./bin/git-brx ./cmd/git-brx
 
 ## 🌿 Branch & PR workflow
 
-Use `git-brx` itself to manage topic branches and pull requests:
+Use `git-brx` itself to manage work branches and pull requests:
 
 1. **Create an issue:** Open a GitHub issue for the bug fix or feature.
-2. **Create a topic branch:**
+2. **Create a work branch:**
    ```bash
    git brx create issue/<number> -y
    ```
@@ -101,11 +101,11 @@ Use `git-brx` itself to manage topic branches and pull requests:
 
 ## 📝 Commit conventions
 
-Use [Conventional Commits](https://www.conventionalcommits.org/):
-- `feat(#<issue>): ...` for new features
-- `fix(#<issue>): ...` for bug fixes
-- `docs(#<issue>): ...` for documentation changes
-- `refactor(#<issue>): ...` for refactoring without behavior changes
-- `test(#<issue>): ...` for test additions or updates
-- `ci: ...` for GitHub Actions workflow changes
-- `chore(#<issue>): ...` for maintenance or dependency updates
+Use [Conventional Commits](https://www.conventionalcommits.org/) in the format `<type>(<component>): <description>` (lowercase imperative, <= 72 characters, no trailing period, and no issue numbers in commit subjects—issue references belong in the pull request):
+- `feat(<component>): ...` for new features (`!` suffix + `BREAKING CHANGE:` footer for breaking changes)
+- `fix(<component>): ...` for bug fixes
+- `docs(<component>): ...` for documentation changes
+- `refactor(<component>): ...` for refactoring without behavior changes
+- `test(<component>): ...` for test additions or updates
+- `ci(<component>): ...` for GitHub Actions workflow changes
+- `chore(<component>): ...` for maintenance or dependency updates

@@ -113,13 +113,15 @@ git brx publish --no-force
 ## 6. `git-brx review`
 **Usage:** `git-brx review [flags] [<target_branch>]`
 
-Verifies that the active branch is pushed and matches local `HEAD`, resolves `<target_branch>` (`<arg>` $\to$ recorded `branch.<name>.brx-base` $\to$ repository default) and checks its remote existence, opens a pull request via the configured SCM provider, routes reviewers from `.git-brx.yaml`, and appends merge instructions. When `review.template` is unset, it auto-discovers a repository PR template (such as `pull_request_template.md`).
+Verifies that the active branch is pushed and matches local `HEAD`, resolves `<target_branch>` (`<arg>` $\to$ recorded `branch.<name>.brx-base` $\to$ repository default) and checks its remote existence, opens a pull request via the configured SCM provider, routes reviewers from `.git-brx.yaml`, and appends merge instructions. On `epic/*` branches, it also aggregates `Closes #<N>` references from merged child pull requests targeting the epic. When `review.template` is unset, it auto-discovers a repository PR template (such as `pull_request_template.md`).
 
 ### Flags
 - `-r`, `--reviewer <user>`: Request specific reviewer(s) instead of using configured routing rules (repeatable or comma-separated).
 - `-t`, `--title <title>`: Override the generated pull request title.
 - `-s`, `--strategy <strategy>`: Override the merge strategy in PR instructions (`squash`, `merge`, or `rebase`).
 - `--draft`: Create the pull request in draft state (skips automated `review.mapping` assignment unless `--reviewer` is explicitly provided).
+- `--merge-instructions`: Explicitly enable merge instructions in the PR description.
+- `--no-merge-instructions`: Explicitly disable merge instructions in the PR description.
 
 ### Examples
 ```bash
@@ -213,7 +215,7 @@ git brx history --stat src/api
 ## 11. `git-brx config`
 **Usage:** `git-brx config [flags]`
 
-Prints the effective configuration resolved across all four cascade tiers (User Global, Shared Global, Repo Local, and Remote Origin) in YAML format with provenance comments.
+Prints the effective configuration resolved across all four cascade tiers (user global, shared global, repo local, and remote origin) in YAML format with provenance comments.
 
 ### Flags
 - `--sources`: Print only the list of active configuration source tiers.
@@ -245,4 +247,20 @@ Prints the command list or detailed usage for a subcommand. Useful on Windows or
 git brx help
 git brx help create
 git brx help sync
+```
+
+---
+
+<a id="git-brx-completion"></a>
+## 14. `git-brx completion`
+**Usage:** `git-brx completion <bash|zsh|fish|powershell>`
+
+Generates shell autocompletion scripts for subcommands, flags, and dynamic branch names.
+
+### Examples
+```bash
+source <(git-brx completion bash)
+source <(git-brx completion zsh)
+git-brx completion fish | source
+git-brx completion powershell | Out-String | Invoke-Expression
 ```

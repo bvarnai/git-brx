@@ -49,7 +49,7 @@ Every tracked code change starts with an issue in GitHub or Jira:
 - **The pull request reviews "How":** Code review focuses on design, correctness, test coverage, and security—not rediscovering requirements.
 
 ### 2. Built-in safety rails
-- Pushes default to `--force-with-lease` (`git brx publish`) so you never blindly overwrite a colleague's remote commits.
+- Pushes default to `--force-with-lease` (`git brx publish`) on `issue/*` and `feature/*` (never blindly overwriting a colleague's commits) and enforce fast-forward-only pushes on `epic/*` and `release/*`.
 - Issue branches (`issue/*`) rebase linearly onto `main`, keeping history clean and bisectable.
 - Conflict resolution (`git brx resolve`) opens your configured merge tool and stages **only** the resolved files—never `git add .`.
 - Branch cleanup (`git brx delete`) checks that the branch has been merged and removed on `origin` before deleting local refs.
@@ -110,14 +110,13 @@ Once `git-brx` is in your `PATH`, Git automatically exposes it as `git brx <comm
 | [`git brx sync`](docs/user-guide/synchronization-and-rebasing.md#1-synchronizing-with-base-git-brx-sync) | Syncs the active branch with base (rebases `issue/*`, merges `feature/*` and `epic/*`). |
 | [`git brx update`](docs/user-guide/synchronization-and-rebasing.md#2-updating-from-remote-git-brx-update) | Rebases local commits onto `origin/<current-branch>`. |
 | [`git brx resolve`](docs/user-guide/synchronization-and-rebasing.md#3-resolving-conflicts-git-brx-resolve) | Runs your configured merge tool on conflicted files and continues the rebase/merge. |
-| [`git brx reset`](docs/user-guide/synchronization-and-rebasing.md#4-recovery-git-brx-reset) | Aborts any active rebase/merge and hard-resets to `origin/<current-branch>`. |
-| [`git brx publish`](docs/user-guide/branch-lifecycle.md#4-leased-publishing-git-brx-publish) | Pushes the current branch to `origin` with `--force-with-lease` and sets upstream tracking. |
+| [`git brx reset`](docs/user-guide/synchronization-and-rebasing.md#4-recovery-git-brx-reset) | Aborts an active rebase/merge preserving local commits; resets to `origin/<current-branch>` when idle. |
+| [`git brx publish`](docs/user-guide/branch-lifecycle.md#4-leased-publishing-git-brx-publish) | Pushes the current branch to `origin` (`--force-with-lease` on `issue/*` and `feature/*`, fast-forward-only on `epic/*` and `release/*`) and sets upstream tracking. |
 | [`git brx review`](docs/user-guide/branch-lifecycle.md#5-code-review-submission-git-brx-review) | Opens a pull request with automated reviewer assignment and merge instructions. |
-| [`git brx delete`](docs/user-guide/branch-lifecycle.md#6-safe-post-merge-deletion-git-brx-delete) | Verifies remote branch deletion, switches to `main`, and deletes the local branch. |
+| [`git brx delete`](docs/user-guide/branch-lifecycle.md#6-safe-post-merge-deletion-git-brx-delete) | Verifies remote deletion (or deletes merged remote with `--delete-remote`), returns to the recorded parent base or `main`, and deletes the local branch. |
 | [`git brx history`](docs/user-guide/command-reference.md#git-brx-history) | Prints a formatted commit graph (supports `--delta` branch filtering). |
 | [`git brx name`](docs/user-guide/command-reference.md#git-brx-name) | Prints the active branch name to `stdout` for use in scripts. |
 | [`git brx config`](docs/user-guide/command-reference.md#git-brx-config) | Prints the resolved cascading configuration and source provenance in YAML. |
-| [`git brx completion`](docs/spec/completion.md) | Generates shell completion scripts (`bash`, `zsh`, `fish`, `powershell`). |
 
 All commands accept `--help` (`-h`), `--verbose` (`-v`), `--quiet` (`-q`), and `--no-color`.
 
@@ -125,7 +124,7 @@ All commands accept `--help` (`-h`), `--verbose` (`-v`), `--quiet` (`-q`), and `
 
 ## Platform support
 
-| Platform / Backend | Issue tracker | Code review (PR / MR) | Status | Notes |
+| Platform / backend | Issue tracker | Code review (PR / MR) | Status | Notes |
 | :--- | :--- | :--- | :--- | :--- |
 | ✅ **GitHub** | GitHub Issues | GitHub Pull Requests | **Done** | Tested and verified against GitHub.com |
 | ⌛ Atlassian (Bitbucket + Jira) | Jira Server / DC | Bitbucket Server / DC | *Implemented (untested)* | Client and contract tests implemented; not yet verified on live instances |
@@ -170,6 +169,8 @@ Verify the installation:
 git brx --version
 # git-brx version v1.2.0 (86d244b linux/amd64)
 ```
+
+See [Shell completion](docs/user-guide/getting-started.md#shell-completion) to enable tab completion for Bash, Zsh, Fish, or PowerShell.
 
 ---
 
@@ -223,7 +224,7 @@ See the [AI agent integration guide](docs/user-guide/getting-started.md#6-ai-age
 ## Documentation wiki
 
 - 📖 **[User guide index](docs/user-guide/README.md)**: Table of contents and reading paths.
-- 🎯 **[Philosophy & mental model](docs/user-guide/philosophy.md)**: Issue-driven workflow, branch roles, and PR hygiene.
+- 🎯 **[Core concepts & workflow](docs/user-guide/philosophy.md)**: Issue-driven workflow, branch roles, and PR hygiene.
 - 🚀 **[Getting started](docs/user-guide/getting-started.md)**: Installation, shell completion, credentials, and configuration cascade.
 - 🔄 **[Branch lifecycle guide](docs/user-guide/branch-lifecycle.md)**: Walkthrough from `create` to `delete`.
 - ⚡ **[Synchronization & rebasing](docs/user-guide/synchronization-and-rebasing.md)**: Rebasing with `sync` and `update`, resolving conflicts, and resetting.
@@ -251,4 +252,4 @@ Licensed under the [MIT License](LICENSE).
 
 ![AI Assisted](https://img.shields.io/badge/AI-Assisted-blue?style=flat-square)
 
-Developed with the assistance of AI tools. All AI-generated code is reviewed, tested, and refined by human maintainers.
+This project was developed with the assistance of AI tools. All AI-generated code has been reviewed, tested, and manually refined.

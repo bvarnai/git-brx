@@ -6,7 +6,7 @@
 
 ## Platform support status
 
-| Platform / Backend | Issue tracker | Code review (PR / MR) | Status | Guide & documentation |
+| Platform / backend | Issue tracker | Code review (PR / MR) | Status | Guide & documentation |
 | :--- | :--- | :--- | :--- | :--- |
 | ✅ **GitHub** | GitHub Issues | GitHub Pull Requests | **Done** | [GitHub integration guide](platforms/github.md) |
 | ⌛ **Atlassian (Bitbucket + Jira)** | Jira Server / DC | Bitbucket Server / DC | *Implemented (untested)* | [Atlassian integration guide](platforms/atlassian.md) |
@@ -16,7 +16,7 @@
 
 ---
 
-## 1. Zero-config & partial-config modes (Remote auto-detection)
+## 1. Zero-config & partial-config modes (remote auto-detection)
 
 ### Zero-config mode
 For GitHub repositories, **no `.git-brx.yaml` file is needed**.

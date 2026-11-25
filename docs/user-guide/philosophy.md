@@ -1,4 +1,4 @@
-# Core philosophy & mental model
+# Core concepts & workflow
 
 ## 1. Workflow over commands: the origin of `git-brx`
 
@@ -75,10 +75,10 @@ Once you name a branch, `git-brx` selects the matching `sync` strategy and PR me
 ```mermaid
 flowchart TD
     subgraph S1 ["Stage 1: Create"]
-        Issue["Tracker Issue<br/>(task-101)"] -->|"git brx create"| WorkBranch["Branch<br/>(issue/task-101)"]
+        Issue["Tracker issue<br/>(task-101)"] -->|"git brx create"| WorkBranch["Branch<br/>(issue/task-101)"]
     end
 
-    subgraph S2 ["Stage 2: Sync & Publish"]
+    subgraph S2 ["Stage 2: Sync & publish"]
         WorkBranch -->|"Write code"| LocalCommits["Local commits"]
         LocalCommits -->|"git brx sync"| Rebased["Rebased onto base"]
         Rebased -->|"git brx publish"| RemoteBranch["Leased push to origin"]
@@ -100,14 +100,14 @@ Checks that the issue exists in GitHub or Jira, validates the branch prefix agai
 ### Stage 2: Sync & publish (`git brx sync` / `git brx publish`)
 As teammates merge changes into `main`, run `git brx sync` to keep your branch current (rebasing `issue/*` branches or merging `main` into `feature/*` and `epic/*` branches).
 
-Run `git brx publish` to push your branch to `origin` using `--force-with-lease` and configure upstream tracking.
+Run `git brx publish` to push your branch to `origin` and configure upstream tracking (`--force-with-lease` on `issue/*` and `feature/*`, fast-forward-only on `epic/*` and `release/*`).
 
 ### Stage 3: Review (`git brx review`)
 When the change is ready for review, `git brx review` opens a pull request:
-1. Links the parent issue (`Closes #<id>`).
+1. Links the parent issue (`Closes #<id>`)—and on `epic/*` branches, aggregates `Closes #<N>` references from merged child pull requests.
 2. Populates your repository's PR template.
 3. Matches modified file paths, issue labels, or branch patterns to assign reviewers (excluding the PR author).
 4. Appends merge strategy instructions (`Squash and merge` or `Create a merge commit`).
 
 ### Stage 4: Delete (`git brx delete`)
-After the PR is merged and the remote branch is removed on `origin`, `git brx delete` switches your working tree back to `main`, deletes the local branch, and prunes stale `origin/*` tracking refs.
+After the PR is merged and the remote branch is removed on `origin` (or removed via `--delete-remote`), `git brx delete` switches your working tree back to the recorded parent base (`brx-base`) or `main`, deletes the local branch, and prunes stale `origin/*` tracking refs.

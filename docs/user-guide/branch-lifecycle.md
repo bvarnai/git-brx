@@ -10,8 +10,8 @@ This guide walks through the lifecycle of a branch in `git-brx`, from creating a
 
 | Branch type | Scope & purpose | Lifespan | Default `sync` strategy | Default PR merge strategy |
 | :--- | :--- | :--- | :--- | :--- |
-| **`issue/<id>`** | Bug fixes, small tasks, tech debt | Short-lived | **Rebase** (`git rebase`) | **Squash & Merge** |
-| **`feature/<id>`** | Backlog stories, multi-person features | Short-to-medium | **Merge** (`git merge`) | **Squash & Merge** *(or Merge commit)* |
+| **`issue/<id>`** | Bug fixes, small tasks, tech debt | Short-lived | **Rebase** (`git rebase`) | **Squash & merge** |
+| **`feature/<id>`** | Backlog stories, multi-person features | Short-to-medium | **Merge** (`git merge`) | **Squash & merge** *(or Merge commit)* |
 | **`epic/<id>`** | Multi-PR initiatives | Long-lived | **Merge** (`git merge`) | **Merge commit (`--no-ff`)** |
 | **`release/<version>`** *(optional)* | Optional release stabilization or maintenance / backporting | On demand / maintained | N/A *(or explicit `--merge`)* | Tagged *(not required for simple releases)* |
 | **`main` / `master`** | Default base branch | Permanent | N/A | Protected base branch |
@@ -164,7 +164,7 @@ git brx review
    - **Branch cleanup:** Delete source branch `issue/task-101` after merging
    ```
    - `issue/*` and `feature/*` branches default to **Squash and merge** (whether targeting `main` or `epic/*`).
-   - `epic/*` and `release/*` branches default to **Create a merge commit** when acting as the PR source branch (e.g., `epic/*` into `main`).
+   - `epic/*` branches infer `epic(<scope>):` for unprefixed issue titles, default to **Create a merge commit** with descriptive merge instructions (`Merge branch 'epic/<id>' into <target>: <summary>`), and automatically append `Closes #<N>` lines from merged child PRs targeting the epic (warning when total closing references exceed GitHub's 10-issue auto-close limit). `release/*` branches also default to **Create a merge commit** when acting as the PR source branch.
    - Override the merge strategy for a specific PR with `-s, --strategy <squash|merge|rebase>` or create a draft PR with `--draft`:
      ```bash
      git brx review -s merge

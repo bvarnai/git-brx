@@ -54,7 +54,7 @@ review:
 
 ---
 
-## 3. Authentication & Personal Access Token (PAT)
+## 3. Authentication & personal access token (PAT)
 
 Export your Atlassian Personal Access Token (HTTP Bearer token) in `GIT_BRX_TOKEN`:
 
