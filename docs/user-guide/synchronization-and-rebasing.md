@@ -6,7 +6,7 @@ This guide covers how `git-brx` syncs branches with `main`, pulls collaborator c
 
 ## 1. Synchronizing with base (`git brx sync`)
 
-As teammates merge changes into `main`, run `git brx sync` to incorporate upstream commits into your topic branch:
+As teammates merge changes into `main`, run `git brx sync` to incorporate upstream commits into your work branch:
 
 ```bash
 # Sync with your recorded brx-base (or main/master by default):

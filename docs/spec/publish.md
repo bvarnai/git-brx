@@ -17,7 +17,7 @@
   - Must NOT be in a detached HEAD state (`git symbolic-ref -q HEAD`).
   - Remote `origin` must exist.
   - Protected branch check:
-    - `main` / `master`: Force-push with lease is strictly forbidden (use `--no-force` or switch to a topic branch).
+    - `main` / `master`: Force-push with lease is strictly forbidden (use `--no-force` or switch to a work branch).
     - `epic/*` / `release/*`: Always push fast-forward only (no `--force-with-lease`).
 
 ## 3. Core Execution Flow
@@ -29,7 +29,7 @@
      - If `<branch>` is `main` or `master` and `!opts.NoForce`: fail with Exit Code `2` (`Refusing to force-push with lease directly to protected '<branch>' branch`).
      - Determine `forceWithLease`:
        - For `epic/*` and `release/*`: `forceWithLease = false` (always fast-forward only to protect shared integration history under child branches).
-       - For `issue/*`, `feature/*`, and custom topic branches: `forceWithLease = !opts.NoForce`.
+       - For `issue/*`, `feature/*`, and custom branches: `forceWithLease = !opts.NoForce`.
 2. **Upstream Tracking Evaluation:**
    - Inspect existing upstream configuration:
      ```bash

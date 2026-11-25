@@ -3,7 +3,7 @@
 ## 1. Command Signature
 - **Usage:** `git-brx create [flags] <branch>`
 - **Arguments:**
-  - `<branch>` *(mandatory)*: Name of the topic branch to create (e.g., `issue/VSB-1234`, `feature/VSB-5678`).
+  - `<branch>` *(mandatory)*: Name of the work branch to create (e.g., `issue/VSB-1234`, `feature/VSB-5678`).
 - **Flags:**
   - Standard global flags: `--help` (`-h`), `--version`, `--verbose` (`-v`), `--quiet` (`-q`), `--no-color`.
   - Feature flags:
@@ -60,7 +60,7 @@
    - **Base resolution & validation:**
      - If `--base <base>` is specified: verify `<base>` exists locally or as `origin/<base>` (fetching if online). If missing, fail with Exit Code `3`. If local `<base>` is clean and strictly behind `origin/<base>`, fast-forward it (or fork directly from `origin/<base>` if `<base>` is checked out in another linked worktree).
      - If `--base` is omitted: resolve the currently attached branch (or default branch if unborn/detached) as `<base>`.
-       - If the active branch is `issue/*` or `feature/*`, emit `[git-brx] Warning: Creating '<branch>' from topic branch '<current>' instead of default branch` with hint `Pass '--base main' or run 'git-brx select main' first if this was unintentional`.
+       - If the active branch is `issue/*` or `feature/*`, emit `[git-brx] Warning: Creating '<branch>' from '<current>' instead of default branch` with hint `Pass '--base main' or run 'git-brx select main' first if this was unintentional`.
        - If online and the active branch is behind `origin/<current>`, emit `[git-brx] Warning: Base branch '<current>' is behind 'origin/<current>'` with hint `Run 'git-brx update' before branching if you need the latest commits`.
    - **Dirty worktree warning:** If uncommitted local modifications exist (`git diff-index --quiet HEAD --` or untracked tracked-collision risk), emit `[git-brx] Warning: Uncommitted local changes will be carried over to '<branch>'`.
    - **Checkout & parent tracking:**
@@ -99,4 +99,4 @@
 | `TC-CRT-01` | Currently on `main`, branch `issue/42` already exists locally | `git-brx create issue/42 -y` | Exits `0`, checks out `issue/42`, logs `Branch 'issue/42' already exists; switched to 'issue/42'`. |
 | `TC-CRT-02` | Branch `issue/43` exists only on `origin`, not locally | `git-brx create issue/43 -y` | Fetches `issue/43`, creates local tracking checkout, exits `0`. |
 | `TC-CRT-03` | Currently on `main`, `epic/10` exists locally or on `origin` | `git-brx create issue/44 -y --base epic/10` | Forks `issue/44` from `epic/10` (or `origin/epic/10`), sets `branch.issue/44.brx-base=epic/10`, exits `0`. |
-| `TC-CRT-04` | Currently on `issue/10` with uncommitted edits | `git-brx create issue/45 -y` | Emits topic-branch fork warning and dirty-worktree warning, creates `issue/45`, exits `0`. |
+| `TC-CRT-04` | Currently on `issue/10` with uncommitted edits | `git-brx create issue/45 -y` | Emits branch-fork warning and dirty-worktree warning, creates `issue/45`, exits `0`. |

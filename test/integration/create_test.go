@@ -521,12 +521,12 @@ func TestCreateIntegration(t *testing.T) {
 		assert.Contains(t, stderr.String(), "Base branch 'epic/missing' not found")
 	})
 
-	t.Run("CreateWarningsForTopicForkAndDirtyTree", func(t *testing.T) {
+	t.Run("CreateWarningsForBranchForkAndDirtyTree", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")
 		h.Git("remote", "add", "origin", "git@github.com:myorg/myrepo.git")
 		h.CreateBranch("issue/10")
-		h.CommitFile("topic.txt", "topic", "Topic commit")
+		h.CommitFile("branch.txt", "work", "Branch commit")
 
 		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, "dirty.txt"), []byte("wip"), 0644))
 
@@ -534,7 +534,7 @@ func TestCreateIntegration(t *testing.T) {
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"create", "--offline", "issue/45"}, &stdout, &stderr)
 
 		assert.Equal(t, int(errcode.ExitSuccess), code)
-		assert.Contains(t, stderr.String(), "Creating 'issue/45' from topic branch 'issue/10' instead of default branch")
+		assert.Contains(t, stderr.String(), "Creating 'issue/45' from 'issue/10' instead of default branch")
 		assert.Contains(t, stderr.String(), "Uncommitted local changes will be carried over to 'issue/45'")
 		assert.Equal(t, "issue/10", strings.TrimSpace(h.Git("config", "--local", "--get", "branch.issue/45.brx-base")))
 	})

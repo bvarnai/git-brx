@@ -268,7 +268,7 @@ For coding agents that do not support skills (or repositories that want an alway
 ```markdown
 # Git Workflow Policy
 - Always use `git-brx` (or `git brx`) CLI commands for Git branch operations:
-  - Creating topic branches: `git brx create <branch> -y`
+  - Creating work branches: `git brx create <branch> -y`
   - Upstream synchronization: `git brx sync`
   - Pulling collaborator commits: `git brx update`
   - Pushing branches: `git brx publish`

@@ -3,7 +3,7 @@ name: git-brx
 description: >-
   Runbook for using git-brx for Git branch lifecycle management, ticket branch creation,
   upstream synchronization, pair programming updates, pull requests, and branch cleanup.
-  Activate when creating topic branches, working on issues, syncing branches, pushing PRs,
+  Activate when creating branches, working on issues, syncing branches, pushing PRs,
   or managing git workflow.
 ---
 
@@ -12,7 +12,7 @@ description: >-
 This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unified CLI for branch lifecycle management.
 
 > [!IMPORTANT]
-> **Never use raw Git commands** for topic branch creation (`git checkout -b`), force pushing (`git push -f`), or ad-hoc pull request creation when `git-brx` is available. Always use the corresponding `git brx` subcommands.
+> **Never use raw Git commands** for branch creation (`git checkout -b`), force pushing (`git push -f`), or ad-hoc pull request creation when `git-brx` is available. Always use the corresponding `git brx` subcommands.
 
 ---
 
@@ -34,7 +34,7 @@ This skill guides the AI assistant in using `git-brx` (or `git brx`) as the unif
 
 ## 2. Standard End-to-End Workflow
 
-### Step 1: Topic branch creation (`create`)
+### Step 1: Branch creation (`create`)
 When starting work on an issue or ticket:
 1. Ensure your local default branch is current:
    ```bash
@@ -66,7 +66,7 @@ When starting work on an issue or ticket:
   - For `issue/*`: Executes a linear rebase on top of latest `main`.
   - For `feature/*`: Creates a true merge commit from `main`.
 - **Syncing with Collaborator on Shared Branch:**
-  If a teammate pushed commits to the same topic branch:
+  If a teammate pushed commits to the same work branch:
   ```bash
   git brx update
   ```

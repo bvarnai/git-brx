@@ -27,7 +27,7 @@ func TestNameIntegration(t *testing.T) {
 		assert.Empty(t, stderr.String(), "stderr must be empty on attached clean branch")
 	})
 
-	t.Run("TopicBranchStdoutPurity", func(t *testing.T) {
+	t.Run("WorkBranchStdoutPurity", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("init.txt", "init", "Initial commit")
 		h.CreateBranch("issue/VSB-500")

@@ -1,6 +1,6 @@
 package domain
 
-// BranchType defines recognized topic and mainline branch categories.
+// BranchType defines recognized work and base branch categories.
 type BranchType string
 
 const (

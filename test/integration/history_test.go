@@ -93,31 +93,53 @@ func TestHistoryIntegration(t *testing.T) {
 		assert.NotContains(t, out, "Commit in docs")
 	})
 
-	t.Run("TopicBranchModeFiltersToTopicBranchCommits", func(t *testing.T) {
+	t.Run("DeltaFlagFiltersToBranchCommits", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("base.txt", "base", "Base master commit")
 		h.CreateBranch("issue/VSB-200")
-		h.CommitFile("topic.txt", "topic", "Topic branch commit only")
+		h.CommitFile("branch.txt", "branch", "Branch commit only")
 
 		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--delta", "--no-color"}, &stdout, &stderr)
 
 		assert.Equal(t, int(errcode.ExitSuccess), code)
 		out := stdout.String()
-		assert.Contains(t, out, "Topic branch commit only")
+		assert.Contains(t, out, "Branch commit only")
 		assert.NotContains(t, out, "Base master commit")
 	})
 
-	t.Run("TopicBranchModeOnMasterBranchLogsNoticeAndExitsCleanly", func(t *testing.T) {
+	t.Run("DeltaFlagOnMasterBranchLogsNoticeAndExitsCleanly", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("base.txt", "base", "Base master commit")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--delta", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code)
+		assert.Empty(t, stdout.String())
+		assert.Contains(t, stderr.String(), "You are on base branch 'master'; there is no branch delta to display")
+	})
+
+	t.Run("RemovedTopicFlagReturnsUsageError", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("base.txt", "base", "Base master commit")
 
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
 
-		assert.Equal(t, int(errcode.ExitSuccess), code)
-		assert.Empty(t, stdout.String())
-		assert.Contains(t, stderr.String(), "You are on base branch 'master'; there is no topic branch delta to display")
+		assert.Equal(t, int(errcode.ExitUsageError), code)
+		assert.Contains(t, stderr.String(), "unknown flag: --topic")
+	})
+
+	t.Run("BranchAndDeltaFlagsAreMutuallyExclusive", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("base.txt", "base", "Base master commit")
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--branch", "master", "--delta", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitUsageError), code)
+		assert.Contains(t, stderr.String(), "Cannot specify both --branch and --delta")
 	})
 
 	t.Run("BranchFlagScopesToNamedBranch", func(t *testing.T) {
@@ -244,7 +266,7 @@ func TestHistoryIntegration(t *testing.T) {
 		assert.Empty(t, stdout.String())
 	})
 
-	t.Run("TopicBranchUsesRecordedEpicBaseAndOriginFallback", func(t *testing.T) {
+	t.Run("DeltaFlagUsesRecordedEpicBaseAndOriginFallback", func(t *testing.T) {
 		h := NewHarness(t)
 		h.CommitFile("base.txt", "base", "Base master commit")
 		h.SetupRemoteBare()
@@ -260,7 +282,7 @@ func TestHistoryIntegration(t *testing.T) {
 
 		// TC-HIS-01: local epic/10 exists -> diffs epic/10..issue/44 (excludes Epic integration commit)
 		var stdout, stderr bytes.Buffer
-		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--delta", "--no-color"}, &stdout, &stderr)
 		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stdout.String(), "Slice 44 commit")
 		assert.NotContains(t, stdout.String(), "Epic integration commit")
@@ -269,7 +291,7 @@ func TestHistoryIntegration(t *testing.T) {
 		h.Git("branch", "-D", "epic/10")
 		stdout.Reset()
 		stderr.Reset()
-		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--topic", "--no-color"}, &stdout, &stderr)
+		code = cli.RunInDir(context.Background(), h.RepoDir, []string{"history", "--delta", "--no-color"}, &stdout, &stderr)
 		assert.Equal(t, int(errcode.ExitSuccess), code)
 		assert.Contains(t, stdout.String(), "Slice 44 commit")
 		assert.NotContains(t, stdout.String(), "Epic integration commit")

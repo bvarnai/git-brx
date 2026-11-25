@@ -103,7 +103,7 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 
 	switch currBranch.Type {
 	case domain.BranchTypeIssue, domain.BranchTypeFeature, domain.BranchTypeEpic:
-		// Eligible topic branch
+		// Eligible work branch
 	default:
 		return errcode.NewError(errcode.ErrPreconditionRepo, "You must be on an 'issue', 'feature', or 'epic' branch to create a review")
 	}

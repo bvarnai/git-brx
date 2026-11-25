@@ -64,7 +64,7 @@ Every tracked code change starts with an issue in GitHub or Jira:
 
 ```mermaid
 flowchart LR
-    A["1. Issue<br/>(GitHub / Jira)"] -->|"git brx create"| B["2. Topic branch<br/>(issue/task-101)"]
+    A["1. Issue<br/>(GitHub / Jira)"] -->|"git brx create"| B["2. Branch<br/>(issue/task-101)"]
     B -->|"git brx sync / update"| C["3. Work & sync<br/>(Rebase & leased push)"]
     C -->|"git brx review"| D["4. Code review<br/>(PR with checklist & reviewers)"]
     D -->|"git brx delete"| E["5. Cleanup<br/>(Local deleted & origin pruned)"]
@@ -77,7 +77,7 @@ flowchart LR
 Run the full branch lifecycle in 5 commands:
 
 ```bash
-# 1. Validate the issue in your tracker and create the topic branch
+# 1. Validate the issue in your tracker and create a work branch
 git brx create issue/task-101
 
 # ... write code, make regular git commits ...
@@ -105,7 +105,7 @@ Once `git-brx` is in your `PATH`, Git automatically exposes it as `git brx <comm
 
 | Command | Purpose |
 | :--- | :--- |
-| [`git brx create`](docs/user-guide/branch-lifecycle.md#2-branch-creation-git-brx-create) | Validates the issue in your tracker and creates a local topic branch. |
+| [`git brx create`](docs/user-guide/branch-lifecycle.md#2-branch-creation-git-brx-create) | Validates the issue in your tracker and creates a local branch. |
 | [`git brx select`](docs/user-guide/branch-lifecycle.md#3-branch-switching--exploration-git-brx-select-name-history) | Fetches remotes and switches branches with typo suggestions and dirty-tree warnings. |
 | [`git brx sync`](docs/user-guide/synchronization-and-rebasing.md#1-synchronizing-with-base-git-brx-sync) | Syncs the active branch with base (rebases `issue/*`, merges `feature/*` and `epic/*`). |
 | [`git brx update`](docs/user-guide/synchronization-and-rebasing.md#2-updating-from-remote-git-brx-update) | Rebases local commits onto `origin/<current-branch>`. |
@@ -114,7 +114,7 @@ Once `git-brx` is in your `PATH`, Git automatically exposes it as `git brx <comm
 | [`git brx publish`](docs/user-guide/branch-lifecycle.md#4-leased-publishing-git-brx-publish) | Pushes the current branch to `origin` with `--force-with-lease` and sets upstream tracking. |
 | [`git brx review`](docs/user-guide/branch-lifecycle.md#5-code-review-submission-git-brx-review) | Opens a pull request with automated reviewer assignment and merge instructions. |
 | [`git brx delete`](docs/user-guide/branch-lifecycle.md#6-safe-post-merge-deletion-git-brx-delete) | Verifies remote branch deletion, switches to `main`, and deletes the local branch. |
-| [`git brx history`](docs/user-guide/command-reference.md#git-brx-history) | Prints a formatted commit graph (supports `--topic` branch filtering). |
+| [`git brx history`](docs/user-guide/command-reference.md#git-brx-history) | Prints a formatted commit graph (supports `--delta` branch filtering). |
 | [`git brx name`](docs/user-guide/command-reference.md#git-brx-name) | Prints the active branch name to `stdout` for use in scripts. |
 | [`git brx config`](docs/user-guide/command-reference.md#git-brx-config) | Prints the resolved cascading configuration and source provenance in YAML. |
 | [`git brx completion`](docs/spec/completion.md) | Generates shell completion scripts (`bash`, `zsh`, `fish`, `powershell`). |

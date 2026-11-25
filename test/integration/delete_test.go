@@ -27,9 +27,9 @@ func TestDeleteIntegration(t *testing.T) {
 		h.Git("remote", "add", "origin", originDir)
 		h.Git("push", "-u", "origin", "master")
 
-		// Create local topic branch without publishing
+		// Create local branch without publishing
 		h.CreateBranch("issue/VSB-101")
-		h.CommitFile("topic.txt", "work", "Topic commit")
+		h.CommitFile("work.txt", "work", "Work commit")
 
 		var stdout, stderr bytes.Buffer
 		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"delete", "--no-color"}, &stdout, &stderr)
@@ -53,7 +53,7 @@ func TestDeleteIntegration(t *testing.T) {
 		h.Git("remote", "add", "origin", originDir)
 		h.Git("push", "-u", "origin", "master")
 
-		// Create topic branch and push to origin
+		// Create work branch and push to origin
 		h.CreateBranch("feature/auth")
 		h.CommitFile("auth.go", "package auth", "Auth commit")
 		h.Git("push", "-u", "origin", "feature/auth")
@@ -78,7 +78,7 @@ func TestDeleteIntegration(t *testing.T) {
 		h.Git("remote", "add", "origin", originDir)
 		h.Git("push", "-u", "origin", "master")
 
-		// Create and push topic branch
+		// Create and push work branch
 		h.CreateBranch("issue/VSB-102")
 		h.CommitFile("w.txt", "w", "commit")
 		h.Git("push", "-u", "origin", "issue/VSB-102")
@@ -140,9 +140,9 @@ func TestDeleteIntegration(t *testing.T) {
 		h.Git("remote", "add", "origin", originDir)
 		h.Git("push", "-u", "origin", "master")
 
-		// Create local topic branch without publishing
+		// Create local branch without publishing
 		h.CreateBranch("issue/VSB-200")
-		h.CommitFile("topic.txt", "work", "Topic commit")
+		h.CommitFile("work.txt", "work", "Work commit")
 
 		// Switch back to master
 		h.Git("checkout", "master")

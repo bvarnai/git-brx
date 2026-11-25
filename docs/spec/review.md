@@ -21,7 +21,7 @@
 - **Git state assertions (e.g., dirty working tree check):**
   - Must be inside a Git working tree (`git rev-parse --is-inside-work-tree` == `true`).
   - Must NOT be in a detached HEAD state (`git symbolic-ref -q HEAD`).
-  - Active branch must be an eligible topic branch (`issue/*`, `feature/*`, or `epic/*`).
+  - Active branch must be an eligible work branch (`issue/*`, `feature/*`, or `epic/*`).
   - Source branch must already be published to remote origin (`git ls-remote --heads origin <branch>`).
 
 ## 3. Core Execution Flow
@@ -63,9 +63,9 @@
    - Else if `--draft` is set, skip automated `review.mapping` resolution (`reviewers = nil`) so draft PRs do not auto-ping mapped reviewers.
    - Otherwise, resolve reviewers using structured `config.review.mapping`:
      - **Resolution Hierarchy:**
-       1. **Changed file paths (`review.mapping.paths`):** Evaluates modified files on topic branch (`git diff --name-only origin/<target>...HEAD`, falling back to `<target>...HEAD` if needed) against path globs (e.g. `internal/ui/**`, `docs/**`). Collects and deduplicates all matched reviewers.
+       1. **Changed file paths (`review.mapping.paths`):** Evaluates modified files on the branch (`git diff --name-only origin/<target>...HEAD`, falling back to `<target>...HEAD` if needed) against path globs (e.g. `internal/ui/**`, `docs/**`). Collects and deduplicates all matched reviewers.
        2. **Issue labels or components (`review.mapping.labels`):** If no path rules matched, matches issue labels (GitHub) or components (Jira).
-       3. **Branch patterns (`review.mapping.branches`):** If no labels matched, matches topic branch name against glob patterns (e.g. `epic/*`).
+       3. **Branch patterns (`review.mapping.branches`):** If no labels matched, matches branch name against glob patterns (e.g. `epic/*`).
        4. **Default fallback (`review.mapping.default`):** Falls back to default reviewer if no prior rules matched.
      - **Author Exclusion:** Automatically excludes the PR author (detected from GitHub login or local Git user identity) from the candidate reviewer list across all tiers.
      - Reviewer values support list format (`[alice, bob]`), comma-separated string (`"alice, bob"`), or single string (`alice`).

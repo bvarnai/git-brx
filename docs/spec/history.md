@@ -9,7 +9,7 @@
   - Extension flags:
     - `--limit` (`-l` `<int>`): Limit the number of commits rendered in the graph (default: unconstrained or pager-governed).
     - `--branch` (`-b` `<string>`): Scope history to a specific named branch.
-    - `--topic`: Show only commits on active topic branch relative to its recorded parent base (`branch.<current>.brx-base`) or the repository default branch (`main`/`master`).
+    - `--delta`: Show only commits on the current branch relative to its recorded parent base (`branch.<current>.brx-base`) or the repository default branch (`main`/`master`).
     - `--search` (`-s` `<string>`): Filter commits whose message matches the query string (case-insensitive).
     - `--stat`: Show diffstat summary of changed files for each commit.
     - `--patch` (`-p`): Show code diff patch for each commit.
@@ -31,7 +31,7 @@
    - Limit: If `--limit` > 0, append `--max-count=<N>`.
    - Search: If `--search` is non-empty, append `--grep=<query>` and `-i`.
    - Diff peeking: If `--stat` is active, append `--stat`. If `--patch` / `-p` is active, append `-p`.
-   - Branch relativity: If `--branch` / `-b` is provided, append `<branch>`. If `--topic` is active, resolve base branch in order: (1) recorded `branch.<current>.brx-base` (falling back to default if missing locally and remotely), (2) repository default branch (`main`/`master`). If the resolved base exists only as `origin/<base>`, use `origin/<base>` as the diff base. Append `<baseRef>..<current_branch>`. If current branch is identical to base branch, emit notice (`[git-brx] You are on base branch '<base>'; there is no topic branch delta to display`) and return cleanly without outputting the full base branch log.
+   - Branch relativity: If `--branch` / `-b` is provided, append `<branch>`. If `--delta` is active, resolve base branch in order: (1) recorded `branch.<current>.brx-base` (falling back to default if missing locally and remotely), (2) repository default branch (`main`/`master`). If the resolved base exists only as `origin/<base>`, use `origin/<base>` as the diff base. Append `<baseRef>..<current_branch>`. If current branch is identical to base branch, emit notice (`[git-brx] You are on base branch '<base>'; there is no branch delta to display`) and return cleanly without outputting the full base branch log.
    - Path scoping: If `<path>` is provided, check if path is a directory. If directory, append `-- <path>`. If regular file or past path, append `--follow -- <path>`.
 4. **Color & Pager Management:** If `--no-color` or `NO_COLOR` is active, pass `--no-color` to Git. If `stdout` is connected to a TTY, attach standard Git pager configuration (`PAGER` or `less`).
 
@@ -51,5 +51,7 @@
 ## 6. Black-box verification scenarios
 | Scenario ID | Given | When | Then (exit code, output, state) |
 | :--- | :--- | :--- | :--- |
-| `TC-HIS-01` | On `issue/44` forked from `epic/10` (`branch.issue/44.brx-base=epic/10`) | `git-brx history --topic` | Runs `git log ... epic/10..issue/44` instead of `main..issue/44`, exits `0`. |
-| `TC-HIS-02` | `branch.issue/44.brx-base=epic/10` where only `origin/epic/10` exists locally | `git-brx history --topic` | Uses `origin/epic/10..issue/44`, exits `0`. |
+| `TC-HIS-01` | On `issue/44` forked from `epic/10` (`branch.issue/44.brx-base=epic/10`) | `git-brx history --delta` | Runs `git log ... epic/10..issue/44` instead of `main..issue/44`, exits `0`. |
+| `TC-HIS-02` | `branch.issue/44.brx-base=epic/10` where only `origin/epic/10` exists locally | `git-brx history --delta` | Uses `origin/epic/10..issue/44`, exits `0`. |
+| `TC-HIS-03` | Repository with commits | `git-brx history --topic` | Rejects removed flag with unknown-flag error and exits `2`. |
+| `TC-HIS-04` | Repository with commits | `git-brx history --branch main --delta` | Fails with `Cannot specify both --branch and --delta` and exits `2`. |

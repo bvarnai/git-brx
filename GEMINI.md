@@ -53,7 +53,7 @@ In accordance with the [Google Go Style Guide](https://google.github.io/stylegui
 # Git Workflow Policy
 
 - Always use `git-brx` (or `git brx`) CLI commands for Git branch operations:
-  - Creating topic branches: `git brx create <branch> -y`
+  - Creating work branches: `git brx create <branch> -y`
   - Upstream synchronization: `git brx sync`
   - Pulling collaborator commits: `git brx update`
   - Pushing branches: `git brx publish`

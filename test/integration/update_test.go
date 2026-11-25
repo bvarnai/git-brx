@@ -21,7 +21,7 @@ func TestUpdateIntegration(t *testing.T) {
 		remoteBare := h.SetupRemoteBare()
 		h.Git("push", "-u", "origin", "master")
 
-		// Create topic branch and publish it to origin
+		// Create work branch and publish it to origin
 		h.CreateBranch("issue/VSB-200")
 		h.CommitFile("issue.txt", "my work", "Local commit")
 		h.Git("push", "-u", "origin", "issue/VSB-200")
