@@ -104,6 +104,12 @@ type SCMProvider interface {
 	FormatClosingIssue(issueKey string) string
 }
 
+// ChildClosingIssuesProvider is an optional interface implemented by SCM providers
+// that can discover closing issue keys from pull requests merged into a given base branch.
+type ChildClosingIssuesProvider interface {
+	ListMergedChildClosingIssues(ctx context.Context, baseBranch string) ([]string, error)
+}
+
 var mergeConvPrefixRegex = regexp.MustCompile(`^[a-z]+(?:\([^)]+\))?:\s*(.+)$`)
 
 func mergeCommitSummary(opts MergeInstructionOptions) string {

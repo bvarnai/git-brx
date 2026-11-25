@@ -74,6 +74,9 @@
      - Load template from `config.review.template`, or auto-discover standard repository templates (`.github/pull_request_template.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `pull_request_template.md`).
      - If custom template is present, append horizontal divider (`---`).
      - Append closing reference (`Closes #<issueKey>`) if branch is linked to an issue.
+       - On `epic/*` branches, if the configured SCM provider implements `ChildClosingIssuesProvider`, `git-brx` queries merged pull requests targeting `<branch>`, extracts unique same-repo closing references (`Closes`/`Fixes`/`Resolves #<N>`), and appends one `Closes #<N>` line per child issue in ascending numeric order beneath `Closes #<epic>` (skipping duplicates of `<issueKey>`).
+       - Child lookup errors emit a non-fatal `stderr` warning and proceed with `Closes #<epic>` only.
+       - If total closing references exceed `10`, emit a non-fatal `stderr` warning noting GitHub's 10-issue auto-close limit.
      - Append `### Merge instructions` block via `SCMProvider.FormatMergeInstructions(opts)` (unless disabled via `config.review.merge.instructions: false` or `--no-merge-instructions` flag; overridden by `--merge-instructions`):
        - **Merge Strategy Resolution Hierarchy:**
          1. CLI override (`-s, --strategy <squash|merge|rebase>`).
@@ -132,7 +135,7 @@
 
 ## 5. Edge Cases & Behavioral Notes
 - **Pre-flight Remote Sync & Target Verification:** Verifies that the remote tracking branch exists on `origin` and matches local `HEAD` before submitting pull request creation requests, and verifies that `<targetBranch>` exists on `origin`.
-- **Non-Default Target Closing References:** Child PRs targeting `epic/*` retain `Closes #<issueKey>` in the PR body for issue cross-linking, though GitHub only auto-closes `#<issueKey>` when the PR merges into the repository default branch (`main`).
+- **Non-Default Target Closing References:** Child PRs targeting `epic/*` retain `Closes #<issueKey>` in the PR body for issue cross-linking, though GitHub only auto-closes `#<issueKey>` when the PR merges into the repository default branch (`main`). To avoid orphaned child issues, `git-brx review` on `epic/*` automatically aggregates merged child `Closes #<N>` references into the epic PR description so GitHub auto-closes them when the epic merges into the default branch (subject to GitHub's 10 linked-issues-per-PR cap).
 - **Secure In-Memory Credential Handling:** Authentication credentials and tokens are maintained exclusively within process memory for API calls, preventing secrets exposure in process lists.
 - **Reviewer List Parsing:** `-r` supports both repeated flags and comma-separated usernames, deduplicating while preserving order.
 
@@ -146,3 +149,4 @@
 | `TC-REV-05` | Published `issue/50` with `review.mapping.default` configured | `git-brx review --draft` / `git-brx review --draft -r alice` | Sends `draft: true` in PR payload; skips automated `review.mapping` reviewers when `-r` is omitted and assigns `["alice"]` when `-r alice` is explicitly passed, exits `0`. |
 | `TC-REV-06` | `issue/50` already has an open PR `#77` | `git-brx review` | Queries existing PR and exits `6` with URL for `#77`. |
 | `TC-REV-07` | `origin/epic/10` exists remotely, no local `epic/10` | `git-brx review epic/10` | Computes `ChangedFiles` against `origin/epic/10...HEAD` for `review.mapping.paths`. |
+| `TC-REV-08` | Published `epic/91` with merged child PRs closing `#94`, `#92` and a closed-unmerged PR referencing `#99` | `git-brx review main` | Epic PR description contains `Closes #91`, `Closes #92`, `Closes #94` (excludes `#99`), logs child closing count to `stderr`, and exits `0`. |

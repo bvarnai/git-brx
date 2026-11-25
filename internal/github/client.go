@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -349,6 +352,73 @@ func (c *Client) ResolveReviewers(opts domain.ReviewerResolutionOptions) []strin
 // FormatMergeInstructions renders standard GitHub-aligned merge instructions.
 func (c *Client) FormatMergeInstructions(opts domain.MergeInstructionOptions) string {
 	return domain.FormatDefaultMergeInstructions(opts)
+}
+
+var _ domain.ChildClosingIssuesProvider = (*Client)(nil)
+
+var githubClosingIssueRegex = regexp.MustCompile(`(?i)\b(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved):?[ \t]+#(\d+)\b`)
+
+type rawMergedPRItem struct {
+	Number   int     `json:"number"`
+	Body     string  `json:"body"`
+	MergedAt *string `json:"merged_at"`
+}
+
+// ListMergedChildClosingIssues queries GitHub for merged pull requests targeting baseBranch
+// and returns deduplicated same-repo closing issue keys sorted in ascending numeric order.
+func (c *Client) ListMergedChildClosingIssues(ctx context.Context, baseBranch string) ([]string, error) {
+	endpoint := fmt.Sprintf("%s/repos/%s/%s/pulls?base=%s&state=closed&per_page=100",
+		c.BaseURL, c.Owner, c.Repo, url.QueryEscape(baseBranch))
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, errcode.WrapError(errcode.ErrGeneral, err, "Failed to create HTTP request")
+	}
+
+	c.setHeaders(httpReq)
+
+	resp, err := c.HTTPClient.Do(httpReq)
+	if err != nil {
+		return nil, errcode.WrapError(errcode.ErrPreconditionRemote, err, "GitHub API request failed")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.handleErrorResponse(resp, "list merged pull requests for base branch %s", baseBranch)
+	}
+
+	var rawList []rawMergedPRItem
+	if err := json.NewDecoder(resp.Body).Decode(&rawList); err != nil {
+		return nil, errcode.WrapError(errcode.ErrAPI, err, "Failed to parse pull request list response")
+	}
+
+	seen := make(map[int]struct{})
+	var nums []int
+	for _, pr := range rawList {
+		if pr.MergedAt == nil || strings.TrimSpace(*pr.MergedAt) == "" {
+			continue
+		}
+		for _, m := range githubClosingIssueRegex.FindAllStringSubmatch(pr.Body, -1) {
+			if len(m) < 2 {
+				continue
+			}
+			n, convErr := strconv.Atoi(m[1])
+			if convErr != nil {
+				continue
+			}
+			if _, exists := seen[n]; !exists {
+				seen[n] = struct{}{}
+				nums = append(nums, n)
+			}
+		}
+	}
+
+	sort.Ints(nums)
+	keys := make([]string, len(nums))
+	for i, n := range nums {
+		keys[i] = strconv.Itoa(n)
+	}
+	return keys, nil
 }
 
 // FormatClosingIssue renders GitHub's closing keyword syntax for linking issues to PRs.
