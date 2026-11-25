@@ -4,7 +4,7 @@
 
 # git-brx
 
-**Lightweight, opinionated Git branching workflow CLI**
+**Opinionated Git branching, driven by simple commands**
 
 [![CI](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/bvarnai/git-brx?color=blue)](https://github.com/bvarnai/git-brx/releases)
@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="#why-git-brx">Why git-brx?</a> •
-  <a href="#the-git-brx-philosophy">Core philosophy</a> •
+  <a href="#the-git-brx-philosophy">Philosophy</a> •
   <a href="#quick-start">Quick start</a> •
   <a href="#platform-support">Platform support</a> •
   <a href="#installation">Installation</a> •
@@ -31,9 +31,9 @@
 
 Git gives you the primitives, not a ready-to-use workflow. Whether you ship solo or collaborate on a team, three problems show up repeatedly:
 
-- **Inconsistent habits:** Without lightweight conventions, branch names and merge habits drift across commits and contributors—producing tangled histories and stale branches on `origin`.
-- **All-or-nothing branching models:** Heavyweight models built for larger organizations are usually overkill, while having no branching model at all breaks down as soon as you want to release anything.
-- **Fear of breaking things:** Rebasing, syncing, or cleaning up branches feels risky when a single wrong flag (`git push --force`, `git reset --hard`, `git checkout .`) can discard local work or overwrite someone else's commits.
+- **Inconsistent habits:** Without lightweight conventions, branch names and merge habits drift over time, leaving messy histories and stale branches.
+- **All-or-nothing branching models:** Heavyweight models built for larger organizations are usually overkill, while having no model at all falls short when you care about clean, maintainable work.
+- **Fear of breaking things:** Rebasing, merging, or cleaning up branches feels risky when one mistake can discard local work or overwrite someone else's commits.
 
 **`git-brx` pairs a lightweight, opinionated branching workflow with a guardrailed Git CLI.** Instead of choosing between ad-hoc raw Git and heavyweight branching models, it gives solo developers and teams three clear branch roles (`issue/*`, `feature/*`, `epic/*`), automates the issue-to-PR lifecycle, and applies safe Git defaults so rebase, sync, and cleanup are routine.
 
@@ -44,7 +44,7 @@ There is **no lock-in**: `git-brx` runs standard Git plumbing under the hood. Yo
 ## The git-brx philosophy
 
 ### 1. Issue-first development
-Every tracked code change starts with an issue in GitHub or Jira:
+Every code change starts with an issue in your tracker (GitHub, Jira, etc.):
 - **The issue defines "What" and "Why":** Context, requirements, edge cases, and acceptance criteria live in the issue tracker.
 - **The pull request reviews "How":** Code review focuses on design, correctness, test coverage, and security—not rediscovering requirements.
 
@@ -105,18 +105,18 @@ Once `git-brx` is in your `PATH`, Git automatically exposes it as `git brx <comm
 
 | Command | Purpose |
 | :--- | :--- |
-| [`git brx create`](docs/user-guide/branch-lifecycle.md#2-branch-creation-git-brx-create) | Validates the issue in your tracker and creates a local branch. |
-| [`git brx select`](docs/user-guide/branch-lifecycle.md#3-branch-switching--exploration-git-brx-select-name-history) | Fetches remotes and switches branches with typo suggestions and dirty-tree warnings. |
-| [`git brx sync`](docs/user-guide/synchronization-and-rebasing.md#1-synchronizing-with-base-git-brx-sync) | Syncs the active branch with base (rebases `issue/*`, merges `feature/*` and `epic/*`). |
-| [`git brx update`](docs/user-guide/synchronization-and-rebasing.md#2-updating-from-remote-git-brx-update) | Rebases local commits onto `origin/<current-branch>`. |
-| [`git brx resolve`](docs/user-guide/synchronization-and-rebasing.md#3-resolving-conflicts-git-brx-resolve) | Runs your configured merge tool on conflicted files and continues the rebase/merge. |
-| [`git brx reset`](docs/user-guide/synchronization-and-rebasing.md#4-recovery-git-brx-reset) | Aborts an active rebase/merge preserving local commits; resets to `origin/<current-branch>` when idle. |
-| [`git brx publish`](docs/user-guide/branch-lifecycle.md#4-leased-publishing-git-brx-publish) | Pushes the current branch to `origin` (`--force-with-lease` on `issue/*` and `feature/*`, fast-forward-only on `epic/*` and `release/*`) and sets upstream tracking. |
-| [`git brx review`](docs/user-guide/branch-lifecycle.md#5-code-review-submission-git-brx-review) | Opens a pull request with automated reviewer assignment and merge instructions. |
-| [`git brx delete`](docs/user-guide/branch-lifecycle.md#6-safe-post-merge-deletion-git-brx-delete) | Verifies remote deletion (or deletes merged remote with `--delete-remote`), returns to the recorded parent base or `main`, and deletes the local branch. |
-| [`git brx history`](docs/user-guide/command-reference.md#git-brx-history) | Prints a formatted commit graph (supports `--delta` branch filtering). |
-| [`git brx name`](docs/user-guide/command-reference.md#git-brx-name) | Prints the active branch name to `stdout` for use in scripts. |
-| [`git brx config`](docs/user-guide/command-reference.md#git-brx-config) | Prints the resolved cascading configuration and source provenance in YAML. |
+| [`git brx create`](docs/user-guide/branch-lifecycle.md#2-branch-creation-git-brx-create) | Validates the issue and creates a work branch. |
+| [`git brx select`](docs/user-guide/branch-lifecycle.md#3-branch-switching--exploration-git-brx-select-name-history) | Fetches remotes and switches branches safely. |
+| [`git brx sync`](docs/user-guide/synchronization-and-rebasing.md#1-synchronizing-with-base-git-brx-sync) | Syncs the active branch with its base branch. |
+| [`git brx update`](docs/user-guide/synchronization-and-rebasing.md#2-updating-from-remote-git-brx-update) | Rebases local commits onto the remote branch. |
+| [`git brx resolve`](docs/user-guide/synchronization-and-rebasing.md#3-resolving-conflicts-git-brx-resolve) | Resolves conflicts in your merge tool and continues the rebase/merge. |
+| [`git brx reset`](docs/user-guide/synchronization-and-rebasing.md#4-recovery-git-brx-reset) | Aborts an active rebase/merge, or resets to `origin`. |
+| [`git brx publish`](docs/user-guide/branch-lifecycle.md#4-leased-publishing-git-brx-publish) | Pushes the current branch safely to `origin`. |
+| [`git brx review`](docs/user-guide/branch-lifecycle.md#5-code-review-submission-git-brx-review) | Opens a pull request with reviewers and merge instructions. |
+| [`git brx delete`](docs/user-guide/branch-lifecycle.md#6-safe-post-merge-deletion-git-brx-delete) | Safely deletes a merged branch and returns to its base. |
+| [`git brx history`](docs/user-guide/command-reference.md#git-brx-history) | Prints a formatted commit graph. |
+| [`git brx name`](docs/user-guide/command-reference.md#git-brx-name) | Prints the active branch name for use in scripts. |
+| [`git brx config`](docs/user-guide/command-reference.md#git-brx-config) | Prints the resolved configuration and value sources. |
 
 All commands accept `--help` (`-h`), `--verbose` (`-v`), `--quiet` (`-q`), and `--no-color`.
 
