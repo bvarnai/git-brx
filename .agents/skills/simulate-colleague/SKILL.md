@@ -263,7 +263,7 @@ Seeded Issue #7 is labeled `epic`, mapping strictly to `epic/7`. When `git brx r
    ```markdown
    ### Merge instructions
    - **Strategy:** Create a merge commit
-     - **Commit:** `Merge branch 'epic/7' into main` (merge commit preserving all constituent commits)
+     - **Commit:** `Merge branch 'epic/7' into main: <summary>` (merge commit preserving all constituent commits)
    - **Branch cleanup:** Delete source branch `epic/7` after merging
    ```
 

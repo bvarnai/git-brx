@@ -66,3 +66,105 @@ func TestSelectPullRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatDefaultMergeInstructions_MergeStrategy(t *testing.T) {
+	tests := []struct {
+		name            string
+		opts            domain.MergeInstructionOptions
+		expectedCommit  string
+		unexpectedMatch string
+	}{
+		{
+			name: "strips conventional epic(#91) prefix from PRTitle",
+			opts: domain.MergeInstructionOptions{
+				PRTitle:      "epic(#91): workflow hardening",
+				Branch:       "epic/91",
+				TargetBranch: "main",
+				Strategy:     "merge",
+			},
+			expectedCommit: "`Merge branch 'epic/91' into main: workflow hardening`",
+		},
+		{
+			name: "strips conventional feat(VSB-101) prefix from PRTitle",
+			opts: domain.MergeInstructionOptions{
+				PRTitle:      "feat(VSB-101): support OAuth2",
+				Branch:       "feature/VSB-101",
+				TargetBranch: "main",
+				Strategy:     "merge",
+			},
+			expectedCommit: "`Merge branch 'feature/VSB-101' into main: support OAuth2`",
+		},
+		{
+			name: "preserves custom non-conventional PRTitle",
+			opts: domain.MergeInstructionOptions{
+				PRTitle:      "Custom epic title",
+				Branch:       "epic/91",
+				TargetBranch: "main",
+				Strategy:     "merge",
+			},
+			expectedCommit: "`Merge branch 'epic/91' into main: Custom epic title`",
+		},
+		{
+			name: "falls back to Summary and strips conventional prefix when PRTitle empty",
+			opts: domain.MergeInstructionOptions{
+				Summary:      "epic(workflow): workflow hardening",
+				Branch:       "epic/91",
+				TargetBranch: "main",
+				Strategy:     "merge",
+			},
+			expectedCommit: "`Merge branch 'epic/91' into main: workflow hardening`",
+		},
+		{
+			name: "uses plain Summary when PRTitle empty",
+			opts: domain.MergeInstructionOptions{
+				Summary:      "My summary",
+				Branch:       "epic/1",
+				TargetBranch: "main",
+				Strategy:     "merge",
+			},
+			expectedCommit: "`Merge branch 'epic/1' into main: My summary`",
+		},
+		{
+			name: "strips #IssueKey: prefix from PRTitle",
+			opts: domain.MergeInstructionOptions{
+				PRTitle:      "#91: Workflow hardening",
+				IssueKey:     "91",
+				Branch:       "epic/91",
+				TargetBranch: "main",
+				Strategy:     "merge",
+			},
+			expectedCommit: "`Merge branch 'epic/91' into main: Workflow hardening`",
+		},
+		{
+			name: "omits suffix when PRTitle equals Branch and Summary is empty",
+			opts: domain.MergeInstructionOptions{
+				PRTitle:      "epic/91",
+				Branch:       "epic/91",
+				TargetBranch: "main",
+				Strategy:     "merge",
+			},
+			expectedCommit:  "`Merge branch 'epic/91' into main`",
+			unexpectedMatch: "main:",
+		},
+		{
+			name: "omits suffix when both PRTitle and Summary are empty",
+			opts: domain.MergeInstructionOptions{
+				Branch:       "epic/1",
+				TargetBranch: "main",
+				Strategy:     "merge",
+			},
+			expectedCommit:  "`Merge branch 'epic/1' into main`",
+			unexpectedMatch: "main:",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := domain.FormatDefaultMergeInstructions(tt.opts)
+			assert.Contains(t, out, tt.expectedCommit)
+			if tt.unexpectedMatch != "" {
+				assert.NotContains(t, out, tt.unexpectedMatch)
+			}
+		})
+	}
+}
