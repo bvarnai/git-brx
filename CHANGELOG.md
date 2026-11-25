@@ -7,19 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-25
+
 ### Added
-- Canonical `internal/term` package with thread-safe `Logger`, `ResolveColorPolicy` (`GIT_BRX_COLOR`, `NO_COLOR`, `TERM=dumb`), `Confirm`, `Spinner`, and `Timer` (`#66`).
-- Domain-level diagnostic debug logging (`Debug` / `Debugf` in magenta `\x1b[35m`) across all CLI subcommands on `-v` / `--verbose` (`#66`).
-- Subprocess environment sanitization (`BuildSanitizedEnv`) stripping conflicting environment variables, `WaitDelay = 3 * time.Second`, and graceful `SIGTERM` cancellation (`#66`).
-- Mutual exclusivity enforcement between `--verbose` (`-v`) and `--quiet` (`-q`) with exit code `2` (`#66`).
-- Shell completion specification `docs/spec/completion.md` and global specification harmonization (`#67`).
-- Cross-platform CI matrix across `ubuntu-latest`, `macos-latest`, and `windows-latest` (`#65`).
-- Stable tagless release archive aliases (`git-brx_<os>_<arch>.tar.gz` / `.zip`) and PR template (`#65`).
+- Parent base branch tracking (`branch.<name>.brx-base`) on `create` (with `--base`, fork/dirty-worktree warnings, and collision auto-switch) resolved automatically across `sync`, `review`, `history --delta`, and `delete` (`#94`, `#95`).
+- Automatic fast-forward of clean behind-origin branches on `select` with `--no-ff` opt-out (`#94`, `#95`).
+- Linked-worktree safety across `sync`, `review`, `history --delta`, and `delete` using `origin/<base>` and detached-`HEAD` fallback (`#96`, `#97`, `#100`, `#101`).
+- Pull request `--draft` mode (skipping automated reviewer assignment unless `-r` is passed), repeatable/comma-separated `-r`/`--reviewer`, and remote sync/target validation in `review` (`#98`, `#99`).
+- `delete --delete-remote` to remove merged remote branches while blocking open PRs and prioritizing `OPEN` > `MERGED` > `CLOSED` across reused branch names (`#100`, `#101`).
+- Automatic aggregation of merged child closing references (`Closes #<N>`) on `epic/*` pull requests in `review`, with a non-fatal warning when exceeding GitHub's 10-issue auto-close limit (`#105`, `#106`).
+- `epic(<scope>):` PR title prefix inference and descriptive merge commit instructions (`Merge branch '<branch>' into <target>: <summary>`) for `epic/*` pull requests (`#103`, `#104`).
+- Antigravity plugin packaging (`plugin.json`, `skills/git-brx/SKILL.md`) for AI coding agent integration (`#83`, `#84`, `#85`, `#86`).
+- Canonical `internal/term`, `internal/errcode`, and `internal/command` packages with thread-safe `Logger`, `ResolveColorPolicy` (`GIT_BRX_COLOR`, `NO_COLOR`, `TERM=dumb`), magenta `Debug` logging on `-v`/`--verbose`, mutual exclusivity between `--verbose` and `--quiet`, `SanitizedEnv`, and graceful `SIGTERM` cancellation (`#66`, `#70`, `#79`, `#80`, `#81`, `#82`).
+- Shell completion specification `docs/spec/completion.md`, cross-platform CI matrix (`ubuntu-latest`, `macos-latest`, `windows-latest`, plus Go `1.22` minimum check), and stable tagless release archive aliases (`#65`, `#67`, `#69`, `#71`).
 
 ### Changed
-- Migrated all commands and tests from `internal/ui` to `internal/term` and removed legacy `internal/ui` (`#66`).
-- Aligned `git-brx --version` output format to `git-brx version <semver> (<commit> <os>/<arch>)` (`#66`).
-- Mapped process context cancellation to standard exit code `130` (`ExitInterrupted`) (`#66`).
+- **Breaking:** Renamed `git-brx history --topic` to `--delta` (no compatibility alias) and replaced "topic branch" terminology across CLI diagnostics, specifications, and guides (`#109`, `#110`).
+- Enforced fast-forward-only pushes on shared `epic/*` and `release/*` branches in `publish`, and preserved merge commits (`--rebase-merges`) on `feature/*` and `epic/*` in `update` (`#96`, `#97`).
+- Defaulted child `issue/*` and `feature/*` pull requests targeting `epic/*` to **Squash and merge**, reserving merge-commit instructions for `epic/*` and `release/*` source branches (`#89`, `#90`).
+- Updated `reset` to abort active merges/rebases while preserving unpushed local commits and reset to `origin/<branch>` only when idle (`#92`, `#93`).
+- Updated `resolve` to detect cleared conflict markers before invoking `git mergetool` and added `--no-tool` for headless sessions (`#92`, `#93`).
+- Aligned `git-brx --version` output format to `git-brx version <semver> (<commit> <os>/<arch>)` and mapped context cancellation to exit code `130` (`ExitInterrupted`) (`#66`, `#70`).
+- Refined `README.md`, `CONTRIBUTING.md`, and user guides for `v1.3.0` behavior, optional `release/*` guidance, and GitHub-first examples (`#68`, `#75`, `#77`, `#87`, `#107`).
+
+### Removed
+- **Breaking:** Removed the unused `--dry-run` (`-n`) global flag across CLI, specifications, and documentation (`#73`, `#74`).
+- Removed legacy `internal/ui` package, legacy source/docs, and unused repository PR template (`#63`, `#64`, `#66`).
+
+### Fixed
+- Queried `origin` directly in `update` so branches published from another clone or worktree are discovered cleanly (`#96`, `#97`).
+- Hardened reviewer author exclusion and surfaced existing PR URLs on HTTP 409 conflicts in `review` (`#98`, `#99`).
 
 ## [1.2.0] - 2026-10-15
 
@@ -77,7 +94,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub and Jira/Bitbucket issue tracker and SCM integration.
 - Direct Git execution boundary (`internal/git`) with `LC_ALL=C` and non-interactive safeguards.
 
-[Unreleased]: https://github.com/bvarnai/git-brx/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/bvarnai/git-brx/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/bvarnai/git-brx/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/bvarnai/git-brx/compare/v1.0.3...v1.2.0
 [1.0.3]: https://github.com/bvarnai/git-brx/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/bvarnai/git-brx/compare/v1.0.1...v1.0.2

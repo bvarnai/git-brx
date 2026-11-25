@@ -43,7 +43,7 @@ go build -o /usr/local/bin/git-brx ./cmd/git-brx
 ### Verify installation
 ```bash
 git-brx --version
-# git-brx version v1.2.0 (86d244b linux/amd64)
+# git-brx version v1.3.0 (a1b2c3d linux/amd64)
 ```
 
 ---

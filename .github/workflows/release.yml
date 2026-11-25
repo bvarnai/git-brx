@@ -24,9 +24,16 @@ jobs:
           go-version: 'stable'
           cache: true
 
-      - name: Verify Dependencies & Tests
+      - name: Verify Dependencies, Lint & Tests
         run: |
           go mod verify
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not formatted properly:"
+            echo "$unformatted"
+            exit 1
+          fi
+          go vet ./...
           go test -race ./...
 
       - name: Build Matrix & Create Archives
