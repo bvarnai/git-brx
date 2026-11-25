@@ -408,3 +408,116 @@ func TestClient_FormatMergeInstructions(t *testing.T) {
 	assert.Contains(t, rebaseInstructions, "Rebase and merge")
 	assert.Contains(t, rebaseInstructions, "Linear rebase onto `main`")
 }
+
+func TestClient_ListMergedChildClosingIssues(t *testing.T) {
+	tests := []struct {
+		name         string
+		baseBranch   string
+		statusCode   int
+		responseBody string
+		expected     []string
+		expectErr    bool
+		errCode      int
+		errSubstr    string
+	}{
+		{
+			name:       "aggregates merged PRs sorted numerically and URL-escapes base branch",
+			baseBranch: "epic/91",
+			statusCode: http.StatusOK,
+			responseBody: `[
+				{"number": 95, "merged_at": "2026-11-24T10:00:00Z", "body": "Summary\n\n---\nCloses #94\n\n### Merge instructions"},
+				{"number": 93, "merged_at": "2026-11-24T09:00:00Z", "body": "Fixes #92"},
+				{"number": 97, "merged_at": "2026-11-24T11:00:00Z", "body": "Resolves #100\nAlso fixes #9"},
+				{"number": 98, "merged_at": "2026-11-24T12:00:00Z", "body": "Closes #10"}
+			]`,
+			expected: []string{"9", "10", "92", "94", "100"},
+		},
+		{
+			name:       "excludes closed-unmerged PRs and duplicate issue numbers",
+			baseBranch: "epic/91",
+			statusCode: http.StatusOK,
+			responseBody: `[
+				{"number": 95, "merged_at": "2026-11-24T10:00:00Z", "body": "Closes #94\nResolves #92\nCloses #94"},
+				{"number": 99, "merged_at": null, "body": "Closes #999"},
+				{"number": 100, "merged_at": "", "body": "Fixes #888"}
+			]`,
+			expected: []string{"92", "94"},
+		},
+		{
+			name:       "supports closing keyword case variants and optional colon while ignoring cross-repo and malformed refs",
+			baseBranch: "epic/91",
+			statusCode: http.StatusOK,
+			responseBody: `[
+				{"number": 101, "merged_at": "2026-11-24T10:00:00Z", "body": "close #1\nCLOSES: #2\nclosed #3\nfix #4\nFixes:\t#5\nFIXED #6\nresolve #7\nResolves: #8\nresolved #9\nCloses org/other#77\nSee #101\nEncloses #55\nCloses #42a"}
+			]`,
+			expected: []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"},
+		},
+		{
+			name:         "empty list or empty bodies return empty slice without error",
+			baseBranch:   "epic/91",
+			statusCode:   http.StatusOK,
+			responseBody: `[{"number": 10, "merged_at": "2026-11-24T10:00:00Z", "body": ""}]`,
+			expected:     []string{},
+		},
+		{
+			name:         "HTTP 500 propagates API error",
+			baseBranch:   "epic/91",
+			statusCode:   http.StatusInternalServerError,
+			responseBody: `{"message": "Internal Server Error"}`,
+			expectErr:    true,
+			errCode:      errcode.ExitAPIError,
+			errSubstr:    "Internal Server Error",
+		},
+		{
+			name:         "HTTP 401 propagates authorization error",
+			baseBranch:   "epic/91",
+			statusCode:   http.StatusUnauthorized,
+			responseBody: `{"message": "Bad credentials"}`,
+			expectErr:    true,
+			errCode:      errcode.ExitAPIError,
+			errSubstr:    "Bad credentials",
+		},
+		{
+			name:         "malformed JSON propagates API parse error",
+			baseBranch:   "epic/91",
+			statusCode:   http.StatusOK,
+			responseBody: `{not valid json`,
+			expectErr:    true,
+			errCode:      errcode.ExitAPIError,
+			errSubstr:    "Failed to parse pull request list response",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodGet, r.Method)
+				assert.Equal(t, "/repos/my-org/my-repo/pulls", r.URL.Path)
+				assert.Contains(t, r.URL.RawQuery, "base=epic%2F91")
+				assert.Equal(t, tt.baseBranch, r.URL.Query().Get("base"))
+				assert.Equal(t, "closed", r.URL.Query().Get("state"))
+				assert.Equal(t, "100", r.URL.Query().Get("per_page"))
+				assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.statusCode)
+				_, _ = w.Write([]byte(tt.responseBody))
+			}))
+			defer server.Close()
+
+			client := github.NewClient("my-org", "my-repo", "test-token", github.WithBaseURL(server.URL))
+			got, err := client.ListMergedChildClosingIssues(context.Background(), tt.baseBranch)
+			if tt.expectErr {
+				require.Error(t, err)
+				var appErr *errcode.AppError
+				require.True(t, errors.As(err, &appErr), "expected *errcode.AppError, got %T: %v", err, err)
+				assert.Equal(t, tt.errCode, errcode.ExitCode(appErr))
+				assert.Contains(t, appErr.Message, tt.errSubstr)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}

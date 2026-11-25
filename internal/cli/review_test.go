@@ -314,6 +314,60 @@ func TestComposeReviewDescription(t *testing.T) {
 	})
 }
 
+func TestComposeReviewDescriptionWithClosingIssues(t *testing.T) {
+	app := cli.NewApp(nil, nil, nil)
+	scm := &mockSCMProvider{}
+
+	t.Run("epic primary key and unsorted duplicate child keys render primary first then ascending children", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescriptionWithClosingIssues(cfg, scm, "91", []string{"94", "92", "91", "94"}, "Workflow epic", "epic/91", "main", "")
+		assert.True(t, strings.HasPrefix(desc, "Closes #91\nCloses #92\nCloses #94\n\n### Merge instructions"), "got:\n%s", desc)
+	})
+
+	t.Run("preserves template and divider placement with multiple closing refs", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{
+			Review: domain.ReviewConfig{
+				Template: "## Epic Summary",
+			},
+		}
+		desc := app.ComposeReviewDescriptionWithClosingIssues(cfg, scm, "91", []string{"92"}, "Workflow epic", "epic/91", "main", "")
+		assert.True(t, strings.HasPrefix(desc, "## Epic Summary\n\n---\nCloses #91\nCloses #92\n\n### Merge instructions"), "got:\n%s", desc)
+	})
+
+	t.Run("suppressing merge instructions emits multi-line closing refs cleanly", func(t *testing.T) {
+		f := false
+		cfg := &domain.ProjectConfig{
+			Review: domain.ReviewConfig{
+				Merge: domain.MergeConfig{
+					Instructions: &f,
+				},
+			},
+		}
+		desc := app.ComposeReviewDescriptionWithClosingIssues(cfg, scm, "91", []string{"92"}, "Workflow epic", "epic/91", "main", "")
+		assert.Equal(t, "Closes #91\nCloses #92\n", desc)
+	})
+
+	t.Run("empty primary issueKey still emits sorted child closing refs without leading blank lines", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescriptionWithClosingIssues(cfg, scm, "", []string{"94", "92"}, "", "epic/custom", "main", "")
+		assert.True(t, strings.HasPrefix(desc, "Closes #92\nCloses #94\n\n### Merge instructions"), "got:\n%s", desc)
+	})
+
+	t.Run("scm returning empty FormatClosingIssue omits all closing refs", func(t *testing.T) {
+		emptySCM := &mockSCMProvider{emptyClosing: true}
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescriptionWithClosingIssues(cfg, emptySCM, "91", []string{"92", "94"}, "Workflow epic", "epic/91", "main", "")
+		assert.False(t, strings.Contains(desc, "Closes #"))
+		assert.True(t, strings.HasPrefix(desc, "### Merge instructions"))
+	})
+
+	t.Run("nil scm does not panic when extra child keys are provided", func(t *testing.T) {
+		cfg := &domain.ProjectConfig{}
+		desc := app.ComposeReviewDescriptionWithClosingIssues(cfg, nil, "91", []string{"92", "94"}, "Workflow epic", "epic/91", "main", "")
+		assert.True(t, strings.HasPrefix(desc, "### Merge instructions"))
+	})
+}
+
 func TestComposePullRequestTitle(t *testing.T) {
 	tests := []struct {
 		name        string

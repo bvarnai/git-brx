@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -857,5 +858,209 @@ scm:
 
 		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
 		assert.Equal(t, []string{"carol"}, requestedReviewers)
+	})
+
+	t.Run("EpicAggregatesMergedChildClosingReferences", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/91")
+		h.CommitFile("epic.txt", "epic", "Epic work")
+		h.Git("push", "-u", "origin", "epic/91")
+
+		var capturedBody string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/test-org/test-repo/issues/91" {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 91, "title": "Workflow hardening", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodGet {
+				assert.Equal(t, "epic/91", r.URL.Query().Get("base"))
+				assert.Equal(t, "closed", r.URL.Query().Get("state"))
+				assert.Equal(t, "100", r.URL.Query().Get("per_page"))
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`[
+					{"number": 95, "merged_at": "2026-11-24T10:00:00Z", "body": "Closes #94\nCloses other/repo#555"},
+					{"number": 93, "merged_at": "2026-11-24T09:00:00Z", "body": "Fixes: #92\nCloses #91"},
+					{"number": 99, "merged_at": null, "body": "Closes #99"}
+				]`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]any
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedBody, _ = body["body"].(string)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 102, "html_url": "https://github.com/test-org/test-repo/pull/102"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "master", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.True(t, strings.HasPrefix(capturedBody, "Closes #91\nCloses #92\nCloses #94\n\n### Merge instructions"), "body:\n%s", capturedBody)
+		assert.NotContains(t, capturedBody, "Closes #99")
+		assert.NotContains(t, capturedBody, "#555")
+		assert.Contains(t, stderr.String(), "Including 2 child closing references from merged pull requests targeting 'epic/91'")
+		assert.Equal(t, "https://github.com/test-org/test-repo/pull/102\n", stdout.String())
+	})
+
+	t.Run("NonEpicBranchSkipsChildClosingLookup", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("feature/56")
+		h.CommitFile("feat.txt", "feat", "Feature work")
+		h.Git("push", "-u", "origin", "feature/56")
+
+		pullsGetCalled := false
+		var capturedBody string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/test-org/test-repo/issues/56" {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 56, "title": "Feature work", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodGet {
+				pullsGetCalled = true
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`[]`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]any
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedBody, _ = body["body"].(string)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 56, "html_url": "https://github.com/test-org/test-repo/pull/56"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "master", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.False(t, pullsGetCalled, "GET /pulls must not be called for non-epic branch")
+		assert.True(t, strings.HasPrefix(capturedBody, "Closes #56\n\n### Merge instructions"), "body:\n%s", capturedBody)
+	})
+
+	t.Run("EpicChildLookupFailureWarnsAndCreatesPR", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/92")
+		h.CommitFile("epic.txt", "epic", "Epic work")
+		h.Git("push", "-u", "origin", "epic/92")
+
+		var capturedBody string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/test-org/test-repo/issues/92" {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 92, "title": "Resilient epic", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodGet {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte(`{"message": "Upstream outage"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]any
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedBody, _ = body["body"].(string)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 108, "html_url": "https://github.com/test-org/test-repo/pull/108"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "master", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Contains(t, stderr.String(), "Warning: Unable to fetch merged child pull requests for 'epic/92'; omitting child closing references")
+		assert.True(t, strings.HasPrefix(capturedBody, "Closes #92\n\n### Merge instructions"), "body:\n%s", capturedBody)
+		assert.Equal(t, "https://github.com/test-org/test-repo/pull/108\n", stdout.String())
+	})
+
+	t.Run("EpicExceedingTenClosingReferencesWarns", func(t *testing.T) {
+		h := NewHarness(t)
+		h.CommitFile("init.txt", "init", "Initial commit")
+		h.SetupRemoteBare()
+		h.Git("push", "-u", "origin", "master")
+
+		h.CreateBranch("epic/93")
+		h.CommitFile("epic.txt", "epic", "Epic work")
+		h.Git("push", "-u", "origin", "epic/93")
+
+		var prItems []string
+		for issueNum := 101; issueNum <= 110; issueNum++ {
+			prItems = append(prItems, fmt.Sprintf(`{"number": %d, "merged_at": "2026-11-24T10:00:00Z", "body": "Closes #%d"}`, issueNum+100, issueNum))
+		}
+		prsJSON := "[" + strings.Join(prItems, ",") + "]"
+
+		var capturedBody string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/test-org/test-repo/issues/93" {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"number": 93, "title": "Large epic", "state": "open"}`))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodGet {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(prsJSON))
+				return
+			}
+			if r.URL.Path == "/repos/test-org/test-repo/pulls" && r.Method == http.MethodPost {
+				var body map[string]any
+				_ = json.NewDecoder(r.Body).Decode(&body)
+				capturedBody, _ = body["body"].(string)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 109, "html_url": "https://github.com/test-org/test-repo/pull/109"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		configContent := []byte("platform: github\ntracker:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\nscm:\n  provider: github\n  uri: " + server.URL + "\n  owner: test-org\n  repo: test-repo\n")
+		require.NoError(t, os.WriteFile(filepath.Join(h.RepoDir, ".git-brx.yaml"), configContent, 0644))
+
+		var stdout, stderr bytes.Buffer
+		code := cli.RunInDir(context.Background(), h.RepoDir, []string{"review", "master", "--no-color"}, &stdout, &stderr)
+
+		assert.Equal(t, int(errcode.ExitSuccess), code, "stderr: %s", stderr.String())
+		assert.Contains(t, stderr.String(), "Warning: Pull request includes 11 closing references, which exceeds GitHub's limit of 10 auto-closed issues per pull request")
+		assert.Contains(t, capturedBody, "Closes #93\nCloses #101\nCloses #102\nCloses #103\nCloses #104\nCloses #105\nCloses #106\nCloses #107\nCloses #108\nCloses #109\nCloses #110")
 	})
 }

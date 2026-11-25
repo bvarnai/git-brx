@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -248,7 +249,32 @@ func (a *App) runReview(ctx context.Context, opts ReviewOptions, mergeInstrOverr
 		return err
 	}
 
-	prBody := a.ComposeReviewDescription(cfg, scm, issueKey, summaryText, currBranch.Name, targetBranch, prTitle, mergeStrategy)
+	var childClosingKeys []string
+	if currBranch.Type == domain.BranchTypeEpic {
+		if childProvider, ok := scm.(domain.ChildClosingIssuesProvider); ok {
+			keys, childErr := childProvider.ListMergedChildClosingIssues(ctx, currBranch.Name)
+			if childErr != nil {
+				a.Logger.Warn("Unable to fetch merged child pull requests for '%s'; omitting child closing references: %v", currBranch.Name, childErr)
+			} else {
+				childClosingKeys = filterUniqueChildClosingKeys(issueKey, keys)
+			}
+		}
+	}
+
+	primaryCount := len(formatClosingReferences(scm, issueKey, nil))
+	totalRefs := formatClosingReferences(scm, issueKey, childClosingKeys)
+	if added := len(totalRefs) - primaryCount; added > 0 {
+		unit := "references"
+		if added == 1 {
+			unit = "reference"
+		}
+		a.Logger.Log("Including %d child closing %s from merged pull requests targeting '%s'", added, unit, currBranch.Name)
+	}
+	if len(totalRefs) > maxGitHubLinkedIssues {
+		a.Logger.Warn("Pull request includes %d closing references, which exceeds GitHub's limit of %d auto-closed issues per pull request; remaining issues may need to be closed manually", len(totalRefs), maxGitHubLinkedIssues)
+	}
+
+	prBody := a.ComposeReviewDescriptionWithClosingIssues(cfg, scm, issueKey, childClosingKeys, summaryText, currBranch.Name, targetBranch, prTitle, mergeStrategy)
 
 	// 7. Pull Request Submission
 	req := domain.PullRequestRequest{
@@ -301,8 +327,92 @@ func parseReviewers(raw []string) []string {
 	return out
 }
 
+const maxGitHubLinkedIssues = 10
+
+func normalizeClosingKey(key string) string {
+	clean := strings.TrimSpace(key)
+	clean = strings.TrimPrefix(clean, "#")
+	clean = strings.TrimPrefix(clean, "issue/")
+	clean = strings.TrimPrefix(clean, "feature/")
+	clean = strings.TrimPrefix(clean, "epic/")
+	return strings.TrimSpace(clean)
+}
+
+func filterUniqueChildClosingKeys(primaryKey string, childKeys []string) []string {
+	primaryNorm := normalizeClosingKey(primaryKey)
+	seen := make(map[string]struct{})
+	if primaryNorm != "" {
+		seen[primaryNorm] = struct{}{}
+	}
+
+	var out []string
+	for _, raw := range childKeys {
+		norm := normalizeClosingKey(raw)
+		if norm == "" {
+			continue
+		}
+		if _, exists := seen[norm]; exists {
+			continue
+		}
+		seen[norm] = struct{}{}
+		out = append(out, norm)
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		ni, erri := strconv.Atoi(out[i])
+		nj, errj := strconv.Atoi(out[j])
+		if erri == nil && errj == nil {
+			return ni < nj
+		}
+		if erri == nil {
+			return true
+		}
+		if errj == nil {
+			return false
+		}
+		return out[i] < out[j]
+	})
+
+	return out
+}
+
+func formatClosingReferences(scm domain.SCMProvider, issueKey string, extraIssueKeys []string) []string {
+	if scm == nil {
+		return nil
+	}
+
+	seen := make(map[string]struct{})
+	var refs []string
+	addRef := func(key string) {
+		if key == "" {
+			return
+		}
+		ref := strings.TrimSpace(scm.FormatClosingIssue(key))
+		if ref == "" {
+			return
+		}
+		if _, exists := seen[ref]; exists {
+			return
+		}
+		seen[ref] = struct{}{}
+		refs = append(refs, ref)
+	}
+
+	addRef(issueKey)
+	for _, childKey := range filterUniqueChildClosingKeys(issueKey, extraIssueKeys) {
+		addRef(childKey)
+	}
+
+	return refs
+}
+
 // ComposeReviewDescription constructs the PR description text.
 func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey, summary, branch, targetBranch string, prTitle string, strategy ...string) string {
+	return a.ComposeReviewDescriptionWithClosingIssues(cfg, scm, issueKey, nil, summary, branch, targetBranch, prTitle, strategy...)
+}
+
+// ComposeReviewDescriptionWithClosingIssues constructs the PR description text with optional extra child closing issue keys.
+func (a *App) ComposeReviewDescriptionWithClosingIssues(cfg *domain.ProjectConfig, scm domain.SCMProvider, issueKey string, extraIssueKeys []string, summary, branch, targetBranch, prTitle string, strategy ...string) string {
 	template := ""
 	if cfg.Review.Template != "" {
 		if content, err := os.ReadFile(cfg.Review.Template); err == nil {
@@ -326,10 +436,7 @@ func (a *App) ComposeReviewDescription(cfg *domain.ProjectConfig, scm domain.SCM
 	}
 	template = strings.TrimSpace(template)
 
-	closingRef := ""
-	if issueKey != "" && scm != nil {
-		closingRef = scm.FormatClosingIssue(issueKey)
-	}
+	closingRef := strings.Join(formatClosingReferences(scm, issueKey, extraIssueKeys), "\n")
 
 	// Append merge instructions unless explicitly disabled via review.merge.instructions: false
 	appendInstructions := true
