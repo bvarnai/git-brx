@@ -219,7 +219,7 @@ sequenceDiagram
 > ```markdown
 > ### Merge instructions
 > - **Strategy:** Create a merge commit
->   - **Commit:** `Merge branch 'epic/7' into main` (merge commit preserving all constituent commits)
+>   - **Commit:** `Merge branch 'epic/7' into main: <summary>` (merge commit preserving all constituent commits)
 > - **Branch cleanup:** Delete source branch `epic/7` after merging
 > ```
 > Merged the PR using **Create a merge commit** (commit `9d31f0e`) and deleted the remote branch.

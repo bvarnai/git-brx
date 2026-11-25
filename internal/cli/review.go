@@ -414,7 +414,10 @@ func ComposePullRequestTitle(customTitle, branchName, issueKey, issueTitle strin
 		return fmt.Sprintf("%s(%s): %s", matches[1], scope, matches[2])
 	}
 
-	if strings.HasPrefix(branchName, "feature/") || strings.HasPrefix(branchName, "epic/") {
+	if strings.HasPrefix(branchName, "epic/") {
+		return fmt.Sprintf("epic(%s): %s", scope, issueTitle)
+	}
+	if strings.HasPrefix(branchName, "feature/") {
 		return fmt.Sprintf("feat(%s): %s", scope, issueTitle)
 	}
 	if strings.HasPrefix(branchName, "issue/") {

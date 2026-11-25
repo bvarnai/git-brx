@@ -83,7 +83,7 @@
          5. Global configuration fallback: `review.merge.strategy` (defaults to `squash`).
        - **Supported Strategies:**
          - **`squash` (`Squash and merge (recommended)`):** Commit: `<prTitle>` (or fallback `<issueKey>: <summary>`) (all commits squashed into a single commit).
-         - **`merge` (`Create a merge commit`):** Commit: `Merge branch '<branch>' into <target>` (merge commit preserving all constituent commits).
+         - **`merge` (`Create a merge commit`):** Commit: `Merge branch '<branch>' into <target>: <summary>` (or `Merge branch '<branch>' into <target>` when no summary is available; merge commit preserving all constituent commits).
          - **`rebase` (`Rebase and merge`):** Commit: Linear rebase onto `<target>` (all constituent commits preserved, no merge commit).
        - **Branch cleanup:** Instructs deletion of source branch after merge.
        - **Built-in Convention as Configuration Snippet:**
@@ -100,7 +100,7 @@
 7. **Pull Request Submission:**
    - Submit PR via the configured `SCMProvider` (GitHub Pull Requests API, Bitbucket Server REST API, etc.).
    - Standard payload fields:
-     - `title`: `<type>(#<issueKey>): <summary>` (Conventional Commits scope format, or `<branch>` if unlinked, or custom `--title`)
+     - `title`: `<type>(#<issueKey>): <summary>` (Conventional Commits scope format preserving explicit conventional prefixes on the issue title, otherwise defaulting `<type>` by branch prefix: `epic/*` -> `epic`, `feature/*` -> `feat`, `issue/*` -> `fix`; falls back to `<branch>` if unlinked, or uses custom `--title`)
      - `description`: `<reviewDescription>`
      - `sourceBranch`: `<branch>`
      - `targetBranch`: `<targetBranch>`

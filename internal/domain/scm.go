@@ -1,6 +1,10 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"regexp"
+	"strings"
+)
 
 // PullRequestRequest defines the parameters for opening a pull request.
 type PullRequestRequest struct {
@@ -100,6 +104,33 @@ type SCMProvider interface {
 	FormatClosingIssue(issueKey string) string
 }
 
+var mergeConvPrefixRegex = regexp.MustCompile(`^[a-z]+(?:\([^)]+\))?:\s*(.+)$`)
+
+func mergeCommitSummary(opts MergeInstructionOptions) string {
+	candidate := strings.TrimSpace(opts.PRTitle)
+	if candidate == "" || candidate == opts.Branch {
+		candidate = strings.TrimSpace(opts.Summary)
+	}
+	if candidate == "" {
+		return ""
+	}
+
+	if matches := mergeConvPrefixRegex.FindStringSubmatch(candidate); len(matches) == 2 {
+		return strings.TrimSpace(matches[1])
+	}
+
+	if opts.IssueKey != "" {
+		rawKey := strings.TrimPrefix(opts.IssueKey, "#")
+		for _, prefix := range []string{"#" + rawKey + ":", rawKey + ":", opts.IssueKey + ":"} {
+			if strings.HasPrefix(candidate, prefix) {
+				return strings.TrimSpace(strings.TrimPrefix(candidate, prefix))
+			}
+		}
+	}
+
+	return candidate
+}
+
 // FormatDefaultMergeInstructions formats generic, UI-agnostic merge instructions.
 func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 	strategy := opts.Strategy
@@ -114,9 +145,13 @@ func FormatDefaultMergeInstructions(opts MergeInstructionOptions) string {
 
 	switch strategy {
 	case "merge":
+		mergeMsg := "Merge branch '" + opts.Branch + "' into " + target
+		if summary := mergeCommitSummary(opts); summary != "" {
+			mergeMsg += ": " + summary
+		}
 		return "### Merge instructions\n" +
 			"- **Strategy:** Create a merge commit\n" +
-			"  - **Commit:** `Merge branch '" + opts.Branch + "' into " + target + "` (merge commit preserving all constituent commits)\n" +
+			"  - **Commit:** `" + mergeMsg + "` (merge commit preserving all constituent commits)\n" +
 			"- **Branch cleanup:** Delete source branch `" + opts.Branch + "` after merging\n"
 	case "rebase":
 		return "### Merge instructions\n" +
