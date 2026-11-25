@@ -34,7 +34,7 @@ This guide walks through the lifecycle of a branch in `git-brx`, from creating a
 Create a new topic branch linked to an issue:
 
 ```bash
-git brx create issue/TASK-101
+git brx create issue/task-101
 ```
 
 ### Execution steps
@@ -43,15 +43,15 @@ git brx create issue/TASK-101
    - If the branch already exists locally or on `origin`, `git-brx` fetches if needed, safely switches to that branch (fast-forwarding clean branches behind `origin/<branch>`), and exits `0`.
 3. **Name validation:** Matches the branch name against `branch.template` (e.g., `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`).
 4. **Issue tracker lookup:**
-   - Queries Jira or GitHub Issues for `TASK-101`.
+   - Queries Jira or GitHub Issues for `task-101`.
    - Verifies that the issue type/labels are allowed for the target branch prefix (e.g., `bug` $\to$ `issue/`) and prints the issue title, status, assignee, and URL.
-   - Prompts `Create branch 'issue/TASK-101' [Y/n]?` (pass `-y` / `--yes` to skip the prompt in scripts).
-5. **Base guardrails & checkout:** Validates `--base <branch>` if provided (or warns when forking from another topic branch, a behind-origin base, or a dirty worktree), runs `git checkout -b issue/TASK-101 [<base>]`, and records `branch.<name>.brx-base` in local `.git/config`.
+   - Prompts `Create branch 'issue/task-101' [Y/n]?` (pass `-y` / `--yes` to skip the prompt in scripts).
+5. **Base guardrails & checkout:** Validates `--base <branch>` if provided (or warns when forking from another topic branch, a behind-origin base, or a dirty worktree), runs `git checkout -b issue/task-101 [<base>]`, and records `branch.<name>.brx-base` in local `.git/config`.
 
 ### Offline mode
 When working without network access, pass `--offline` (`-o`):
 ```bash
-git brx create --offline issue/TASK-101
+git brx create --offline issue/task-101
 ```
 This skips the remote ref check and issue tracker lookup, validating only the local branch name syntax.
 
@@ -65,15 +65,15 @@ This skips the remote ref check and issue tracker lookup, validating only the lo
 git brx select
 
 # Switch to a specific branch:
-git brx select issue/TASK-101
+git brx select issue/task-101
 ```
 
 **What `select` does:**
 - **Fetches remotes:** Runs `git fetch` before switching (unless `--offline` is passed).
 - **Auto-fast-forward & behind-upstream hint:** When online and clean, if the target branch is strictly behind `origin/<branch>`, `git-brx` automatically fast-forwards it (`--ff-only`, unless `--no-ff` is passed). When dirty, diverged, or `--no-ff` is active, it prints a hint:
   ```text
-  [git-brx] Already on 'issue/TASK-101'
-  [git-brx] Hint: Your branch is behind 'origin/issue/TASK-101' by 2 commit(s). Run 'git-brx update' to update.
+  [git-brx] Already on 'issue/task-101'
+  [git-brx] Hint: Your branch is behind 'origin/issue/task-101' by 2 commit(s). Run 'git-brx update' to update.
   ```
 - **Typo suggestions:** If the target branch doesn't exist, `git-brx` suggests close matches using Levenshtein distance:
   ```text
@@ -149,12 +149,12 @@ git brx review
    - **Author exclusion:** Removes the PR author from the resolved reviewer list.
 4. **PR body generation:** Loads your configured `review.template` (or auto-discovers a repository PR template), adds the issue closing reference (`Closes #<id>`), and appends **Merge instructions**:
    ```markdown
-   Closes #TASK-101
+   Closes #task-101
 
    ### Merge instructions
    - **Strategy:** Squash and merge (recommended)
-     - **Commit:** `fix(#TASK-101): add user authentication API` (all commits squashed into a single commit)
-   - **Branch cleanup:** Delete source branch `issue/TASK-101` after merging
+     - **Commit:** `fix(#task-101): add user authentication API` (all commits squashed into a single commit)
+   - **Branch cleanup:** Delete source branch `issue/task-101` after merging
    ```
    - `issue/*` and `feature/*` branches default to **Squash and merge** (whether targeting `main` or `epic/*`).
    - `epic/*` and `release/*` branches default to **Create a merge commit** when acting as the PR source branch (e.g., `epic/*` into `main`).
@@ -184,6 +184,6 @@ git brx delete
 4. **Local cleanup:** Runs `git branch -D <branch>` and `git remote prune origin`.
 5. **Update hint:** When switched to an unfetched/dirty return branch without auto-fast-forwarding, prints a hint to run `git-brx update`.
    ```text
-   [git-brx] Deleted local branch 'issue/TASK-101' and pruned origin
+   [git-brx] Deleted local branch 'issue/task-101' and pruned origin
    [git-brx] Hint: Your local 'main' may not be up-to-date. Use 'git-brx update' to update changes
    ```
