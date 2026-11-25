@@ -4,7 +4,7 @@
 
 # git-brx
 
-**Opinionated Git branch workflow CLI**
+**Lightweight, opinionated Git branching workflow CLI**
 
 [![CI](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bvarnai/git-brx/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/bvarnai/git-brx?color=blue)](https://github.com/bvarnai/git-brx/releases)
@@ -29,13 +29,13 @@
 
 ## Why git-brx?
 
-Git's low-level CLI makes everyday team workflows harder than they need to be. As teams grow, three problems show up repeatedly:
+Git gives you the primitives, not a ready-to-use workflow. Whether you ship solo or collaborate on a team, three problems show up repeatedly:
 
-- **Destructive commands:** Engineers hesitate to rebase, sync, or clean up branches when a single wrong flag (`git push --force`, `git reset --hard`, `git checkout .`) can discard local work or overwrite a teammate's commits.
-- **Inconsistent habits:** Without shared tooling, everyone invents their own aliases, branch names, and merge habits. Some squash locally, some create tangled merge histories, and others leave stale branches on `origin`.
-- **Heavyweight branching models:** Complex branching models built for large release trains add unnecessary overhead for teams shipping continuously.
+- **Inconsistent habits:** Without lightweight conventions, branch names and merge habits drift across commits and contributors—producing tangled histories and stale branches on `origin`.
+- **All-or-nothing branching models:** Heavyweight models built for larger organizations are usually overkill, while having no branching model at all breaks down as soon as you want to release anything.
+- **Fear of breaking things:** Rebasing, syncing, or cleaning up branches feels risky when a single wrong flag (`git push --force`, `git reset --hard`, `git checkout .`) can discard local work or overwrite someone else's commits.
 
-**`git-brx` wraps standard Git in a thin, guardrailed CLI.** It enforces consistent branch naming, automates rebase/merge decisions, prevents accidental history overwrites, and links every branch to an issue and pull request.
+**`git-brx` pairs a lightweight, opinionated branching workflow with a guardrailed Git CLI.** Instead of choosing between ad-hoc raw Git and heavyweight branching models, it gives solo developers and teams three clear branch roles (`issue/*`, `feature/*`, `epic/*`), automates the issue-to-PR lifecycle, and applies safe Git defaults so rebase, sync, and cleanup are routine.
 
 There is **no lock-in**: `git-brx` runs standard Git plumbing under the hood. You can mix `git-brx` and raw `git` commands at any time.
 
@@ -44,7 +44,7 @@ There is **no lock-in**: `git-brx` runs standard Git plumbing under the hood. Yo
 ## The git-brx philosophy
 
 ### 1. Issue-first development
-Every tracked code change starts with an issue in Jira or GitHub:
+Every tracked code change starts with an issue in GitHub or Jira:
 - **The issue defines "What" and "Why":** Context, requirements, edge cases, and acceptance criteria live in the issue tracker.
 - **The pull request reviews "How":** Code review focuses on design, correctness, test coverage, and security—not rediscovering requirements.
 
@@ -64,7 +64,7 @@ Every tracked code change starts with an issue in Jira or GitHub:
 
 ```mermaid
 flowchart LR
-    A["1. Issue<br/>(Jira / GitHub)"] -->|"git brx create"| B["2. Topic branch<br/>(issue/TASK-101)"]
+    A["1. Issue<br/>(GitHub / Jira)"] -->|"git brx create"| B["2. Topic branch<br/>(issue/task-101)"]
     B -->|"git brx sync / update"| C["3. Work & sync<br/>(Rebase & leased push)"]
     C -->|"git brx review"| D["4. Code review<br/>(PR with checklist & reviewers)"]
     D -->|"git brx delete"| E["5. Cleanup<br/>(Local deleted & origin pruned)"]
@@ -78,7 +78,7 @@ Run the full branch lifecycle in 5 commands:
 
 ```bash
 # 1. Validate the issue in your tracker and create the topic branch
-git brx create issue/TASK-101
+git brx create issue/task-101
 
 # ... write code, make regular git commits ...
 

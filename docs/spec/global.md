@@ -18,10 +18,10 @@
 | `sync` | Synchronizes branch with target base (rebase for issues, merge for features). |
 | `reset` | Aborts active merges/rebases and hard-resets working copy to remote tracking ref. |
 | `resolve` | Launches interactive merge tool and continues in-flight rebase or merge. |
-| `create` | Validates against issue tracker (JIRA) and provisions local topic branch. |
+| `create` | Validates against issue tracker (GitHub, Jira) and provisions local topic branch. |
 | `publish` | Pushes branch to remote with lease and configures upstream tracking. |
 | `delete` | Validates remote branch deletion, switches to `main`, and deletes local branch. |
-| `review` | Creates a pull request on configured SCM platform (Bitbucket, GitHub) via REST API with reviewer mapping. |
+| `review` | Creates a pull request on configured SCM platform (GitHub, Bitbucket) via REST API with reviewer mapping. |
 | `config` | Prints the effective resolved cascading configuration and source provenance in YAML format. |
 | `completion` | Generates shell autocompletion script (`bash`, `zsh`, `fish`, `powershell`). |
 | `help` | Displays help catalog or detailed command documentation for a specific subcommand. |
@@ -135,7 +135,7 @@ The Go implementation must adhere to a strict, application-wide exit code contra
 | `3` | Git Repository Precondition Failure | Not inside a Git worktree, bare repository, prohibited shallow repository, or detached HEAD. |
 | `4` | Remote / Network Precondition Failure | Remote `origin` not configured, remote unreachable (DNS/timeout), network down without `--offline`. |
 | `5` | Git State / Merge Conflict Encountered | In-flight rebase or merge already detected, or merge conflicts triggered during `sync` or `update`. |
-| `6` | External Service / API Failure | JIRA or Bitbucket API returned HTTP 401, 403, 404, or 409, or schema validation failed. |
+| `6` | External Service / API Failure | GitHub, Jira, or Bitbucket API returned HTTP 401, 403, 404, or 409, or schema validation failed. |
 | `7` | User Aborted / Canceled | User declined interactive confirmation (`[y/N]`) or aborted credential entry. |
 | `8` | Configuration / Validation Error | Missing or unreadable configuration file (`.git-brx.yaml`), malformed YAML, or branch name fails regex naming contract. |
 | `130` | Process Interrupted | Subprocess or command terminated early due to `SIGINT` (Ctrl+C), `SIGTERM`, or context cancellation. |

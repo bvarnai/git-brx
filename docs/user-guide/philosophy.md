@@ -8,11 +8,11 @@
 
 ## 2. Issue-driven development: single source of truth
 
-In `git-brx`, **every tracked code change maps to an issue in Jira or GitHub.**
+In `git-brx`, **every tracked code change maps to an issue in GitHub or Jira.**
 
 ```text
 ┌────────────────────────────────────────────────────────┐
-│                   THE ISSUE (Jira / GitHub)            │
+│                   THE ISSUE (GitHub / Jira)            │
 │  • What is the problem?                                │
 │  • Why is this change needed?                          │
 │  • What are the acceptance criteria & edge cases?      │
@@ -43,7 +43,7 @@ Without a clear boundary between issues and pull requests, scope debates spill i
 | **The issue** | Product, QA, engineers | **Defines *What* and *Why*:** Specifications, acceptance criteria, reproduction steps, and test plans | Requirements, edge cases, scope, user impact |
 | **The pull request** | Engineering peers | **Reviews *How*:** Architecture, correctness, test coverage, and performance | Implementation details, code structure, edge-case handling, tests |
 
-When you run `git brx create issue/TASK-101`, `git-brx` queries the issue tracker, checks that `TASK-101` exists and matches the branch prefix, and creates the local topic branch.
+When you run `git brx create issue/task-101`, `git-brx` queries the issue tracker, checks that `task-101` exists and matches the branch prefix, and creates the local topic branch.
 
 ---
 
@@ -74,7 +74,7 @@ Once you name a branch, `git-brx` selects the matching `sync` strategy and PR me
 ```mermaid
 flowchart TD
     subgraph S1 ["Stage 1: Create"]
-        Issue["Tracker Issue<br/>(TASK-101)"] -->|"git brx create"| TopicBranch["Topic Branch<br/>(issue/TASK-101)"]
+        Issue["Tracker Issue<br/>(task-101)"] -->|"git brx create"| TopicBranch["Topic Branch<br/>(issue/task-101)"]
     end
 
     subgraph S2 ["Stage 2: Sync & Publish"]
@@ -94,7 +94,7 @@ flowchart TD
 ```
 
 ### Stage 1: Create (`git brx create`)
-Checks that the issue exists in Jira or GitHub, validates the branch prefix against the issue type, and creates the branch from your current base branch.
+Checks that the issue exists in GitHub or Jira, validates the branch prefix against the issue type, and creates the branch from your current base branch.
 
 ### Stage 2: Sync & publish (`git brx sync` / `git brx publish`)
 As teammates merge changes into `main`, run `git brx sync` to keep your branch current (rebasing `issue/*` branches or merging `main` into `feature/*` and `epic/*` branches).

@@ -7,13 +7,13 @@ Common questions, error messages, and recovery steps for `git-brx`.
 ## Frequently asked questions
 
 ### Q: Why does `git-brx` require an issue for every branch?
-**A:** Linking every branch to a Jira or GitHub issue keeps requirements, context, and acceptance criteria in one place. Reviewers don't have to guess what a PR is supposed to solve, and future maintainers can trace any commit back to its issue via `git blame`. For quick local spikes that don't need an issue, use `git checkout -b <branch>`.
+**A:** Linking every branch to a GitHub or Jira issue keeps requirements, context, and acceptance criteria in one place. Reviewers don't have to guess what a PR is supposed to solve, and future maintainers can trace any commit back to its issue via `git blame`. For quick local spikes that don't need an issue, use `git checkout -b <branch>`.
 
 ### Q: Can I use `git-brx` offline?
 **A:** Yes. Pass `--offline` (`-o`) to `create` or `select`:
 ```bash
-git brx create --offline issue/TASK-101
-git brx select --offline issue/TASK-101
+git brx create --offline issue/task-101
+git brx select --offline issue/task-101
 ```
 This skips remote network checks and issue tracker API calls.
 
@@ -21,8 +21,8 @@ This skips remote network checks and issue tracker API calls.
 **A:** No. `git-brx` reads your existing Git configuration, credential helpers, and merge tools without modifying `~/.gitconfig`.
 
 ### Q: What is the difference between `sync` and `update`?
-- **`git brx sync`**: Pulls new commits from the **base branch** into your topic branch (e.g., `main` $\to$ `issue/TASK-101`).
-- **`git brx update`**: Pulls remote commits from **your current branch's upstream** (e.g., `origin/issue/TASK-101` $\to$ `issue/TASK-101`).
+- **`git brx sync`**: Pulls new commits from the **base branch** into your topic branch (e.g., `main` $\to$ `issue/task-101`).
+- **`git brx update`**: Pulls remote commits from **your current branch's upstream** (e.g., `origin/issue/task-101` $\to$ `issue/task-101`).
 
 ---
 
@@ -38,7 +38,7 @@ This skips remote network checks and issue tracker API calls.
   ```bash
   git brx select main
   git brx update
-  git brx select issue/TASK-101
+  git brx select issue/task-101
   git brx sync
   ```
 

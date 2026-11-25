@@ -42,7 +42,7 @@
    - If regex does not match, log `[git-brx] Error: Branch name '<branch>' doesn't match pattern <pattern>` and exit with Exit Code `8`.
 5. **Issue Tracker Validation (Online Mode):**
    - If `--offline` is NOT set:
-     - Fetch issue details using the configured `IssueTracker` adapter (Jira REST, GitHub Issues, etc.).
+     - Fetch issue details using the configured `IssueTracker` adapter (GitHub Issues, Jira REST, etc.).
      - If authorization fails: Fail with Exit Code `6` (`Authorization failure`).
      - If issue not found: Fail with Exit Code `6` (`Issue not found in issue tracker`).
      - Check issue type & direct label mapping:
