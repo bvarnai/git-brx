@@ -18,10 +18,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout Scoop Bucket
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: bvarnai/scoop-bucket
           token: ${{ secrets.SCOOP_BUCKET_PAT }}
