@@ -8,11 +8,11 @@
 
 ## 2. Issue-driven development: single source of truth
 
-In `git-brx`, **every tracked code change maps to an issue in Jira or GitHub.**
+In `git-brx`, **every tracked code change maps to an issue in GitHub or Jira.**
 
 ```text
 ┌────────────────────────────────────────────────────────┐
-│                   THE ISSUE (Jira / GitHub)            │
+│                   THE ISSUE (GitHub / Jira)            │
 │  • What is the problem?                                │
 │  • Why is this change needed?                          │
 │  • What are the acceptance criteria & edge cases?      │
@@ -94,7 +94,7 @@ flowchart TD
 ```
 
 ### Stage 1: Create (`git brx create`)
-Checks that the issue exists in Jira or GitHub, validates the branch prefix against the issue type, and creates the branch from your current base branch.
+Checks that the issue exists in GitHub or Jira, validates the branch prefix against the issue type, and creates the branch from your current base branch.
 
 ### Stage 2: Sync & publish (`git brx sync` / `git brx publish`)
 As teammates merge changes into `main`, run `git brx sync` to keep your branch current (rebasing `issue/*` branches or merging `main` into `feature/*` and `epic/*` branches).

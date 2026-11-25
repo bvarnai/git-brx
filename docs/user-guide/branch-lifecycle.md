@@ -43,7 +43,7 @@ git brx create issue/task-101
    - If the branch already exists locally or on `origin`, `git-brx` fetches if needed, safely switches to that branch (fast-forwarding clean branches behind `origin/<branch>`), and exits `0`.
 3. **Name validation:** Matches the branch name against `branch.template` (e.g., `issue/<KEY>`, `feature/<KEY>`, `epic/<KEY>`).
 4. **Issue tracker lookup:**
-   - Queries Jira or GitHub Issues for `task-101`.
+   - Queries GitHub Issues or Jira for `task-101`.
    - Verifies that the issue type/labels are allowed for the target branch prefix (e.g., `bug` $\to$ `issue/`) and prints the issue title, status, assignee, and URL.
    - Prompts `Create branch 'issue/task-101' [Y/n]?` (pass `-y` / `--yes` to skip the prompt in scripts).
 5. **Base guardrails & checkout:** Validates `--base <branch>` if provided (or warns when forking from another topic branch, a behind-origin base, or a dirty worktree), runs `git checkout -b issue/task-101 [<base>]`, and records `branch.<name>.brx-base` in local `.git/config`.
@@ -139,11 +139,11 @@ git brx review
 
 ### How `review` builds the pull request
 1. **Remote sync & target check:** Verifies that local `HEAD` matches `origin/<branch>`, resolves `<target_branch>` (explicit argument $\to$ recorded `branch.<name>.brx-base` $\to$ default branch), and verifies `<target_branch>` exists on `origin`.
-2. **Issue metadata lookup:** Extracts the issue key from the branch name and fetches the issue title and labels from Jira or GitHub.
+2. **Issue metadata lookup:** Extracts the issue key from the branch name and fetches the issue title and labels from GitHub or Jira.
 3. **Reviewer routing:** Evaluates `review.mapping` in `.git-brx.yaml` in order of precedence (skipped when `--draft` is set unless `-r` is passed):
    - **CLI override:** `-r, --reviewer <user>` (repeatable or comma-separated, deduplicated).
    - **Changed file paths (`mapping.paths`):** Matches modified files against `origin/<target>...HEAD` (falling back to `<target>...HEAD`) globs (e.g., `internal/ui/**`, `docs/**`) and aggregates all matched reviewers.
-   - **Issue labels (`mapping.labels`):** If no path rules match, checks Jira components or GitHub labels.
+   - **Issue labels (`mapping.labels`):** If no path rules match, checks GitHub labels or Jira components.
    - **Branch globs (`mapping.branches`):** If no label rules match, checks the source branch name (e.g., `epic/*`).
    - **Default fallback (`mapping.default`):** Used when no earlier rules match.
    - **Author exclusion:** Removes the PR author from the resolved reviewer list.

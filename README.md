@@ -44,7 +44,7 @@ There is **no lock-in**: `git-brx` runs standard Git plumbing under the hood. Yo
 ## The git-brx philosophy
 
 ### 1. Issue-first development
-Every tracked code change starts with an issue in Jira or GitHub:
+Every tracked code change starts with an issue in GitHub or Jira:
 - **The issue defines "What" and "Why":** Context, requirements, edge cases, and acceptance criteria live in the issue tracker.
 - **The pull request reviews "How":** Code review focuses on design, correctness, test coverage, and security—not rediscovering requirements.
 
@@ -64,7 +64,7 @@ Every tracked code change starts with an issue in Jira or GitHub:
 
 ```mermaid
 flowchart LR
-    A["1. Issue<br/>(Jira / GitHub)"] -->|"git brx create"| B["2. Topic branch<br/>(issue/task-101)"]
+    A["1. Issue<br/>(GitHub / Jira)"] -->|"git brx create"| B["2. Topic branch<br/>(issue/task-101)"]
     B -->|"git brx sync / update"| C["3. Work & sync<br/>(Rebase & leased push)"]
     C -->|"git brx review"| D["4. Code review<br/>(PR with checklist & reviewers)"]
     D -->|"git brx delete"| E["5. Cleanup<br/>(Local deleted & origin pruned)"]

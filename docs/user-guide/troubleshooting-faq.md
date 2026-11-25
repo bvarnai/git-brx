@@ -7,7 +7,7 @@ Common questions, error messages, and recovery steps for `git-brx`.
 ## Frequently asked questions
 
 ### Q: Why does `git-brx` require an issue for every branch?
-**A:** Linking every branch to a Jira or GitHub issue keeps requirements, context, and acceptance criteria in one place. Reviewers don't have to guess what a PR is supposed to solve, and future maintainers can trace any commit back to its issue via `git blame`. For quick local spikes that don't need an issue, use `git checkout -b <branch>`.
+**A:** Linking every branch to a GitHub or Jira issue keeps requirements, context, and acceptance criteria in one place. Reviewers don't have to guess what a PR is supposed to solve, and future maintainers can trace any commit back to its issue via `git blame`. For quick local spikes that don't need an issue, use `git checkout -b <branch>`.
 
 ### Q: Can I use `git-brx` offline?
 **A:** Yes. Pass `--offline` (`-o`) to `create` or `select`:
