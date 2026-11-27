@@ -12,13 +12,13 @@ This guide walks through the lifecycle of a branch in `git-brx`, from creating a
 | :--- | :--- | :--- | :--- | :--- |
 | **`issue/<id>`** | Bug fixes, small tasks, tech debt | Short-lived | **Rebase** (`git rebase`) | **Squash & merge** |
 | **`feature/<id>`** | Backlog stories, multi-person features | Short-to-medium | **Merge** (`git merge`) | **Squash & merge** *(or Merge commit)* |
-| **`epic/<id>`** | Multi-PR initiatives | Long-lived | **Merge** (`git merge`) | **Merge commit (`--no-ff`)** |
+| **`epic/<id>`** | Bounded multi-PR milestones | Multi-PR *(closed on merge to `main`)* | **Merge** (`git merge`) | **Merge commit (`--no-ff`)** |
 | **`release/<version>`** *(optional)* | Optional release stabilization or maintenance / backporting | On demand / maintained | N/A *(or explicit `--merge`)* | Tagged *(not required for simple releases)* |
 | **`main` / `master`** | Default base branch | Permanent | N/A | Protected base branch |
 
 ### Why `sync` strategies differ by prefix
 * **`issue/*` $\to$ Rebase:** Bug fixes and small tasks are usually single-author branches. Rebasing onto `main` keeps commit history linear and prepares the branch for a clean squash merge.
-* **`feature/*` and `epic/*` $\to$ Merge:** Shared or long-running branches often have multiple contributors. Merging `main` into the branch avoids rewriting commit history under teammates working on the same branch.
+* **`feature/*` and `epic/*` $\to$ Merge:** Shared or multi-PR branches often have multiple contributors or forked child slices. Merging `main` into the branch avoids rewriting commit history under teammates or child branches.
 * **Overriding the default:** Pass `--rebase` (`-r`) or `--merge` (`-m`) to `git brx sync` at any time.
 
 ### Optional release branches
@@ -194,3 +194,94 @@ git brx delete
    [git-brx] Deleted local branch 'issue/task-101' and pruned origin
    [git-brx] Hint: Your local 'main' may not be up-to-date. Use 'git-brx update' to update changes
    ```
+
+---
+
+## 7. Multi-PR epic lifecycle
+
+An `epic/<id>` branch aggregates multiple child pull requests (`issue/*` or `feature/*`) for a bounded milestone. Epics follow the same `create` $\to$ `sync` $\to$ `publish` $\to$ `review` $\to$ `delete` lifecycle against `main`, with child slice PRs nested inside, and are closed and deleted once merged into `main`.
+
+```mermaid
+flowchart TD
+    MainStart["main"] -->|"git brx create epic/E and publish"| EpicBranch["epic/E"]
+    EpicBranch -->|"git brx create --base epic/E issue/N"| ChildBranch["issue/N (child slice)"]
+    ChildBranch -->|"sync, publish, review"| ChildPR["Child PR into epic/E (Squash and merge)"]
+    ChildPR -->|"Merged and git brx delete"| EpicBranch
+    EpicBranch -->|"All slices done: select epic/E and sync"| EpicSynced["epic/E synced with main (3-way merge)"]
+    EpicSynced -->|"git brx publish (fast-forward only)"| EpicPushed["origin/epic/E"]
+    EpicPushed -->|"git brx review"| EpicPR["Epic PR into main (Create a merge commit)"]
+    EpicPR -->|"Merged on SCM and git brx delete epic/E"| MainDone["main updated, epic closed and deleted"]
+```
+
+### 1. Provision and publish the epic branch
+
+Ensure the parent epic issue `#<E>` has the `epic` label in your issue tracker (on GitHub, create the `epic` label in repository settings if it does not exist yet), then branch from an up-to-date `main` and publish immediately so child slices can target `origin/epic/<E>`:
+
+```bash
+git brx select main
+git brx update
+git brx create epic/<E>
+git brx publish
+```
+
+- `git brx create` records `branch.epic/<E>.brx-base=main` in local Git config.
+- `git brx publish` enforces fast-forward-only pushes on `epic/*` (never `--force-with-lease`), protecting shared integration history under child branches.
+
+### 2. Fork and merge child slices into the epic
+
+Create each child slice with `--base epic/<E>` (or after `git brx select epic/<E>`):
+
+```bash
+git brx create --base epic/<E> issue/<N>
+```
+
+Because `create` records `branch.issue/<N>.brx-base=epic/<E>`, every subsequent command targets `epic/<E>` automatically without repeating `<target_branch>`:
+
+```bash
+# Rebase onto latest origin/epic/<E>, push, and open child PR against epic/<E>:
+git brx sync
+git brx publish
+git brx review
+```
+
+- Child `issue/*` and `feature/*` PRs targeting `epic/<E>` default to **Squash and merge** instructions.
+- After the child PR merges into `epic/<E>`, clean up locally:
+  ```bash
+  git brx delete
+  ```
+  `git brx delete` switches back to `epic/<E>` (fast-forwarding it automatically if clean and behind `origin/epic/<E>`), deletes local `issue/<N>`, and prunes `origin`.
+
+### 3. Close and merge the completed epic into `main`
+
+Once all child slices are merged into `epic/<E>`, integrate `main` and open the final epic pull request:
+
+```bash
+git brx select epic/<E>
+git brx sync
+git brx publish
+git brx review
+```
+
+- **`sync`:** Merges `main` into `epic/<E>` with a 3-way merge commit (`Merge branch 'main' into 'epic/<E>'`) rather than rebasing, keeping merged slice history intact.
+- **`publish`:** Pushes `epic/<E>` fast-forward-only to `origin`.
+- **`review`:**
+  - Targets `main` (via recorded `branch.epic/<E>.brx-base`).
+  - Formats the PR title with the `epic(#<E>): <title>` prefix.
+  - Emits `Closes #<E>` and automatically aggregates unique `Closes #<N>` references from all merged child PRs targeting `epic/<E>` (logging a warning if the total exceeds GitHub's 10-issue auto-close limit).
+  - Appends **Create a merge commit** instructions (`Merge branch 'epic/<E>' into main: <summary>`) instead of squash, preserving the squashed child slice commits on `main`.
+- **Merge on GitHub / Bitbucket:** Merge the PR using **Create a merge commit** (not *Squash and merge*) so child commit history is preserved and `#<E>` plus its child issues close automatically.
+
+### 4. Delete the closed epic branch
+
+After the epic PR merges into `main`, remove the local epic branch and fast-forward `main`:
+
+```bash
+git brx delete epic/<E>
+# Or, if GitHub "Automatically delete head branches" is disabled:
+git brx delete --delete-remote epic/<E>
+```
+
+`git brx delete` switches back to `main`, auto-fast-forwards local `main` when clean and behind `origin/main`, deletes local `epic/<E>`, and prunes `origin`.
+
+> [!NOTE]
+> **Epics are bounded milestones:** An `epic/<id>` branch is closed and deleted when merged into `main` rather than kept open in parallel with `main`. Start subsequent milestones on a new `epic/<id>` branch.
