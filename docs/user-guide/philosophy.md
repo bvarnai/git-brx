@@ -60,7 +60,7 @@ To plain Git, all branch names are identical—`fix-typo` and `cloud-migration` 
 | :--- | :--- | :--- | :--- | :--- |
 | **`issue/<id>`** | **Solo task:** bug fixes & small tasks (hours to days) | **Linear rebase** | **Squash & merge** | Single-author work stays linear. Squashing onto `main` keeps history clean for `git bisect` while letting you make small work-in-progress commits locally. |
 | **`feature/<id>`** | **Shared feature:** multi-person stories (days to weeks) | **3-way merge** | **Squash & merge** *(or merge commit)* | Multiple developers can push to the same branch without rewriting shared commit history. |
-| **`epic/<id>`** | **Bounded multi-PR milestone:** aggregates child PRs; closed on merge to `main` | **3-way merge** | **Merge commit (`--no-ff`)** | Preserves squashed child slice commits on `main` under an explicit merge commit; closed and deleted on merge rather than kept open in parallel with `main`. |
+| **`epic/<id>`** | **Multi-PR initiative:** integration branch aggregating child PRs (weeks to months) | **3-way merge** | **Merge commit (`--no-ff`)** | Preserves squashed child commits on `main` under an explicit merge commit; closed and deleted on merge rather than kept open alongside `main`. |
 
 Once you name a branch, `git-brx` selects the matching `sync` strategy and PR merge instructions automatically.
 

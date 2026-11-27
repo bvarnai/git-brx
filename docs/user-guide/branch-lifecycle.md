@@ -12,13 +12,13 @@ This guide walks through the lifecycle of a branch in `git-brx`, from creating a
 | :--- | :--- | :--- | :--- | :--- |
 | **`issue/<id>`** | Bug fixes, small tasks, tech debt | Short-lived | **Rebase** (`git rebase`) | **Squash & merge** |
 | **`feature/<id>`** | Backlog stories, multi-person features | Short-to-medium | **Merge** (`git merge`) | **Squash & merge** *(or Merge commit)* |
-| **`epic/<id>`** | Bounded multi-PR milestones | Multi-PR *(closed on merge to `main`)* | **Merge** (`git merge`) | **Merge commit (`--no-ff`)** |
+| **`epic/<id>`** | Multi-PR initiatives | Long-lived | **Merge** (`git merge`) | **Merge commit (`--no-ff`)** |
 | **`release/<version>`** *(optional)* | Optional release stabilization or maintenance / backporting | On demand / maintained | N/A *(or explicit `--merge`)* | Tagged *(not required for simple releases)* |
 | **`main` / `master`** | Default base branch | Permanent | N/A | Protected base branch |
 
 ### Why `sync` strategies differ by prefix
 * **`issue/*` $\to$ Rebase:** Bug fixes and small tasks are usually single-author branches. Rebasing onto `main` keeps commit history linear and prepares the branch for a clean squash merge.
-* **`feature/*` and `epic/*` $\to$ Merge:** Shared or multi-PR branches often have multiple contributors or forked child slices. Merging `main` into the branch avoids rewriting commit history under teammates or child branches.
+* **`feature/*` and `epic/*` $\to$ Merge:** Shared or long-running (multi-PR) branches often have multiple contributors. Merging `main` into the branch avoids rewriting commit history under teammates working on the same branch.
 * **Overriding the default:** Pass `--rebase` (`-r`) or `--merge` (`-m`) to `git brx sync` at any time.
 
 ### Optional release branches
@@ -199,7 +199,7 @@ git brx delete
 
 ## 7. Multi-PR epic lifecycle
 
-An `epic/<id>` branch aggregates multiple child pull requests (`issue/*` or `feature/*`) for a bounded milestone. Epics follow the same `create` $\to$ `sync` $\to$ `publish` $\to$ `review` $\to$ `delete` lifecycle against `main`, with child slice PRs nested inside, and are closed and deleted once merged into `main`.
+An `epic/<id>` branch is an integration branch that aggregates multiple child pull requests (`issue/*` or `feature/*`) for a multi-PR initiative. Epics follow the same `create` $\to$ `sync` $\to$ `publish` $\to$ `review` $\to$ `delete` lifecycle against `main`, with child PRs nested inside, and are closed and deleted once merged into `main`.
 
 ```mermaid
 flowchart TD
@@ -284,4 +284,4 @@ git brx delete --delete-remote epic/<E>
 `git brx delete` switches back to `main`, auto-fast-forwards local `main` when clean and behind `origin/main`, deletes local `epic/<E>`, and prunes `origin`.
 
 > [!NOTE]
-> **Epics are bounded milestones:** An `epic/<id>` branch is closed and deleted when merged into `main` rather than kept open in parallel with `main`. Start subsequent milestones on a new `epic/<id>` branch.
+> **Epics close on merge to `main`:** An `epic/<id>` branch is closed and deleted when merged into `main` rather than kept open in parallel with `main`. Start follow-up initiatives on a new `epic/<id>` branch.
