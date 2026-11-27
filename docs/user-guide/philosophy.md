@@ -60,13 +60,14 @@ To plain Git, all branch names are identical—`fix-typo` and `cloud-migration` 
 | :--- | :--- | :--- | :--- | :--- |
 | **`issue/<id>`** | **Solo task:** bug fixes & small tasks (hours to days) | **Linear rebase** | **Squash & merge** | Single-author work stays linear. Squashing onto `main` keeps history clean for `git bisect` while letting you make small work-in-progress commits locally. |
 | **`feature/<id>`** | **Shared feature:** multi-person stories (days to weeks) | **3-way merge** | **Squash & merge** *(or merge commit)* | Multiple developers can push to the same branch without rewriting shared commit history. |
-| **`epic/<id>`** | **Multi-PR initiative:** larger milestones (weeks to months) | **3-way merge** | **Merge commit (`--no-ff`)** | Preserves individual commits on `main` under an explicit merge commit. |
+| **`epic/<id>`** | **Multi-PR initiative:** integration branch aggregating child PRs (weeks to months) | **3-way merge** | **Merge commit (`--no-ff`)** | Preserves squashed child commits on `main` under an explicit merge commit; closed and deleted on merge rather than kept open alongside `main`. |
 
 Once you name a branch, `git-brx` selects the matching `sync` strategy and PR merge instructions automatically.
 
 > [!NOTE]
 > - **Local spikes and experiments:** For quick prototypes without an issue ticket, use standard Git (`git checkout -b scratch-test`).
 > - **Optional `release/*` branches:** Most projects release by tagging `main` directly. Only create `release/<version>` branches when you need release stabilization or retroactive maintenance/backporting for an older version—see [Optional release branches](branch-lifecycle.md#optional-release-branches).
+> - **Multi-PR epic workflow:** Epics run the same lifecycle against `main` with child `issue/*` or `feature/*` PRs nested inside, then close and delete upon merge into `main`—see [Multi-PR epic lifecycle](branch-lifecycle.md#7-multi-pr-epic-lifecycle).
 
 ---
 
